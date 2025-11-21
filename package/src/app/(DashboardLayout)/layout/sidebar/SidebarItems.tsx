@@ -1,17 +1,16 @@
 import React from "react";
 import Menuitems from "./MenuItems";
-import { Box, Typography } from "@mui/material";
+import { Box } from "@mui/material";
 import {
-  Logo,
   Sidebar as MUI_Sidebar,
   Menu,
   MenuItem,
   Submenu,
 } from "react-mui-sidebar";
+import Logo from '@/app/(DashboardLayout)/layout/shared/logo/Logo';
 import { IconPoint } from '@tabler/icons-react';
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Upgrade } from "./Updrade";
 
 
 const renderMenuItems = (items: any, pathDirect: any) => {
@@ -73,14 +72,11 @@ const SidebarItems = () => {
 
   return (
     < >
-      <MUI_Sidebar width={"100%"} showProfile={false} themeColor={"#5D87FF"} themeSecondaryColor={'#49beff'} >
-
-        <Logo img='/images/logos/dark-logo.svg' component={Link} to="/" >Modernize</Logo>
-
+      <MUI_Sidebar width={"100%"} showProfile={false} themeColor={"#3A3180"} themeSecondaryColor={'#CF2C1B'} >
+<Box sx={{ width: 130 }}>
+        <Logo></Logo>
+</Box>
         {renderMenuItems(Menuitems, pathDirect)}
-        <Box px={2}>
-          <Upgrade />
-        </Box>
       </MUI_Sidebar>
 
     </>

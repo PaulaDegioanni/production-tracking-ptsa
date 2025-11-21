@@ -1,5 +1,5 @@
 'use client'
-import { Grid, Box } from '@mui/material';
+import { Grid, Box, Typography } from '@mui/material';
 import PageContainer from '@/app/(DashboardLayout)/components/container/PageContainer';
 // components
 import SalesOverview from '@/app/(DashboardLayout)/components/dashboard/SalesOverview';
@@ -13,6 +13,15 @@ const Dashboard = () => {
   return (
     <PageContainer title="Dashboard" description="this is Dashboard">
       <Box>
+		<Box mb={4}>
+          <Typography
+            variant="h1"
+            fontWeight="600"
+            sx={{ color: '#3A3184' }}
+          >
+            PTSA - Panel de producción
+          </Typography>
+        </Box>
         <Grid container spacing={3}>
           <Grid
             size={{

@@ -2,6 +2,7 @@ import {
   IconAperture,
   IconCopy,
   IconLayoutDashboard,
+  IconPlant2,
   IconLogin,
   IconMoodHappy,
   IconTypography,
@@ -13,7 +14,7 @@ import { uniqueId } from "lodash";
 const Menuitems = [
   {
     navlabel: true,
-    subheader: "HOME",
+    subheader: "PRODUCCIÓN",
   },
 
   {
@@ -22,6 +23,12 @@ const Menuitems = [
     icon: IconLayoutDashboard,
     href: "/",
   },
+  {
+  id: "production-cycles",
+  title: "Ciclos de siembra",
+  icon: IconPlant2, // o cualquier icono de los que ya usan
+  href: "/production/cycles",
+},
   {
     navlabel: true,
     subheader: "UTILITIES",
