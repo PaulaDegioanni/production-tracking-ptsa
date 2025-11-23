@@ -24,10 +24,10 @@ const Menuitems = [
     href: "/",
   },
   {
-  id: "production-cycles",
+  id: uniqueId(),
   title: "Ciclos de siembra",
   icon: IconPlant2, // o cualquier icono de los que ya usan
-  href: "/production/cycles",
+  href: "/ciclos",
 },
   {
     navlabel: true,
