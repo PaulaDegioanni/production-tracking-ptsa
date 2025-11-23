@@ -20,7 +20,7 @@ import {
   Chip,
   Card,
   CardContent,
-  Divider,
+  alpha,
 } from '@mui/material';
 import PageContainer from '@/app/(DashboardLayout)/components/container/PageContainer';
 import DashboardCard from '@/app/(DashboardLayout)/components/shared/DashboardCard';
@@ -61,13 +61,13 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
   const getStatusColor = (status: CycleStatus) => {
     switch (status) {
       case 'planificado':
-        return 'grey[200]';
+        return 'default';
       case 'sembrado':
         return 'info';
       case 'listo-para-cosechar':
         return 'warning';
       case 'en-cosecha':
-        return 'info';
+        return 'primary';
       case 'cosechado':
         return 'success';
       default:
@@ -77,10 +77,10 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
 
   const getCropColor = (cultivo: string) => {
     const c = cultivo.toLowerCase();
-    if (c.includes('soja')) return 'soja';
-    if (c.includes('maíz') || c.includes('maiz')) return 'maiz';
-    if (c.includes('trigo')) return 'trigo';
-    return 'default';
+    if (c.includes('soja')) return '#bf73ee';
+    if (c.includes('maíz') || c.includes('maiz')) return '#2f97a5';
+    if (c.includes('trigo')) return '#86b300';
+    return '#5A6A85';
   };
 
   const handleClickCycle = (id: number) => {
@@ -93,12 +93,26 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
       description="Listado de ciclos de siembra con métricas clave y estado."
     >
       <Stack spacing={3}>
-        {/* Encabezado */}
+        {/* Encabezado con diseño moderno */}
         <Box>
-          <Typography variant="h2" component="h1" color="primary" gutterBottom>
+          <Typography
+            variant="h2"
+            component="h1"
+            sx={{
+              background: 'linear-gradient(135deg, #3A3184 0%, #6962A2 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              fontWeight: 700,
+              mb: 1,
+            }}
+          >
             Ciclos de siembra
           </Typography>
-          <Typography variant="body1" color="text.secondary" gutterBottom>
+          <Typography
+            variant="body1"
+            color="text.secondary"
+            sx={{ maxWidth: '800px' }}
+          >
             Explora los ciclos por campaña, campo y cultivo, y accede al detalle
             de cada uno.
           </Typography>
@@ -106,76 +120,92 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
 
         <DashboardCard>
           <Stack spacing={3}>
-            {/* Filtros */}
-            <Stack
-              direction={{ xs: 'column', md: 'row' }}
-              spacing={2}
-              sx={{ alignItems: { xs: 'stretch', md: 'center' } }}
+            {/* Filtros con diseño mejorado */}
+            <Box
+              sx={(theme) => ({
+                p: 2.5,
+                borderRadius: 2,
+                background: `linear-gradient(135deg, ${alpha(
+                  theme.palette.primary.main,
+                  0.03
+                )} 0%, ${alpha(theme.palette.primary.light, 0.03)} 100%)`,
+                border: `1px solid ${theme.palette.divider}`,
+              })}
             >
-              <FormControl fullWidth size="small">
-                <InputLabel id="filtro-anio-label">Año</InputLabel>
-                <Select
-                  labelId="filtro-anio-label"
-                  label="Año"
-                  value={yearFilter}
-                  onChange={(e) => setYearFilter(e.target.value)}
-                >
-                  <MenuItem value="2025">2025</MenuItem>
-                  <MenuItem value="2024">2024</MenuItem>
-                  <MenuItem value="all">Todas</MenuItem>
-                </Select>
-              </FormControl>
+              <Stack
+                direction={{ xs: 'column', md: 'row' }}
+                spacing={2}
+                sx={{ alignItems: { xs: 'stretch', md: 'center' } }}
+              >
+                <FormControl fullWidth size="small">
+                  <InputLabel id="filtro-anio-label">Año</InputLabel>
+                  <Select
+                    labelId="filtro-anio-label"
+                    label="Año"
+                    value={yearFilter}
+                    onChange={(e) => setYearFilter(e.target.value)}
+                    sx={{ bgcolor: 'background.paper' }}
+                  >
+                    <MenuItem value="2025">2025</MenuItem>
+                    <MenuItem value="2024">2024</MenuItem>
+                    <MenuItem value="all">Todas</MenuItem>
+                  </Select>
+                </FormControl>
 
-              <FormControl fullWidth size="small">
-                <InputLabel id="filtro-cultivo-label">Cultivo</InputLabel>
-                <Select
-                  labelId="filtro-cultivo-label"
-                  label="Cultivo"
-                  value={cropFilter}
-                  onChange={(e) => setCropFilter(e.target.value)}
-                >
-                  <MenuItem value="all">Todos</MenuItem>
-                  <MenuItem value="Soja">Soja</MenuItem>
-                  <MenuItem value="Maiz">Maíz</MenuItem>
-                </Select>
-              </FormControl>
+                <FormControl fullWidth size="small">
+                  <InputLabel id="filtro-cultivo-label">Cultivo</InputLabel>
+                  <Select
+                    labelId="filtro-cultivo-label"
+                    label="Cultivo"
+                    value={cropFilter}
+                    onChange={(e) => setCropFilter(e.target.value)}
+                    sx={{ bgcolor: 'background.paper' }}
+                  >
+                    <MenuItem value="all">Todos</MenuItem>
+                    <MenuItem value="Soja">Soja</MenuItem>
+                    <MenuItem value="Maiz">Maíz</MenuItem>
+                  </Select>
+                </FormControl>
 
-              <FormControl fullWidth size="small">
-                <InputLabel id="filtro-campo-label">Campo</InputLabel>
-                <Select
-                  labelId="filtro-campo-label"
-                  label="Campo"
-                  value={fieldFilter}
-                  onChange={(e) => setFieldFilter(e.target.value)}
-                >
-                  <MenuItem value="all">Todos</MenuItem>
-                  <MenuItem value="ADELIA MARIA">ADELIA MARIA</MenuItem>
-                  <MenuItem value="BOGINO">BOGINO</MenuItem>
-                  <MenuItem value="GHIGLIONE">GHIGLIONE</MenuItem>
-                </Select>
-              </FormControl>
+                <FormControl fullWidth size="small">
+                  <InputLabel id="filtro-campo-label">Campo</InputLabel>
+                  <Select
+                    labelId="filtro-campo-label"
+                    label="Campo"
+                    value={fieldFilter}
+                    onChange={(e) => setFieldFilter(e.target.value)}
+                    sx={{ bgcolor: 'background.paper' }}
+                  >
+                    <MenuItem value="all">Todos</MenuItem>
+                    <MenuItem value="ADELIA MARIA">ADELIA MARIA</MenuItem>
+                    <MenuItem value="BOGINO">BOGINO</MenuItem>
+                    <MenuItem value="GHIGLIONE">GHIGLIONE</MenuItem>
+                  </Select>
+                </FormControl>
 
-              <FormControl fullWidth size="small">
-                <InputLabel id="filtro-estado-label">Estado</InputLabel>
-                <Select
-                  labelId="filtro-estado-label"
-                  label="Estado"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <MenuItem value="all">Todos</MenuItem>
-                  <MenuItem value="planificado">Planificado</MenuItem>
-                  <MenuItem value="sembrado">Sembrado</MenuItem>
-                  <MenuItem value="listo-para-cosechar">
-                    Listo para cosechar
-                  </MenuItem>
-                  <MenuItem value="en-cosecha">En cosecha</MenuItem>
-                  <MenuItem value="cosechado">Cosechado</MenuItem>
-                </Select>
-              </FormControl>
-            </Stack>
+                <FormControl fullWidth size="small">
+                  <InputLabel id="filtro-estado-label">Estado</InputLabel>
+                  <Select
+                    labelId="filtro-estado-label"
+                    label="Estado"
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    sx={{ bgcolor: 'background.paper' }}
+                  >
+                    <MenuItem value="all">Todos</MenuItem>
+                    <MenuItem value="planificado">Planificado</MenuItem>
+                    <MenuItem value="sembrado">Sembrado</MenuItem>
+                    <MenuItem value="listo-para-cosechar">
+                      Listo para cosechar
+                    </MenuItem>
+                    <MenuItem value="en-cosecha">En cosecha</MenuItem>
+                    <MenuItem value="cosechado">Cosechado</MenuItem>
+                  </Select>
+                </FormControl>
+              </Stack>
+            </Box>
 
-            {/* Acciones */}
+            {/* Acciones con mejor layout */}
             <Stack
               direction={{ xs: 'column', md: 'row' }}
               spacing={2}
@@ -184,9 +214,24 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
                 alignItems: { xs: 'stretch', md: 'center' },
               }}
             >
-              <Typography variant="body2" color="text.secondary">
-                {filterCycles.length} ciclo(s) encontrados.
-              </Typography>
+              <Box
+                sx={(theme) => ({
+                  px: 2,
+                  py: 1,
+                  borderRadius: 1.5,
+                  bgcolor: alpha(theme.palette.primary.main, 0.08),
+                  border: `1px solid ${alpha(
+                    theme.palette.primary.main,
+                    0.12
+                  )}`,
+                })}
+              >
+                <Typography variant="body2" color="primary" fontWeight={600}>
+                  {filteredCycles.length} ciclo
+                  {filteredCycles.length !== 1 ? 's' : ''} encontrado
+                  {filteredCycles.length !== 1 ? 's' : ''}
+                </Typography>
+              </Box>
               <Stack
                 direction="row"
                 spacing={2}
@@ -198,94 +243,96 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
                 <Button
                   variant="contained"
                   color="primary"
-                  sx={{ flexGrow: { xs: 1, md: 0 } }}
-                  // onClick={() => ...}  // lo definimos cuando agreguemos creación
+                  sx={{
+                    flexGrow: { xs: 1, md: 0 },
+                    boxShadow: (theme) =>
+                      `0 4px 12px ${alpha(theme.palette.primary.main, 0.25)}`,
+                    '&:hover': {
+                      boxShadow: (theme) =>
+                        `0 6px 16px ${alpha(theme.palette.primary.main, 0.35)}`,
+                    },
+                  }}
                 >
                   Crear nuevo ciclo
                 </Button>
-                <Button
-                  variant="outlined"
-                  sx={{ flexGrow: { xs: 1, md: 0 } }}
-                  // onClick={() => ...}  // export a CSV más adelante
-                >
+                <Button variant="outlined" sx={{ flexGrow: { xs: 1, md: 0 } }}>
                   Exportar CSV
                 </Button>
               </Stack>
             </Stack>
 
-            {/* Lista de ciclos: tabla en desktop, cards en móvil */}
-
-            {/* 📊 Vista tabla (desktop)*/}
+            {/* 📊 Vista tabla (desktop) con diseño moderno */}
             <Box sx={{ display: { xs: 'none', md: 'block' } }}>
-              <TableContainer component={Paper} variant="outlined">
+              <TableContainer
+                component={Paper}
+                variant="outlined"
+                sx={{
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                  boxShadow: (theme) =>
+                    `0 2px 8px ${alpha(theme.palette.grey[500], 0.08)}`,
+                }}
+              >
                 <Table size="small">
                   <TableHead
                     sx={(theme) => ({
-                      backgroundColor: theme.palette.grey[100],
+                      background: `linear-gradient(135deg, ${alpha(
+                        theme.palette.primary.main,
+                        0.06
+                      )} 0%, ${alpha(theme.palette.primary.light, 0.06)} 100%)`,
                       '& .MuiTableCell-root': {
-                        fontWeight: 600,
-                        color: theme.palette.text.primary,
-                        borderBottom: `2px solid ${theme.palette.divider}`,
+                        fontWeight: 700,
+                        color: theme.palette.primary.main,
+                        borderBottom: `2px solid ${theme.palette.primary.main}`,
+                        py: 1.5,
+                        fontSize: '0.85rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
                       },
                     })}
                   >
                     <TableRow>
-                      {/* 1 - ID Ciclo */}
                       <TableCell>ID Ciclo</TableCell>
-
-                      {/* 2 - Estado */}
                       <TableCell>Estado</TableCell>
-
-                      {/* 3 - Cultivo */}
                       <TableCell>Cultivo</TableCell>
-
-                      {/* divisor vertical */}
                       <TableCell
                         sx={(theme) => ({
-                          borderLeft: `1.5px solid ${theme.palette.grey[300]}`,
+                          borderLeft: `2px solid ${alpha(
+                            theme.palette.primary.main,
+                            0.15
+                          )}`,
                         })}
                       />
-
-                      {/* 3 - Campo */}
                       <TableCell>Campo</TableCell>
-
-                      {/* 4 - Superficie */}
                       <TableCell align="right">Sup. (ha)</TableCell>
-
-                      {/* divisor vertical */}
                       <TableCell
                         sx={(theme) => ({
-                          borderLeft: `1.5px solid ${theme.palette.grey[300]}`,
+                          borderLeft: `2px solid ${alpha(
+                            theme.palette.primary.main,
+                            0.15
+                          )}`,
                         })}
                       />
-
-                      {/* 5 - Rend. esperado */}
                       <TableCell align="right">Rend. esp. (qq/ha)</TableCell>
-
-                      {/* 6 - Rend. obtenido */}
                       <TableCell align="right">Rend. obt. (qq/ha)</TableCell>
-
-                      {/* divisor vertical */}
                       <TableCell
                         sx={(theme) => ({
-                          borderLeft: `1.5px solid ${theme.palette.grey[300]}`,
+                          borderLeft: `2px solid ${alpha(
+                            theme.palette.primary.main,
+                            0.15
+                          )}`,
                         })}
                       />
-
-                      {/* 7 - Kgs stock */}
                       <TableCell align="right">Kgs stock</TableCell>
-
-                      {/* 8 - Kgs camión */}
                       <TableCell align="right">Kgs camión</TableCell>
-
-                      {/* 9 - Kgs totales */}
                       <TableCell align="right">Kgs totales</TableCell>
-
-                      {/* divisor vertical */}
                       <TableCell
                         align="right"
                         sx={(theme) => ({
-                          borderLeft: `1.5px solid ${theme.palette.grey[300]}`,
+                          borderLeft: `2px solid ${alpha(
+                            theme.palette.primary.main,
+                            0.15
+                          )}`,
                         })}
                       >
                         Kgs check
@@ -293,35 +340,47 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {filteredCycles.map((cycle) => (
+                    {filteredCycles.map((cycle, index) => (
                       <TableRow
                         key={cycle.id}
                         hover
                         sx={(theme) => ({
                           cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          bgcolor:
+                            index % 2 === 0
+                              ? 'transparent'
+                              : alpha(theme.palette.grey[100], 0.4),
+                          '&:hover': {
+                            bgcolor: alpha(theme.palette.primary.main, 0.04),
+                            transform: 'scale(1.005)',
+                            boxShadow: `0 2px 8px ${alpha(
+                              theme.palette.primary.main,
+                              0.1
+                            )}`,
+                          },
                           '& .MuiTableCell-root': {
                             borderBottom: `1px solid ${theme.palette.divider}`,
+                            py: 1.5,
                           },
                         })}
                         onClick={() => handleClickCycle(cycle.id)}
                       >
-                        {/* 1 - ID Ciclo (con chip de cultivo) */}
                         <TableCell>
-                          <Stack spacing={0.5}>
-                            <Typography variant="body2">
-                              {cycle.cycleId}
-                            </Typography>
-                          </Stack>
+                          <Typography variant="body2" fontWeight={600}>
+                            {cycle.cycleId}
+                          </Typography>
                         </TableCell>
 
-                        {/* 2 - Estado */}
                         <TableCell>
                           <Chip
                             size="small"
-                            label={cycle.status.replace('-', ' ')}
+                            label={cycle.status.replaceAll('-', ' ')}
                             color={getStatusColor(cycle.status) as any}
                             sx={{
-                              alignSelf: 'flex-start',
+                              fontWeight: 600,
+                              fontSize: '0.75rem',
+                              textTransform: 'capitalize',
                               color: 'text.primary',
                             }}
                           />
@@ -331,113 +390,134 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
                           <Chip
                             size="small"
                             label={cycle.crop}
-                            color={getCropColor(cycle.crop) as any}
-                            variant="outlined"
-                            sx={{
-                              alignSelf: 'flex-start',
-                              color:
-                                getCropColor(cycle.crop) === 'soja'
-                                  ? '#bf73ee'
-                                  : getCropColor(cycle.crop) === 'maiz'
-                                  ? '#2f97a5'
-                                  : getCropColor(cycle.crop) === 'trigo'
-                                  ? '#86b300' // trigo verde-dorado
-                                  : undefined,
-                              borderColor:
-                                getCropColor(cycle.crop) === 'soja'
-                                  ? '#bf73ee'
-                                  : getCropColor(cycle.crop) === 'maiz'
-                                  ? '#2f97a5'
-                                  : getCropColor(cycle.crop) === 'trigo'
-                                  ? '#86b300'
-                                  : undefined,
-                              fontWeight: 600,
-                            }}
+                            sx={(theme) => ({
+                              bgcolor: alpha(getCropColor(cycle.crop), 0.12),
+                              color: getCropColor(cycle.crop),
+                              borderColor: getCropColor(cycle.crop),
+                              fontWeight: 700,
+                              fontSize: '0.75rem',
+                              border: `1.5px solid ${alpha(
+                                getCropColor(cycle.crop),
+                                0.3
+                              )}`,
+                            })}
                           />
                         </TableCell>
 
-                        {/* divisor vertical */}
                         <TableCell
                           sx={(theme) => ({
-                            borderLeft: `1.5px solid ${theme.palette.grey[300]}`,
+                            borderLeft: `2px solid ${alpha(
+                              theme.palette.primary.main,
+                              0.08
+                            )}`,
                           })}
                         />
 
-                        {/* 3 - Campo */}
-                        <TableCell>{cycle.field}</TableCell>
-
-                        {/* 4 - Superficie */}
-                        <TableCell align="right">
-                          {cycle.areaHa.toLocaleString('es-ES')}
+                        <TableCell>
+                          <Typography variant="body2">{cycle.field}</Typography>
                         </TableCell>
 
-                        {/* divisor vertical */}
+                        <TableCell align="right">
+                          <Typography variant="body2">
+                            {cycle.areaHa.toLocaleString('es-ES')}
+                          </Typography>
+                        </TableCell>
+
                         <TableCell
                           sx={(theme) => ({
-                            borderLeft: `1.5px solid ${theme.palette.grey[300]}`,
+                            borderLeft: `2px solid ${alpha(
+                              theme.palette.primary.main,
+                              0.08
+                            )}`,
                           })}
                         />
 
-                        {/* 5 - Rend. esperado */}
                         <TableCell align="right">
-                          {cycle.expectedYield.toFixed(1)}
+                          <Typography variant="body2" color="text.secondary">
+                            {cycle.expectedYield.toFixed(1)}
+                          </Typography>
                         </TableCell>
 
-                        {/* 6 - Rend. obtenido */}
                         <TableCell align="right">
-                          <Box component="span" sx={{ fontWeight: 600 }}>
+                          <Typography
+                            variant="body2"
+                            fontWeight={700}
+                            color="primary"
+                          >
                             {cycle.actualYield.toFixed(1)}
-                          </Box>
+                          </Typography>
                         </TableCell>
 
-                        {/* divisor vertical */}
                         <TableCell
                           sx={(theme) => ({
-                            borderLeft: `1.5px solid ${theme.palette.grey[300]}`,
+                            borderLeft: `2px solid ${alpha(
+                              theme.palette.primary.main,
+                              0.08
+                            )}`,
                           })}
                         />
 
-                        {/* 7 - Kgs stock */}
                         <TableCell align="right">
-                          {cycle.stockKgs.toLocaleString('es-ES')}
+                          <Typography variant="body2">
+                            {cycle.stockKgs.toLocaleString('es-ES')}
+                          </Typography>
                         </TableCell>
 
-                        {/* 8 - Kgs camión */}
                         <TableCell align="right">
-                          {cycle.truckKgs.toLocaleString('es-ES')}
+                          <Typography variant="body2">
+                            {cycle.truckKgs.toLocaleString('es-ES')}
+                          </Typography>
                         </TableCell>
 
-                        {/* 9 - Kgs totales */}
                         <TableCell align="right">
-                          <Box component="span" sx={{ fontWeight: 600 }}>
+                          <Typography variant="body2" fontWeight={700}>
                             {cycle.totalKgs.toLocaleString('es-ES')}
-                          </Box>
+                          </Typography>
                         </TableCell>
 
-                        {/* 10 - Kgs check (con divisor y color) */}
                         <TableCell
                           align="right"
                           sx={(theme) => ({
-                            borderLeft: `1.5px solid ${theme.palette.grey[300]}`,
+                            borderLeft: `2px solid ${alpha(
+                              theme.palette.primary.main,
+                              0.08
+                            )}`,
                           })}
                         >
-                          <Typography
-                            variant="body2"
-                            fontWeight={'600'}
-                            color={
-                              cycle.checkKgs === 0 ? '#468b5d' : 'secondary'
-                            }
+                          <Box
+                            sx={(theme) => ({
+                              display: 'inline-block',
+                              px: 1.5,
+                              py: 0.5,
+                              borderRadius: 1,
+                              bgcolor:
+                                cycle.checkKgs === 0
+                                  ? alpha(theme.palette.success.main, 0.15)
+                                  : alpha(theme.palette.secondary.main, 0.15),
+                            })}
                           >
-                            {cycle.checkKgs.toLocaleString('es-ES')}
-                          </Typography>
+                            <Typography
+                              variant="body2"
+                              fontWeight={700}
+                              color={
+                                cycle.checkKgs === 0
+                                  ? 'success.dark'
+                                  : 'secondary.main'
+                              }
+                            >
+                              {cycle.checkKgs.toLocaleString('es-ES')}
+                            </Typography>
+                          </Box>
                         </TableCell>
                       </TableRow>
                     ))}
 
-                    {filterCycles.length === 0 && (
+                    {filteredCycles.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={12} align="center">
-                          No hay ciclos para los filtros seleccionados.
+                        <TableCell colSpan={14} align="center" sx={{ py: 4 }}>
+                          <Typography variant="body1" color="text.secondary">
+                            No hay ciclos para los filtros seleccionados.
+                          </Typography>
                         </TableCell>
                       </TableRow>
                     )}
@@ -445,136 +525,198 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
                 </Table>
               </TableContainer>
             </Box>
-            {/* 📱 Vista cards (móvil) */}
+
+            {/* 📱 Vista cards (móvil) con diseño moderno */}
             <Box sx={{ display: { xs: 'block', md: 'none' } }}>
               <Stack spacing={2}>
                 {filteredCycles.map((cycle) => (
                   <Card
                     key={cycle.id}
-                    variant="outlined"
-                    sx={{ cursor: 'pointer' }}
+                    sx={(theme) => ({
+                      cursor: 'pointer',
+                      borderRadius: 2.5,
+                      border: `1px solid ${theme.palette.divider}`,
+                      transition: 'all 0.3s ease',
+                      boxShadow: `0 2px 8px ${alpha(
+                        theme.palette.grey[500],
+                        0.08
+                      )}`,
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: `0 8px 24px ${alpha(
+                          theme.palette.primary.main,
+                          0.15
+                        )}`,
+                        borderColor: theme.palette.primary.main,
+                      },
+                    })}
                     onClick={() => handleClickCycle(cycle.id)}
                   >
-                    <CardContent>
-                      <Stack spacing={1}>
+                    <CardContent sx={{ p: 2.5 }}>
+                      <Stack spacing={2}>
                         <Stack
                           direction="row"
                           justifyContent="space-between"
                           alignItems="center"
                         >
-                          <Typography variant="subtitle1">
+                          <Typography
+                            variant="subtitle1"
+                            fontWeight={700}
+                            color="primary"
+                          >
                             {cycle.cycleId}
                           </Typography>
                           <Chip
                             size="small"
-                            label={cycle.status.replace('-', ' ')}
+                            label={cycle.status.replaceAll('-', ' ')}
                             color={getStatusColor(cycle.status) as any}
-                            sx={{ color: 'text.primary' }}
+                            sx={{
+                              fontWeight: 600,
+                              textTransform: 'capitalize',
+                              color: 'text.primary',
+                            }}
                           />
                         </Stack>
-                        <Stack
-                          direction="row"
-                          justifyContent="left"
-                          alignItems="center"
-                        >
+
+                        <Stack direction="row" spacing={1} alignItems="center">
                           <Chip
                             size="small"
                             label={cycle.crop}
-                            color={getCropColor(cycle.crop) as any}
-                            variant="outlined"
-                            sx={{
-                              alignSelf: 'flex-start',
-                              color:
-                                getCropColor(cycle.crop) === 'soja'
-                                  ? '#bf73ee'
-                                  : getCropColor(cycle.crop) === 'maiz'
-                                  ? '#2f97a5'
-                                  : getCropColor(cycle.crop) === 'trigo'
-                                  ? '#86b300'
-                                  : undefined,
-                              borderColor:
-                                getCropColor(cycle.crop) === 'soja'
-                                  ? '#bf73ee'
-                                  : getCropColor(cycle.crop) === 'maiz'
-                                  ? '#2f97a5'
-                                  : getCropColor(cycle.crop) === 'trigo'
-                                  ? '#86b300'
-                                  : undefined,
-                              fontWeight: 600,
-                            }}
+                            sx={(theme) => ({
+                              bgcolor: alpha(getCropColor(cycle.crop), 0.12),
+                              color: getCropColor(cycle.crop),
+                              fontWeight: 700,
+                              border: `1.5px solid ${alpha(
+                                getCropColor(cycle.crop),
+                                0.3
+                              )}`,
+                            })}
                           />
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            marginLeft="8px"
-                          >
+                          <Typography variant="body2" color="text.secondary">
                             {cycle.field} · {cycle.year}
                           </Typography>
                         </Stack>
 
-                        <Divider sx={{ my: 1 }} />
+                        <Box
+                          sx={(theme) => ({
+                            height: '1px',
+                            background: `linear-gradient(90deg, ${theme.palette.divider} 0%, transparent 100%)`,
+                          })}
+                        />
 
-                        <Stack direction="row" justifyContent="space-between">
-                          <Typography variant="caption" color="text.secondary">
-                            Sup. (ha)
-                          </Typography>
-                          <Typography variant="body2">
-                            {cycle.areaHa.toLocaleString('es-ES')}
-                          </Typography>
-                        </Stack>
+                        <Stack spacing={1.5}>
+                          <Stack direction="row" justifyContent="space-between">
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              fontWeight={600}
+                            >
+                              Superficie
+                            </Typography>
+                            <Typography variant="body2" fontWeight={600}>
+                              {cycle.areaHa.toLocaleString('es-ES')} ha
+                            </Typography>
+                          </Stack>
 
-                        <Stack direction="row" justifyContent="space-between">
-                          <Typography variant="caption" color="text.secondary">
-                            Rend. esp. / obt.
-                          </Typography>
-                          <Typography variant="body2">
-                            {cycle.expectedYield.toFixed(1)} /{' '}
-                            {cycle.actualYield.toFixed(1)} qq/ha
-                          </Typography>
-                        </Stack>
+                          <Stack direction="row" justifyContent="space-between">
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              fontWeight={600}
+                            >
+                              Rendimiento
+                            </Typography>
+                            <Typography variant="body2">
+                              <Box component="span" color="text.secondary">
+                                {cycle.expectedYield.toFixed(1)}
+                              </Box>
+                              {' / '}
+                              <Box
+                                component="span"
+                                fontWeight={700}
+                                color="primary.main"
+                              >
+                                {cycle.actualYield.toFixed(1)}
+                              </Box>
+                              {' qq/ha'}
+                            </Typography>
+                          </Stack>
 
-                        <Stack direction="row" justifyContent="space-between">
-                          <Typography variant="caption" color="text.secondary">
-                            Kgs totales
-                          </Typography>
-                          <Typography variant="body2">
-                            {cycle.totalKgs.toLocaleString('es-ES')}
-                          </Typography>
-                        </Stack>
+                          <Stack direction="row" justifyContent="space-between">
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              fontWeight={600}
+                            >
+                              Kgs totales
+                            </Typography>
+                            <Typography variant="body2" fontWeight={700}>
+                              {cycle.totalKgs.toLocaleString('es-ES')}
+                            </Typography>
+                          </Stack>
 
-                        <Stack direction="row" justifyContent="space-between">
-                          <Typography variant="caption" color="text.secondary">
-                            Stock / Camión
-                          </Typography>
-                          <Typography variant="body2">
-                            {cycle.stockKgs.toLocaleString('es-ES')} /{' '}
-                            {cycle.truckKgs.toLocaleString('es-ES')}
-                          </Typography>
-                        </Stack>
+                          <Stack direction="row" justifyContent="space-between">
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              fontWeight={600}
+                            >
+                              Stock / Camión
+                            </Typography>
+                            <Typography variant="body2">
+                              {cycle.stockKgs.toLocaleString('es-ES')} /{' '}
+                              {cycle.truckKgs.toLocaleString('es-ES')}
+                            </Typography>
+                          </Stack>
 
-                        <Stack direction="row" justifyContent="space-between">
-                          <Typography variant="caption" color="text.secondary">
-                            Kgs check
-                          </Typography>
-                          <Typography
-                            variant="body2"
-                            fontWeight={'600'}
-                            color={
-                              cycle.checkKgs === 0 ? '#468b5d' : 'secondary'
-                            }
+                          <Stack
+                            direction="row"
+                            justifyContent="space-between"
+                            alignItems="center"
                           >
-                            {cycle.checkKgs.toLocaleString('es-ES')}
-                          </Typography>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              fontWeight={600}
+                            >
+                              Verificación
+                            </Typography>
+                            <Box
+                              sx={(theme) => ({
+                                px: 1.5,
+                                py: 0.5,
+                                borderRadius: 1,
+                                bgcolor:
+                                  cycle.checkKgs === 0
+                                    ? alpha(theme.palette.success.main, 0.15)
+                                    : alpha(theme.palette.secondary.main, 0.15),
+                              })}
+                            >
+                              <Typography
+                                variant="body2"
+                                fontWeight={700}
+                                color={
+                                  cycle.checkKgs === 0
+                                    ? 'success.dark'
+                                    : 'secondary.main'
+                                }
+                              >
+                                {cycle.checkKgs.toLocaleString('es-ES')} kg
+                              </Typography>
+                            </Box>
+                          </Stack>
                         </Stack>
                       </Stack>
                     </CardContent>
                   </Card>
                 ))}
 
-                {filterCycles.length === 0 && (
-                  <Typography variant="body2" color="text.secondary">
-                    No hay ciclos para los filtros seleccionados.
-                  </Typography>
+                {filteredCycles.length === 0 && (
+                  <Box sx={{ py: 4, textAlign: 'center' }}>
+                    <Typography variant="body1" color="text.secondary">
+                      No hay ciclos para los filtros seleccionados.
+                    </Typography>
+                  </Box>
                 )}
               </Stack>
             </Box>
