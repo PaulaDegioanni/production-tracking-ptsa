@@ -1,5 +1,5 @@
 // src/lib/baserow/ciclos.ts
-import { getTableRows } from './client';
+import { getTableRows, getTableRowById } from './client';
 
 const CYCLES_TABLE_ID = Number(process.env.NEXT_PUBLIC_BASEROW_CYCLES_TABLE_ID);
 
@@ -85,6 +85,30 @@ function toNumber(value: unknown): number {
   return 0;
 }
 
+function mapCycleRow(row: CycleRaw): CycleDto {
+  const stockKgs = toNumber(row['Kgs en Stock']);
+  const truckFromStock = toNumber(row['Kgs Camión desde Stock']);
+  const truckFromHarvest = toNumber(row['Kgs Camión desde Cosecha']);
+
+  return {
+    id: row.id,
+    cycleId: String(row.ID ?? ''),
+    field: String(row.Campo ?? ''),
+    crop: String(row.Cultivo?.value ?? ''),
+    areaHa: toNumber(row['Superficie (has)']),
+    status: normalizeStatus(row.Estado),
+    expectedYield: toNumber(row['Rendimiento esperado (qq/ha)']),
+    actualYield: toNumber(row['Rendimiento obtenido (qq/ha)']),
+    totalKgs: toNumber(row['Kgs totales']),
+    stockKgs,
+    truckKgs: truckFromStock + truckFromHarvest,
+    checkKgs: toNumber(row['Kgs Check']),
+    year: String(row['Año de campaña'] ?? ''),
+    sowingDate: row['Fecha de siembra'],
+    estimatedHarvestDate: row['Fecha estimada de cosecha'],
+  };
+}
+
 // --- Public functions ---
 /// Raw
 export async function getCyclesRaw(): Promise<CycleRaw[]> {
@@ -95,27 +119,15 @@ export async function getCyclesRaw(): Promise<CycleRaw[]> {
 export async function getCyclesDto(): Promise<CycleDto[]> {
   const rows = await getCyclesRaw();
 
-  return rows.map((row) => {
-    const stockKgs = toNumber(row['Kgs en Stock']);
-    const truckKgsFromStock = toNumber(row['Kgs Camión desde Stock']);
-    const truckKgsFromHarvest = toNumber(row['Kgs Camión desde Cosecha']);
+  return rows.map(mapCycleRow);
+}
 
-    return {
-      id: row.id,
-      cycleId: String(row.ID ?? ''),
-      field: String(row.Campo ?? ''),
-      crop: String(row.Cultivo?.value ?? ''),
-      areaHa: toNumber(row['Superficie (has)']),
-      status: normalizeStatus(row.Estado),
-      expectedYield: toNumber(row['Rendimiento esperado (qq/ha)']),
-      actualYield: toNumber(row['Rendimiento obtenido (qq/ha)']),
-      totalKgs: toNumber(row['Kgs totales']),
-      stockKgs,
-      truckKgs: truckKgsFromStock + truckKgsFromHarvest,
-      checkKgs: toNumber(row['Kgs Check']),
-      year: String(row['Año de campaña'] ?? ''),
-      sowingDate: row['Fecha de siembra'],
-      estimatedHarvestDate: row['Fecha estimada de cosecha'],
-    };
-  });
+export async function getCycleByIdDto(id: number): Promise<CycleDto | null> {
+  try {
+    const row = await getTableRowById<CycleRaw>(CYCLES_TABLE_ID, id);
+    return mapCycleRow(row);
+  } catch (error) {
+    console.error('Error fetching cycle by id', id, error);
+    return null;
+  }
 }

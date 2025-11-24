@@ -1,4 +1,4 @@
-import { getCyclesDto } from '@/lib/baserow/ciclos';
+import { getCyclesDto } from '@/lib/baserow/cycles';
 import CiclosPageClient from './CiclosPageClient';
 
 const CiclosPage = async () => {

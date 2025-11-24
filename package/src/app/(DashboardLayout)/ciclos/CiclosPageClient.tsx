@@ -25,7 +25,7 @@ import {
 import PageContainer from '@/app/(DashboardLayout)/components/container/PageContainer';
 import DashboardCard from '@/app/(DashboardLayout)/components/shared/DashboardCard';
 import { useRouter } from 'next/navigation';
-import type { CycleDto as CycleItem, CycleStatus } from '@/lib/baserow/ciclos';
+import type { CycleDto as CycleItem, CycleStatus } from '@/lib/baserow/cycles';
 
 type CiclosPageClientProps = {
   initialCiclos: CycleItem[];
