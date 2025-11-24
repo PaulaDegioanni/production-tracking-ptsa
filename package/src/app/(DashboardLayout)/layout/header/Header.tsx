@@ -10,9 +10,14 @@ import {
 } from '@mui/material';
 import PropTypes from 'prop-types';
 import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 // components
 import Profile from './Profile';
-import { IconLayoutSidebar, IconMenu } from '@tabler/icons-react';
+import {
+  IconLayoutSidebar,
+  IconMenu,
+  IconArrowLeft,
+} from '@tabler/icons-react';
 
 interface HeaderProps {
   toggleMobileSidebar: () => void;
@@ -22,6 +27,12 @@ interface HeaderProps {
 const Header = ({ toggleMobileSidebar, toggleSidebar }: HeaderProps) => {
   // const lgUp = useMediaQuery((theme) => theme.breakpoints.up('lg'));
   // const lgDown = useMediaQuery((theme) => theme.breakpoints.down('lg'));
+
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const isCycleDetailPage = /^\/ciclos\/[^/]+$/.test(pathname || '');
+  const showBackButton = isCycleDetailPage;
 
   const AppBarStyled = styled(AppBar)(({ theme }) => ({
     boxShadow: 'none',
@@ -36,6 +47,10 @@ const Header = ({ toggleMobileSidebar, toggleSidebar }: HeaderProps) => {
     width: '100%',
     color: theme.palette.text.secondary,
   }));
+
+  const handleBack = () => {
+    router.back();
+  };
 
   return (
     <AppBarStyled position="sticky" color="default">
@@ -71,6 +86,20 @@ const Header = ({ toggleMobileSidebar, toggleSidebar }: HeaderProps) => {
         >
           <IconLayoutSidebar size={20} />
         </IconButton>
+
+        {/* Botón de volver (solo en páginas de detalle) */}
+        {showBackButton && (
+          <IconButton
+            color="inherit"
+            aria-label="volver"
+            onClick={handleBack}
+            sx={{
+              ml: 0.5,
+            }}
+          >
+            <IconArrowLeft size={20} />
+          </IconButton>
+        )}
 
         <Box flexGrow={1} />
 
