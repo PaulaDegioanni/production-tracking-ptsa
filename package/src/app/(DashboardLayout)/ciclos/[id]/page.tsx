@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getCycleByIdDto } from '@/lib/baserow/cycles';
+import { getCycleDetailDto } from '@/lib/baserow/cycleDetail';
 import CycleDetailPageClient from '../CycleDetailPageClient';
 
 interface CycleDetailPageProps {
@@ -16,13 +16,13 @@ const CycleDetailPage = async ({ params }: CycleDetailPageProps) => {
     notFound();
   }
 
-  const cycle = await getCycleByIdDto(numericId);
+  const detail = await getCycleDetailDto(numericId);
 
-  if (!cycle) {
+  if (!detail) {
     notFound();
   }
 
-  return <CycleDetailPageClient cycle={cycle} />;
+  return <CycleDetailPageClient initialDetail={detail} />;
 };
 
 export default CycleDetailPage;
