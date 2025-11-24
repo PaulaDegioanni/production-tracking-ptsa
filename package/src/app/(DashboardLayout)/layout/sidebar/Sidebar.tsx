@@ -1,28 +1,26 @@
-import { useMediaQuery, Box, Drawer } from "@mui/material";
-import SidebarItems from "./SidebarItems";
+import { useMediaQuery, Box, Drawer } from '@mui/material';
+import SidebarItems from './SidebarItems';
 
-
-
-interface ItemType {
+interface SidebarProps {
   isMobileSidebarOpen: boolean;
-  onSidebarClose: (event: React.MouseEvent<HTMLElement>) => void;
+  onSidebarClose: () => void;
   isSidebarOpen: boolean;
+  onToggleSidebar: () => void;
 }
 
-const MSidebar = ({
+const Sidebar = ({
   isMobileSidebarOpen,
   onSidebarClose,
   isSidebarOpen,
-}: ItemType) => {
-  const lgUp = useMediaQuery((theme: any) => theme.breakpoints.up("lg"));
+  onToggleSidebar,
+}: SidebarProps) => {
+  const isDesktop = useMediaQuery((theme: any) => theme.breakpoints.up('md'));
 
-  const sidebarWidth = "270px";
+  const sidebarWidth = 240;
 
-  // Custom CSS for short scrollbar
   const scrollbarStyles = {
     '&::-webkit-scrollbar': {
       width: '7px',
-
     },
     '&::-webkit-scrollbar-thumb': {
       backgroundColor: '#eff2f7',
@@ -30,88 +28,68 @@ const MSidebar = ({
     },
   };
 
-
-  if (lgUp) {
+  // Desktop sidebar: persistent + collapsable
+  if (isDesktop) {
     return (
       <Box
         sx={{
-          width: sidebarWidth,
+          width: isSidebarOpen ? sidebarWidth : 0,
           flexShrink: 0,
+          transition: 'width 0.25s ease',
         }}
       >
-        {/* ------------------------------------------- */}
-        {/* Sidebar for desktop */}
-        {/* ------------------------------------------- */}
         <Drawer
           anchor="left"
           open={isSidebarOpen}
-          variant="permanent"
+          variant="persistent"
           slotProps={{
             paper: {
               sx: {
-                boxSizing: "border-box",
-                ...scrollbarStyles,
+                boxSizing: 'border-box',
                 width: sidebarWidth,
+                ...scrollbarStyles,
               },
-            }
+            },
           }}
         >
-          {/* ------------------------------------------- */}
-          {/* Sidebar Box */}
-          {/* ------------------------------------------- */}
           <Box
             sx={{
-              height: "100%",
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
             }}
           >
-
-            <Box>
-              {/* ------------------------------------------- */}
-              {/* Sidebar Items */}
-              {/* ------------------------------------------- */}
+            {/* Sidebar items */}
+            <Box sx={{ flexGrow: 1 }}>
               <SidebarItems />
             </Box>
           </Box>
         </Drawer>
-      </Box >
+      </Box>
     );
   }
 
+  // Mobile sidebar: temporary drawer
   return (
     <Drawer
       anchor="left"
       open={isMobileSidebarOpen}
       onClose={onSidebarClose}
       variant="temporary"
-
       slotProps={{
         paper: {
           sx: {
             boxShadow: (theme) => theme.shadows[8],
             ...scrollbarStyles,
           },
-        }
+        },
       }}
     >
-      {/* ------------------------------------------- */}
-      {/* Sidebar Box */}
-      {/* ------------------------------------------- */}
       <Box>
-        {/* ------------------------------------------- */}
-        {/* Sidebar Items */}
-        {/* ------------------------------------------- */}
         <SidebarItems />
       </Box>
-      {/* ------------------------------------------- */}
-      {/* Sidebar For Mobile */}
-      {/* ------------------------------------------- */}
     </Drawer>
   );
 };
 
-export default MSidebar;
-
-
-
-
-
+export default Sidebar;

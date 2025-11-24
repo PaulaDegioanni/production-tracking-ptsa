@@ -1,20 +1,27 @@
 import React from 'react';
-import { Box, AppBar, Toolbar, styled, Stack, IconButton, Badge, Button } from '@mui/material';
+import {
+  Box,
+  AppBar,
+  Toolbar,
+  styled,
+  Stack,
+  IconButton,
+  Button,
+} from '@mui/material';
 import PropTypes from 'prop-types';
 import Link from 'next/link';
 // components
 import Profile from './Profile';
-import { IconBellRinging, IconMenu } from '@tabler/icons-react';
+import { IconLayoutSidebar, IconMenu } from '@tabler/icons-react';
 
-interface ItemType {
-  toggleMobileSidebar:  (event: React.MouseEvent<HTMLElement>) => void;
+interface HeaderProps {
+  toggleMobileSidebar: () => void;
+  toggleSidebar: () => void;
 }
 
-const Header = ({toggleMobileSidebar}: ItemType) => {
-
+const Header = ({ toggleMobileSidebar, toggleSidebar }: HeaderProps) => {
   // const lgUp = useMediaQuery((theme) => theme.breakpoints.up('lg'));
   // const lgDown = useMediaQuery((theme) => theme.breakpoints.down('lg'));
-
 
   const AppBarStyled = styled(AppBar)(({ theme }) => ({
     boxShadow: 'none',
@@ -33,36 +40,48 @@ const Header = ({toggleMobileSidebar}: ItemType) => {
   return (
     <AppBarStyled position="sticky" color="default">
       <ToolbarStyled>
+        {/* Mobile menu button */}
         <IconButton
           color="inherit"
-          aria-label="menu"
+          aria-label="open mobile sidebar"
           onClick={toggleMobileSidebar}
           sx={{
             display: {
-              lg: "none",
-              xs: "inline",
+              md: 'none',
+              xs: 'inline-flex',
             },
+            mr: 1,
           }}
         >
-          <IconMenu width="20" height="20" />
+          <IconMenu width={20} height={20} />
         </IconButton>
 
-
+        {/* Desktop sidebar toggle */}
         <IconButton
-          size="large"
-          aria-label="show 11 new notifications"
           color="inherit"
-          aria-controls="msgs-menu"
-          aria-haspopup="true"
+          aria-label="toggle sidebar"
+          onClick={toggleSidebar}
+          sx={{
+            display: {
+              xs: 'none',
+              md: 'inline-flex',
+            },
+            mr: 1,
+          }}
         >
-          <Badge variant="dot" color="primary">
-            <IconBellRinging size="21" stroke="1.5" />
-          </Badge>
-
+          <IconLayoutSidebar size={20} />
         </IconButton>
+
         <Box flexGrow={1} />
+
         <Stack spacing={1} direction="row" alignItems="center">
-          <Button variant="contained" component={Link} href="/authentication/login"   disableElevation color="primary" >
+          <Button
+            variant="contained"
+            component={Link}
+            href="/authentication/login"
+            disableElevation
+            color="primary"
+          >
             Login
           </Button>
           <Profile />

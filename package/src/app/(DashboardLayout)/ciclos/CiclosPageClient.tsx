@@ -266,14 +266,17 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
               <TableContainer
                 component={Paper}
                 variant="outlined"
-                sx={{
+                sx={(theme) => ({
                   borderRadius: 2,
-                  overflow: 'hidden',
-                  boxShadow: (theme) =>
-                    `0 2px 8px ${alpha(theme.palette.grey[500], 0.08)}`,
-                }}
+                  width: '100%',
+                  overflowX: 'auto',
+                  boxShadow: `0 2px 8px ${alpha(
+                    theme.palette.grey[500],
+                    0.08
+                  )}`,
+                })}
               >
-                <Table size="small">
+                <Table size="small" sx={{ minWidth: 960 }}>
                   <TableHead
                     sx={(theme) => ({
                       background: `linear-gradient(135deg, ${alpha(
