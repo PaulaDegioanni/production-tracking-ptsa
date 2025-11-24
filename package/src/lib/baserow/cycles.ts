@@ -141,3 +141,16 @@ export async function getCycleByIdDto(id: number): Promise<CycleDto | null> {
     return null;
   }
 }
+
+export async function getCycleRowIdByLabel(
+  cycleLabel: string
+): Promise<number | null> {
+  const rows = await getCyclesRaw();
+
+  const match = rows.find((row) => {
+    const label = String(row.ID ?? '').trim();
+    return label === cycleLabel.trim();
+  });
+
+  return match ? match.id : null;
+}

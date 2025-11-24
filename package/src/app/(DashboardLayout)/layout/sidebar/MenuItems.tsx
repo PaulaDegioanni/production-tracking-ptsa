@@ -1,85 +1,53 @@
 import {
-  IconAperture,
-  IconCopy,
   IconLayoutDashboard,
   IconPlant2,
+  IconTruck,
   IconLogin,
-  IconMoodHappy,
-  IconTypography,
   IconUserPlus,
-} from "@tabler/icons-react";
+} from '@tabler/icons-react';
 
-import { uniqueId } from "lodash";
+import { uniqueId } from 'lodash';
 
 const Menuitems = [
   {
     navlabel: true,
-    subheader: "PRODUCCIÓN",
+    subheader: 'PRODUCCIÓN',
   },
 
   {
     id: uniqueId(),
-    title: "Dashboard",
+    title: 'Dashboard',
     icon: IconLayoutDashboard,
-    href: "/",
-  },
-  {
-  id: uniqueId(),
-  title: "Ciclos de siembra",
-  icon: IconPlant2, // o cualquier icono de los que ya usan
-  href: "/ciclos",
-},
-  {
-    navlabel: true,
-    subheader: "UTILITIES",
+    href: '/',
   },
   {
     id: uniqueId(),
-    title: "Typography",
-    icon: IconTypography,
-    href: "/utilities/typography",
+    title: 'Ciclos de siembra',
+    icon: IconPlant2,
+    href: '/ciclos',
   },
   {
     id: uniqueId(),
-    title: "Shadow",
-    icon: IconCopy,
-    href: "/utilities/shadow",
+    title: 'Viajes de camión',
+    icon: IconTruck,
+    href: '/viajes-de-camion',
   },
   {
     navlabel: true,
-    subheader: "AUTH",
+    subheader: 'AUTH',
   },
   {
     id: uniqueId(),
-    title: "Login",
+    title: 'Login',
     icon: IconLogin,
-    href: "/authentication/login",
+    href: '/authentication/login',
   },
   {
     id: uniqueId(),
-    title: "Register",
+    title: 'Register',
     icon: IconUserPlus,
-    href: "/authentication/register",
+    href: '/authentication/register',
   },
-  {
-    navlabel: true,
-    subheader: " EXTRA",
-  },
-  {
-    id: uniqueId(),
-    title: "Icons",
-    icon: IconMoodHappy,
-    href: "/icons",
-  },
-  {
-    id: uniqueId(),
-    title: "Sample Page",
-    icon: IconAperture,
-    href: "/sample-page",
-  },
-
 ];
 
 export default Menuitems;
-
-

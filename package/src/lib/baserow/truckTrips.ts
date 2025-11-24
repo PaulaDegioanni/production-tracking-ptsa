@@ -1,5 +1,6 @@
 // src/lib/baserow/truckTrips.ts
 import { getTableRows } from './client';
+import { getCycleRowIdByLabel } from './cycles';
 import {
   extractLinkRowIds,
   toNumber,
@@ -47,7 +48,7 @@ export type TruckTripRaw = {
 };
 
 // ---- DTO used by the UI ----
-export type TripOriginType = 'harvest' | 'stock' | 'mixed' | 'unknown';
+export type TripOriginType = 'harvest' | 'stock' | 'unknown';
 
 export interface TruckTripDto {
   id: number;
@@ -71,6 +72,7 @@ export interface TruckTripDto {
   originFieldFromHarvest: string; // Campo Origen Cosecha (lookup)
 
   cycleLabel: string; // Ciclo de siembra (texto)
+  cycleRowId: number | null;
 }
 
 // ---- Mapping RAW -> DTO ----
@@ -79,8 +81,7 @@ function mapTruckTripRawToDto(row: TruckTripRaw): TruckTripDto {
   const stockOriginIds = extractLinkRowIds(row['Stock Origen (opcional)']);
 
   let originType: TripOriginType = 'unknown';
-  if (harvestOriginIds.length && stockOriginIds.length) originType = 'mixed';
-  else if (harvestOriginIds.length) originType = 'harvest';
+  if (harvestOriginIds.length) originType = 'harvest';
   else if (stockOriginIds.length) originType = 'stock';
 
   return {
@@ -105,6 +106,7 @@ function mapTruckTripRawToDto(row: TruckTripRaw): TruckTripDto {
     originFieldFromHarvest: normalizeField(row['Campo Origen Cosecha']),
 
     cycleLabel: toStringOrEmpty(row['Ciclo de siembra']),
+    cycleRowId: null,
   };
 }
 
@@ -144,4 +146,25 @@ export async function getTruckTripsByOriginsDto(options: {
     const hasStockOrigin = trip.stockOriginIds.some((id) => stockSet.has(id));
     return hasHarvestOrigin || hasStockOrigin;
   });
+}
+
+export async function getTruckTripsWithCycleIdsDto(): Promise<TruckTripDto[]> {
+  // 1) viajes base
+  const trips = await getTruckTripsDto();
+
+  // 2) resolver ids en paralelo (Promise.all)
+  const enriched = await Promise.all(
+    trips.map(async (trip) => {
+      const cycleRowId = trip.cycleLabel
+        ? await getCycleRowIdByLabel(trip.cycleLabel)
+        : null;
+
+      return {
+        ...trip,
+        cycleRowId,
+      };
+    })
+  );
+
+  return enriched;
 }

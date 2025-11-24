@@ -205,7 +205,7 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
               </Stack>
             </Box>
 
-            {/* Acciones con mejor layout */}
+            {/* Acciones */}
             <Stack
               direction={{ xs: 'column', md: 'row' }}
               spacing={2}
@@ -276,7 +276,7 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
                   )}`,
                 })}
               >
-                <Table size="small" sx={{ minWidth: 960 }}>
+                <Table size="small" sx={{ minWidth: 600 }}>
                   <TableHead
                     sx={(theme) => ({
                       background: `linear-gradient(135deg, ${alpha(
