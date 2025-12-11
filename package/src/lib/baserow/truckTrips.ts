@@ -27,6 +27,7 @@ export type TruckTripRaw = {
   Camión?: any; // link_row a camión (array con { id, value })
   'Ciclo de siembra Cosecha'?: any; // (por ahora no lo usamos)
   'Fecha de salida'?: string | null;
+  Periodo?: string | null;
 
   'Campo Origen Cosecha'?: any; // array de opciones / lookups
   'Tipo destino'?: any; // single select
@@ -58,6 +59,7 @@ export interface TruckTripDto {
   notes?: string;
 
   date: string | null; // Fecha de salida
+  period: string | null;
   truckPlate: string; // Camión
   destinationType: string; // Tipo destino (Puerto, Acopio, etc.)
   destinationDetail: string;
@@ -94,6 +96,7 @@ function mapTruckTripRawToDto(row: TruckTripRaw): TruckTripDto {
     notes: row.Notas ?? undefined,
 
     date: row['Fecha de salida'] ?? null,
+    period: normalizeField(row['Periodo']) || null,
     truckPlate: normalizeField(row['Camión']),
     destinationType: normalizeField(row['Tipo destino']),
     destinationDetail: toStringOrEmpty(row['Detalle Destino (opcional)']),

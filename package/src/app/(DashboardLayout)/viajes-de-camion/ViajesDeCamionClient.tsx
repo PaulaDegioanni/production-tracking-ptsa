@@ -59,13 +59,6 @@ const formatDateTimeParts = (
   };
 };
 
-const formatDateForCompare = (value: string | null): string | null => {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  return date.toISOString().slice(0, 10); // yyyy-mm-dd
-};
-
 const getOriginLabel = (originType: TripOriginType): string => {
   switch (originType) {
     case 'harvest':
@@ -107,8 +100,7 @@ const getDestinationLabel = (trip: TruckTripDto): string => {
 
 const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
   // Filtros
-  const [dateFrom, setDateFrom] = React.useState<string>('');
-  const [dateTo, setDateTo] = React.useState<string>('');
+  const [periodFilter, setPeriodFilter] = React.useState<string>('all');
   const [fieldFilter, setFieldFilter] = React.useState<string>('all');
   const [cycleFilter, setCycleFilter] = React.useState<string>('all');
   const [destinationFilter, setDestinationFilter] =
@@ -148,6 +140,18 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
     [initialTrips]
   );
 
+  const periodOptions = React.useMemo<string[]>(
+    () =>
+      Array.from(
+        new Set(
+          initialTrips
+            .map((trip: TruckTripDto) => trip.period)
+            .filter((v): v is string => Boolean(v))
+        )
+      ).sort(),
+    [initialTrips]
+  );
+
   // Destino: todas las opciones que se muestran en la tabla (getDestinationLabel)
   const uniqueDestinations = React.useMemo<string[]>(
     () =>
@@ -164,11 +168,8 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
   // Trips filtrados
   const filteredTrips = React.useMemo<TruckTripDto[]>(() => {
     return initialTrips.filter((trip: TruckTripDto) => {
-      const tripDate = formatDateForCompare(trip.date);
-
-      // Fecha
-      if (dateFrom && tripDate && tripDate < dateFrom) return false;
-      if (dateTo && tripDate && tripDate > dateTo) return false;
+      // Período
+      if (periodFilter !== 'all' && trip.period !== periodFilter) return false;
 
       // Campo
       if (fieldFilter !== 'all') {
@@ -199,8 +200,7 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
     });
   }, [
     initialTrips,
-    dateFrom,
-    dateTo,
+    periodFilter,
     fieldFilter,
     cycleFilter,
     destinationFilter,
@@ -277,31 +277,21 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
               >
                 <FormControl fullWidth size="small">
                   <TextField
-                    label="Fecha desde"
-                    type="date"
-                    value={dateFrom}
-                    onChange={(e) => setDateFrom(e.target.value)}
+                    label="Período"
+                    select
+                    value={periodFilter}
+                    onChange={(e) => setPeriodFilter(e.target.value)}
                     fullWidth
                     size="small"
                     sx={{ bgcolor: 'background.paper' }}
-                    slotProps={{
-                      inputLabel: { shrink: true },
-                    }}
-                  />
-                </FormControl>
-                <FormControl fullWidth size="small">
-                  <TextField
-                    label="Fecha hasta"
-                    type="date"
-                    value={dateTo}
-                    onChange={(e) => setDateTo(e.target.value)}
-                    fullWidth
-                    size="small"
-                    sx={{ bgcolor: 'background.paper' }}
-                    slotProps={{
-                      inputLabel: { shrink: true },
-                    }}
-                  />
+                  >
+                    <MenuItem value="all">Todos</MenuItem>
+                    {periodOptions.map((period, index) => (
+                      <MenuItem key={`${period}-${index}`} value={period}>
+                        {period}
+                      </MenuItem>
+                    ))}
+                  </TextField>
                 </FormControl>
                 <FormControl fullWidth size="small">
                   <TextField
