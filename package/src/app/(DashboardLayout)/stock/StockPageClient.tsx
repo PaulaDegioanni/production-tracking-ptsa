@@ -132,6 +132,20 @@ const StockPageClient = ({ initialStock }: StockPageClientProps) => {
     });
   }, [initialStock, fieldFilter, cycleFilter, statusFilter]);
 
+  const filteredTotals = React.useMemo(
+    () =>
+      filteredStock.reduce(
+        (acc, stock) => {
+          acc.inKgs += stock.totalInKgs;
+          acc.outKgs += stock.totalOutFromHarvestKgs;
+          acc.balanceKgs += stock.currentKgs;
+          return acc;
+        },
+        { inKgs: 0, outKgs: 0, balanceKgs: 0 }
+      ),
+    [filteredStock]
+  );
+
   return (
     <PageContainer
       title="Stock"
@@ -593,6 +607,46 @@ const StockPageClient = ({ initialStock }: StockPageClientProps) => {
                         </TableRow>
                       );
                     })}
+
+                    <TableRow
+                      sx={(theme) => ({
+                        background: theme.palette.grey.A100,
+                        '& .MuiTableCell-root': {
+                          borderTop: `2px solid ${theme.palette.grey}`,
+                          fontWeight: 800,
+                          color: theme.palette.primary.main,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          py: 1.5,
+                          fontSize: '1rem',
+                        },
+                      })}
+                    >
+                      <TableCell
+                        colSpan={8}
+                        align="right"
+                        sx={() => ({ paddingRight: '2.5rem' })}
+                      >
+                        Total
+                      </TableCell>
+                      <TableCell
+                        sx={(theme) => ({
+                          borderLeft: `2px solid ${alpha(
+                            theme.palette.primary.main,
+                            0.08
+                          )}`,
+                        })}
+                      />
+                      <TableCell align="right">
+                        {formatKgs(filteredTotals.inKgs)}
+                      </TableCell>
+                      <TableCell align="right">
+                        {formatKgs(filteredTotals.outKgs)}
+                      </TableCell>
+                      <TableCell align="right">
+                        {formatKgs(filteredTotals.balanceKgs)}
+                      </TableCell>
+                    </TableRow>
                   </TableBody>
                 </Table>
               </TableContainer>
@@ -601,6 +655,74 @@ const StockPageClient = ({ initialStock }: StockPageClientProps) => {
             {/* Mobile cards */}
             <Box sx={{ display: { xs: 'block', md: 'none' } }}>
               <Stack spacing={2}>
+                <Card
+                  sx={(theme) => ({
+                    borderRadius: 2,
+                    border: `1px solid ${alpha(
+                      theme.palette.primary.main,
+                      0.2
+                    )}`,
+                    background: `linear-gradient(135deg, ${alpha(
+                      theme.palette.primary.main,
+                      0.05
+                    )} 0%, ${alpha(theme.palette.primary.light, 0.05)} 100%)`,
+                  })}
+                >
+                  <CardContent sx={{ p: 2 }}>
+                    <Typography
+                      variant="subtitle2"
+                      color="primary"
+                      fontWeight={700}
+                      mb={1}
+                    >
+                      TOTAL
+                    </Typography>
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="center"
+                      spacing={2}
+                    >
+                      <Stack spacing={0.3}>
+                        <Typography variant="caption" color="text.secondary">
+                          Ingresados
+                        </Typography>
+                        <Typography
+                          variant="body1"
+                          fontWeight={700}
+                          color="primary"
+                        >
+                          {formatKgs(filteredTotals.inKgs)} kg
+                        </Typography>
+                      </Stack>
+                      <Stack spacing={0.3}>
+                        <Typography variant="caption" color="text.secondary">
+                          Egresados
+                        </Typography>
+                        <Typography variant="body1" fontWeight={700}>
+                          {formatKgs(filteredTotals.outKgs)} kg
+                        </Typography>
+                      </Stack>
+                      <Stack spacing={0.3}>
+                        <Typography variant="caption" color="text.secondary">
+                          Saldo
+                        </Typography>
+                        <Typography
+                          variant="body1"
+                          fontWeight={800}
+                          color={
+                            filteredTotals.balanceKgs === 0
+                              ? 'text.secondary'
+                              : 'success.dark'
+                          }
+                        >
+                          {formatKgs(filteredTotals.balanceKgs)} kg
+                        </Typography>
+                      </Stack>
+                    </Stack>
+                  </CardContent>
+                </Card>
+
                 {filteredStock.map((s) => {
                   const { date } = formatDateParts(s.createdAt);
                   const firstCycleId = s.cycleIds[0];
