@@ -21,18 +21,16 @@ import {
   TableContainer,
   Card,
   CardContent,
-  Divider,
-  InputLabel,
 } from '@mui/material';
 import Link from 'next/link';
 
 import PageContainer from '@/app/(DashboardLayout)/components/container/PageContainer';
 import DashboardCard from '@/app/(DashboardLayout)/components/shared/DashboardCard';
-import type {
-  TruckTripDto,
-  TripOriginType,
-  getTruckTripsWithCycleIdsDto,
-} from '@/lib/baserow/truckTrips';
+import StatusChip, {
+  StatusChipOption,
+} from '@/app/(DashboardLayout)/components/shared/StatusChip';
+import CropChip from '@/app/(DashboardLayout)/components/shared/CropChip';
+import type { TruckTripDto, TripOriginType } from '@/lib/baserow/truckTrips';
 
 type ViajesDeCamionClientProps = {
   initialTrips: TruckTripDto[];
@@ -91,6 +89,12 @@ const getOriginChipColor = (
       return 'default';
   }
 };
+
+const TRIP_STATUS_OPTIONS: StatusChipOption[] = [
+  { value: 'Entregado', color: 'success' },
+  { value: 'En viaje', color: 'warning' },
+  { value: 'Pendiente', color: 'info' },
+];
 
 const getDestinationLabel = (trip: TruckTripDto): string => {
   if (trip.destinationDetail) return trip.destinationDetail;
@@ -511,34 +515,36 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                         >
                           {/* ID */}
                           <TableCell>
-                            <Typography variant="body2" fontWeight={600}>
+                            <Typography variant="body1" fontWeight={600}>
                               {trip.tripId}
                             </Typography>
                           </TableCell>
 
                           {/* Camión */}
                           <TableCell>
-                            <Chip
-                              size="small"
-                              label={trip.truckPlate}
-                              variant="outlined"
-                              sx={{
-                                fontWeight: 600,
-                                fontSize: '0.9rem',
-                                textTransform: 'capitalize',
-                                color: 'text.primary',
-                              }}
-                            />
+                            <Stack>
+                              <Chip
+                                size="small"
+                                label={trip.truckPlate}
+                                variant="outlined"
+                                sx={{
+                                  fontWeight: 600,
+                                  fontSize: '0.9rem',
+                                  textTransform: 'capitalize',
+                                  color: 'text.primary',
+                                }}
+                              />
+                            </Stack>
                           </TableCell>
 
                           {/* Fecha */}
                           <TableCell>
-                            <Typography variant="body2" fontWeight={700}>
+                            <Typography variant="body1" fontWeight={700}>
                               {date}
                             </Typography>
 
                             <Typography
-                              variant="caption"
+                              variant="body2"
                               color="text.primary"
                               sx={{
                                 display: 'block',
@@ -552,21 +558,9 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
 
                           {/* Estado */}
                           <TableCell>
-                            <Chip
-                              size="small"
-                              label={trip.status || '—'}
-                              color={
-                                trip.status === 'Entregado'
-                                  ? 'success'
-                                  : trip.status === 'En viaje'
-                                  ? 'warning'
-                                  : 'default'
-                              }
-                              sx={{
-                                fontWeight: 600,
-                                fontSize: '0.75rem',
-                                color: 'text.primary',
-                              }}
+                            <StatusChip
+                              status={trip.status}
+                              options={TRIP_STATUS_OPTIONS}
                             />
                           </TableCell>
                           <TableCell
@@ -614,7 +608,7 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                                 label={getOriginLabel(trip.originType)}
                                 sx={(theme) => ({
                                   fontWeight: 600,
-                                  fontSize: '0.7rem',
+                                  fontSize: 'body1',
                                   color: `${getOriginChipColor(
                                     trip.originType
                                   )}`,
@@ -629,7 +623,7 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
 
                           {/* Destino */}
                           <TableCell>
-                            <Typography variant="body2">
+                            <Typography variant="body1">
                               {getDestinationLabel(trip)}
                             </Typography>
                           </TableCell>
@@ -644,7 +638,7 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                           {/* Kgs */}
                           <TableCell align="right">
                             <Typography
-                              variant="body2"
+                              variant="body1"
                               fontWeight={700}
                               color="primary"
                             >
@@ -701,21 +695,9 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                               {trip.tripId}
                             </Typography>
 
-                            <Chip
-                              size="small"
-                              label={trip.status || '—'}
-                              color={
-                                trip.status === 'Entregado'
-                                  ? 'success'
-                                  : trip.status === 'En viaje'
-                                  ? 'warning'
-                                  : 'default'
-                              }
-                              sx={{
-                                fontWeight: 600,
-                                fontSize: '0.75rem',
-                                color: 'text.primary',
-                              }}
+                            <StatusChip
+                              status={trip.status}
+                              options={TRIP_STATUS_OPTIONS}
                             />
                           </Stack>
 

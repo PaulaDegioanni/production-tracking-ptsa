@@ -25,6 +25,10 @@ import {
 import PageContainer from '@/app/(DashboardLayout)/components/container/PageContainer';
 import DashboardCard from '@/app/(DashboardLayout)/components/shared/DashboardCard';
 import { useRouter } from 'next/navigation';
+import StatusChip, {
+  StatusChipOption,
+} from '@/app/(DashboardLayout)/components/shared/StatusChip';
+import CropChip from '@/app/(DashboardLayout)/components/shared/CropChip';
 import type { CycleDto as CycleItem, CycleStatus } from '@/lib/baserow/cycles';
 
 type CiclosPageClientProps = {
@@ -58,30 +62,17 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
 
   const filteredCycles = initialCiclos.filter(filterCycles);
 
-  const getStatusColor = (status: CycleStatus) => {
-    switch (status) {
-      case 'planificado':
-        return 'default';
-      case 'sembrado':
-        return 'info';
-      case 'listo-para-cosechar':
-        return 'warning';
-      case 'en-cosecha':
-        return 'primary';
-      case 'cosechado':
-        return 'success';
-      default:
-        return 'default';
-    }
-  };
-
-  const getCropColor = (cultivo: string) => {
-    const c = cultivo.toLowerCase();
-    if (c.includes('soja')) return '#bf73ee';
-    if (c.includes('maíz') || c.includes('maiz')) return '#2f97a5';
-    if (c.includes('trigo')) return '#86b300';
-    return '#5A6A85';
-  };
+  const CYCLE_STATUS_OPTIONS: StatusChipOption[] = [
+    { value: 'planificado', label: 'Planificado', color: 'default' },
+    { value: 'sembrado', label: 'Sembrado', color: 'info' },
+    {
+      value: 'listo-para-cosechar',
+      label: 'Listo para cosechar',
+      color: 'warning',
+    },
+    { value: 'en-cosecha', label: 'En cosecha', color: 'primary' },
+    { value: 'cosechado', label: 'Cosechado', color: 'success' },
+  ];
 
   const handleClickCycle = (id: number) => {
     router.push(`/ciclos/${id}`);
@@ -370,41 +361,20 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
                         onClick={() => handleClickCycle(cycle.id)}
                       >
                         <TableCell>
-                          <Typography variant="body2" fontWeight={600}>
+                          <Typography variant="body1" fontWeight={600}>
                             {cycle.cycleId}
                           </Typography>
                         </TableCell>
 
                         <TableCell>
-                          <Chip
-                            size="small"
-                            label={cycle.status.replaceAll('-', ' ')}
-                            color={getStatusColor(cycle.status) as any}
-                            sx={{
-                              fontWeight: 600,
-                              fontSize: '0.75rem',
-                              textTransform: 'capitalize',
-                              color: 'text.primary',
-                            }}
+                          <StatusChip
+                            status={cycle.status}
+                            options={CYCLE_STATUS_OPTIONS}
                           />
                         </TableCell>
 
                         <TableCell>
-                          <Chip
-                            size="small"
-                            label={cycle.crop}
-                            sx={(theme) => ({
-                              bgcolor: alpha(getCropColor(cycle.crop), 0.12),
-                              color: getCropColor(cycle.crop),
-                              borderColor: getCropColor(cycle.crop),
-                              fontWeight: 700,
-                              fontSize: '0.75rem',
-                              border: `1.5px solid ${alpha(
-                                getCropColor(cycle.crop),
-                                0.3
-                              )}`,
-                            })}
-                          />
+                          <CropChip crop={cycle.crop} />
                         </TableCell>
 
                         <TableCell
@@ -417,11 +387,11 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
                         />
 
                         <TableCell>
-                          <Typography variant="body2">{cycle.field}</Typography>
+                          <Typography variant="body1">{cycle.field}</Typography>
                         </TableCell>
 
                         <TableCell align="right">
-                          <Typography variant="body2">
+                          <Typography variant="body1">
                             {cycle.areaHa.toLocaleString('es-ES')}
                           </Typography>
                         </TableCell>
@@ -436,14 +406,14 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
                         />
 
                         <TableCell align="right">
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography variant="body1" color="text.secondary">
                             {cycle.expectedYield.toFixed(1)}
                           </Typography>
                         </TableCell>
 
                         <TableCell align="right">
                           <Typography
-                            variant="body2"
+                            variant="body1"
                             fontWeight={700}
                             color="primary"
                           >
@@ -461,19 +431,19 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
                         />
 
                         <TableCell align="right">
-                          <Typography variant="body2">
+                          <Typography variant="body1">
                             {cycle.stockKgs.toLocaleString('es-ES')}
                           </Typography>
                         </TableCell>
 
                         <TableCell align="right">
-                          <Typography variant="body2">
+                          <Typography variant="body1">
                             {cycle.truckKgs.toLocaleString('es-ES')}
                           </Typography>
                         </TableCell>
 
                         <TableCell align="right">
-                          <Typography variant="body2" fontWeight={700}>
+                          <Typography variant="body1" fontWeight={700}>
                             {cycle.totalKgs.toLocaleString('es-ES')}
                           </Typography>
                         </TableCell>
@@ -569,32 +539,14 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
                           >
                             {cycle.cycleId}
                           </Typography>
-                          <Chip
-                            size="small"
-                            label={cycle.status.replaceAll('-', ' ')}
-                            color={getStatusColor(cycle.status) as any}
-                            sx={{
-                              fontWeight: 600,
-                              textTransform: 'capitalize',
-                              color: 'text.primary',
-                            }}
+                          <StatusChip
+                            status={cycle.status}
+                            options={CYCLE_STATUS_OPTIONS}
                           />
                         </Stack>
 
                         <Stack direction="row" spacing={1} alignItems="center">
-                          <Chip
-                            size="small"
-                            label={cycle.crop}
-                            sx={(theme) => ({
-                              bgcolor: alpha(getCropColor(cycle.crop), 0.12),
-                              color: getCropColor(cycle.crop),
-                              fontWeight: 700,
-                              border: `1.5px solid ${alpha(
-                                getCropColor(cycle.crop),
-                                0.3
-                              )}`,
-                            })}
-                          />
+                          <CropChip crop={cycle.crop} />
                           <Typography variant="body2" color="text.secondary">
                             {cycle.field} · {cycle.year}
                           </Typography>

@@ -21,7 +21,10 @@ import {
 } from '@mui/material';
 import PageContainer from '@/app/(DashboardLayout)/components/container/PageContainer';
 import DashboardCard from '@/app/(DashboardLayout)/components/shared/DashboardCard';
-
+import StatusChip, {
+  StatusChipOption,
+} from '@/app/(DashboardLayout)/components/shared/StatusChip';
+import CropChip from '@/app/(DashboardLayout)/components/shared/CropChip';
 import type { CycleDetailDto } from '@/lib/baserow/cycleDetail';
 import type { CycleStatus } from '@/lib/baserow/cycles';
 
@@ -47,30 +50,35 @@ const CycleDetailPageClient = ({
     });
   };
 
-  const getStatusColor = (status: CycleStatus) => {
-    switch (status) {
-      case 'planificado':
-        return 'default';
-      case 'sembrado':
-        return 'info';
-      case 'listo-para-cosechar':
-        return 'warning';
-      case 'en-cosecha':
-        return 'primary';
-      case 'cosechado':
-        return 'success';
-      default:
-        return 'default';
-    }
-  };
+  const CYCLE_STATUS_OPTIONS: StatusChipOption[] = [
+    { value: 'planificado', label: 'Planificado', color: 'default' },
+    { value: 'sembrado', label: 'Sembrado', color: 'info' },
+    {
+      value: 'listo-para-cosechar',
+      label: 'Listo para cosechar',
+      color: 'warning',
+    },
+    { value: 'en-cosecha', label: 'En cosecha', color: 'primary' },
+    { value: 'cosechado', label: 'Cosechado', color: 'success' },
+  ];
 
-  const getCropColor = (crop: string) => {
-    const c = crop.toLowerCase();
-    if (c.includes('soja')) return '#bf73ee';
-    if (c.includes('maíz') || c.includes('maiz')) return '#2f97a5';
-    if (c.includes('trigo')) return '#86b300';
-    return '#5A6A85';
-  };
+  const TRIP_STATUS_OPTIONS: StatusChipOption[] = [
+    { value: 'Entregado', color: 'success' },
+    { value: 'En viaje', color: 'warning' },
+    { value: 'Pendiente', color: 'info' },
+  ];
+
+  const STOCK_STATUS_OPTIONS: StatusChipOption[] = [
+    { value: 'Nuevo', color: 'info' },
+    { value: 'Parcial', color: 'warning' },
+    { value: 'Completo', color: 'success' },
+    { value: 'Vacío', color: 'default' },
+  ];
+
+  const LOTS_STATUS_OPTIONS: StatusChipOption[] = [
+    { value: 'Activo', color: 'success' },
+    { value: 'Inactivo', color: 'default' },
+  ];
 
   const getStockStatusLabel = (status: any): string => {
     if (!status) return '—';
@@ -156,17 +164,7 @@ const CycleDetailPageClient = ({
           </Typography>
 
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-            <Chip
-              size="small"
-              label={cycle.status.replaceAll('-', ' ')}
-              color={getStatusColor(cycle.status) as any}
-              sx={{
-                fontWeight: 600,
-                textTransform: 'capitalize',
-                fontSize: '0.75rem',
-                color: 'text.primary',
-              }}
-            />
+            <StatusChip status={cycle.status} options={CYCLE_STATUS_OPTIONS} />
           </Stack>
         </Box>
 
@@ -202,17 +200,16 @@ const CycleDetailPageClient = ({
                 })}
               >
                 <Typography
-                  variant="caption"
+                  variant="body2"
                   color="primary"
                   fontWeight={700}
                   textTransform="uppercase"
                   letterSpacing="0.5px"
-                  fontSize="0.7rem"
                 >
                   Superficie total
                 </Typography>
                 <Typography
-                  variant="h5"
+                  variant="h4"
                   mt={1}
                   fontWeight={800}
                   color="primary"
@@ -252,12 +249,11 @@ const CycleDetailPageClient = ({
                 })}
               >
                 <Typography
-                  variant="caption"
+                  variant="body2"
                   color="info.dark"
                   fontWeight={700}
                   textTransform="uppercase"
                   letterSpacing="0.5px"
-                  fontSize="0.7rem"
                 >
                   Rend. Obt / Esp
                 </Typography>
@@ -267,7 +263,7 @@ const CycleDetailPageClient = ({
                   alignItems="baseline"
                   mt={1}
                 >
-                  <Typography variant="h5" fontWeight={800} color="info.dark">
+                  <Typography variant="h4" fontWeight={800} color="info.dark">
                     {cycle.actualYield.toFixed(1)}
                   </Typography>
                   <Typography
@@ -311,17 +307,16 @@ const CycleDetailPageClient = ({
                 })}
               >
                 <Typography
-                  variant="caption"
+                  variant="body2"
                   color="success.dark"
                   fontWeight={700}
                   textTransform="uppercase"
                   letterSpacing="0.5px"
-                  fontSize="0.7rem"
                 >
                   Total cosechado
                 </Typography>
                 <Typography
-                  variant="h5"
+                  variant="h4"
                   mt={1}
                   fontWeight={800}
                   color="success.dark"
@@ -361,17 +356,16 @@ const CycleDetailPageClient = ({
                 })}
               >
                 <Typography
-                  variant="caption"
+                  variant="body2"
                   color="warning.dark"
                   fontWeight={700}
                   textTransform="uppercase"
                   letterSpacing="0.5px"
-                  fontSize="0.7rem"
                 >
                   En stock
                 </Typography>
                 <Typography
-                  variant="h5"
+                  variant="h4"
                   mt={1}
                   fontWeight={800}
                   color="warning.dark"
@@ -414,17 +408,16 @@ const CycleDetailPageClient = ({
                 })}
               >
                 <Typography
-                  variant="caption"
+                  variant="body2"
                   color="secondary.dark"
                   fontWeight={700}
                   textTransform="uppercase"
                   letterSpacing="0.5px"
-                  fontSize="0.7rem"
                 >
                   En camión
                 </Typography>
                 <Typography
-                  variant="h5"
+                  variant="h4"
                   mt={1}
                   fontWeight={800}
                   color="secondary.dark"
@@ -444,44 +437,42 @@ const CycleDetailPageClient = ({
         </DashboardCard>
 
         {/* C. Línea de tiempo */}
-        {/* C. Línea de tiempo (rediseñada) */}
+
         <DashboardCard>
-          <Typography variant="h6" fontWeight={700} mb={2.5} color="primary">
+          <Typography variant="h5" fontWeight={700} mb={2.5} color="primary">
             Línea de tiempo
           </Typography>
 
           <Grid container spacing={3} alignItems="stretch">
             {/* Columna 1: Siembra + Cosecha estimada */}
             <Grid item xs={12} md={4}>
-              <Stack spacing={2}>
+              <Stack spacing={3}>
                 <Box>
                   <Typography
-                    variant="caption"
+                    variant="body2"
                     color="primary"
                     fontWeight={700}
                     textTransform="uppercase"
                     letterSpacing="0.5px"
-                    fontSize="0.7rem"
                   >
                     Fecha de siembra
                   </Typography>
-                  <Typography variant="h6" mt={0.5} fontWeight={700}>
+                  <Typography variant="h5" mt={0.5} fontWeight={700}>
                     {formatDate(cycle.sowingDate)}
                   </Typography>
                 </Box>
 
                 <Box>
                   <Typography
-                    variant="caption"
+                    variant="body2"
                     color="primary"
                     fontWeight={700}
                     textTransform="uppercase"
                     letterSpacing="0.5px"
-                    fontSize="0.7rem"
                   >
                     Cosecha estimada
                   </Typography>
-                  <Typography variant="h6" mt={0.5} fontWeight={700}>
+                  <Typography variant="h5" mt={0.5} fontWeight={700}>
                     {formatDate(cycle.estimatedHarvestDate)}
                   </Typography>
                 </Box>
@@ -505,21 +496,15 @@ const CycleDetailPageClient = ({
               <Stack spacing={2}>
                 <Box paddingLeft="50px" paddingRight="50px">
                   <Typography
-                    variant="caption"
+                    variant="body2"
                     color="secondary"
                     fontWeight={700}
                     textTransform="uppercase"
                     letterSpacing="0.5px"
-                    fontSize="0.7rem"
                   >
                     Inicio cosecha
                   </Typography>
-                  <Typography
-                    variant="h6"
-                    mt={0.5}
-                    fontWeight={700}
-                    color="success.dark"
-                  >
+                  <Typography variant="h5" mt={0.5} fontWeight={700}>
                     {computeHarvestTimeRange.start
                       ? formatDate(computeHarvestTimeRange.start)
                       : '—'}
@@ -528,21 +513,15 @@ const CycleDetailPageClient = ({
 
                 <Box paddingLeft="50px">
                   <Typography
-                    variant="caption"
+                    variant="body2"
                     color="secondary"
                     fontWeight={700}
                     textTransform="uppercase"
                     letterSpacing="0.5px"
-                    fontSize="0.7rem"
                   >
                     Fin cosecha
                   </Typography>
-                  <Typography
-                    variant="h6"
-                    mt={0.5}
-                    fontWeight={700}
-                    color="success.dark"
-                  >
+                  <Typography variant="h5" mt={0.5} fontWeight={700}>
                     {computeHarvestTimeRange.end
                       ? formatDate(computeHarvestTimeRange.end)
                       : '—'}
@@ -569,21 +548,15 @@ const CycleDetailPageClient = ({
                   })}
                 >
                   <Typography
-                    variant="caption"
+                    variant="body2"
                     color="secondary"
                     fontWeight={700}
                     textTransform="uppercase"
                     letterSpacing="0.5px"
-                    fontSize="0.7rem"
                   >
                     Duración cosecha
                   </Typography>
-                  <Typography
-                    variant="h5"
-                    mt={0.5}
-                    fontWeight={800}
-                    color="success.dark"
-                  >
+                  <Typography variant="h6" mt={0.5} fontWeight={800}>
                     {computeHarvestTimeRange.days || '—'}
                   </Typography>
                   {computeHarvestTimeRange.days && (
@@ -676,30 +649,24 @@ const CycleDetailPageClient = ({
                           })}
                         >
                           <TableCell>
-                            <Typography variant="body2" fontWeight={700}>
+                            <Typography variant="body1" fontWeight={700}>
                               {lot.code}
                             </Typography>
                           </TableCell>
                           <TableCell>
-                            <Typography variant="body2">
+                            <Typography variant="body1">
                               {lot.fieldName}
                             </Typography>
                           </TableCell>
                           <TableCell align="right">
-                            <Typography variant="body2" fontWeight={600}>
+                            <Typography variant="body1" fontWeight={600}>
                               {lot.areaHa.toLocaleString('es-ES')}
                             </Typography>
                           </TableCell>
                           <TableCell>
-                            <Chip
-                              size="small"
-                              label={lot.isActive ? 'Activo' : 'Inactivo'}
-                              color={lot.isActive ? 'success' : 'default'}
-                              sx={{
-                                fontWeight: 600,
-                                fontSize: '0.75rem',
-                                color: 'text.primary',
-                              }}
+                            <StatusChip
+                              status={lot.isActive ? 'Activo' : 'Inactivo'}
+                              options={LOTS_STATUS_OPTIONS}
                             />
                           </TableCell>
                         </TableRow>
@@ -747,11 +714,9 @@ const CycleDetailPageClient = ({
                             >
                               {lot.code}
                             </Typography>
-                            <Chip
-                              size="small"
-                              label={lot.isActive ? 'Activo' : 'Inactivo'}
-                              color={lot.isActive ? 'success' : 'default'}
-                              sx={{ fontWeight: 600, color: 'text.primary' }}
+                            <StatusChip
+                              status={lot.isActive ? 'Activo' : 'Inactivo'}
+                              options={LOTS_STATUS_OPTIONS}
                             />
                           </Stack>
                           <Typography
@@ -858,26 +823,22 @@ const CycleDetailPageClient = ({
                             })}
                           >
                             <TableCell>
-                              <Typography
-                                variant="body2"
-                                fontWeight={700}
-                                color="success.dark"
-                              >
+                              <Typography variant="body1" fontWeight={700}>
                                 {formatDate(h.date)}
                               </Typography>
                             </TableCell>
                             <TableCell>
-                              <Typography variant="body2">
+                              <Typography variant="body1">
                                 {lotNames || '—'}
                               </Typography>
                             </TableCell>
                             <TableCell align="right">
-                              <Typography variant="body2" fontWeight={700}>
+                              <Typography variant="body1" fontWeight={700}>
                                 {h.harvestedKgs.toLocaleString('es-ES')}
                               </Typography>
                             </TableCell>
                             <TableCell align="right">
-                              <Typography variant="body2" fontWeight={600}>
+                              <Typography variant="body1" fontWeight={600}>
                                 {h.directTruckKgs.toLocaleString('es-ES')}
                               </Typography>
                             </TableCell>
@@ -1093,38 +1054,29 @@ const CycleDetailPageClient = ({
                           })}
                         >
                           <TableCell>
-                            <Typography variant="body2" fontWeight={700}>
+                            <Typography variant="body1" fontWeight={700}>
                               {s.name}
                             </Typography>
                           </TableCell>
                           <TableCell>
-                            <Typography variant="body2">{s.field}</Typography>
+                            <Typography variant="body1">{s.field}</Typography>
                           </TableCell>
                           <TableCell>
-                            <Chip
-                              size="small"
-                              label={s.crop}
-                              sx={{
-                                bgcolor: alpha(getCropColor(s.crop), 0.12),
-                                color: getCropColor(s.crop),
-                                fontWeight: 700,
-                                fontSize: '0.75rem',
-                              }}
-                            />
+                            <CropChip crop={s.crop} />
                           </TableCell>
                           <TableCell align="right">
-                            <Typography variant="body2" fontWeight={600}>
+                            <Typography variant="body1" fontWeight={600}>
                               {s.totalInKgs.toLocaleString('es-ES')}
                             </Typography>
                           </TableCell>
                           <TableCell align="right">
-                            <Typography variant="body2" fontWeight={600}>
+                            <Typography variant="body1" fontWeight={600}>
                               {s.totalOutFromHarvestKgs.toLocaleString('es-ES')}
                             </Typography>
                           </TableCell>
                           <TableCell align="right">
                             <Typography
-                              variant="body2"
+                              variant="body1"
                               fontWeight={800}
                               color="warning.dark"
                             >
@@ -1132,21 +1084,10 @@ const CycleDetailPageClient = ({
                             </Typography>
                           </TableCell>
                           <TableCell>
-                            <Chip
-                              size="small"
-                              label={getStockStatusLabel(s.status)}
-                              color={
-                                s.status === 'Completo'
-                                  ? 'success'
-                                  : s.status === 'Parcial'
-                                  ? 'warning'
-                                  : 'default'
-                              }
-                              sx={{
-                                fontWeight: 600,
-                                fontSize: '0.75rem',
-                                color: 'text.primary',
-                              }}
+                            {/*TODO: usar la funcion del backend */}
+                            <StatusChip
+                              status={getStockStatusLabel(s.status)}
+                              options={STOCK_STATUS_OPTIONS}
                             />
                           </TableCell>
                         </TableRow>
@@ -1197,17 +1138,9 @@ const CycleDetailPageClient = ({
                             >
                               {s.name}
                             </Typography>
-                            <Chip
-                              size="small"
-                              label={getStockStatusLabel(s.status)}
-                              color={
-                                s.status === 'Completo'
-                                  ? 'success'
-                                  : s.status === 'Parcial'
-                                  ? 'warning'
-                                  : 'default'
-                              }
-                              sx={{ fontWeight: 600, color: 'text.primary' }}
+                            <StatusChip
+                              status={getStockStatusLabel(s.status)}
+                              options={STOCK_STATUS_OPTIONS}
                             />
                           </Stack>
                           <Stack direction="row" spacing={1}>
@@ -1221,17 +1154,7 @@ const CycleDetailPageClient = ({
                             <Typography variant="body2" color="text.secondary">
                               ·
                             </Typography>
-                            <Chip
-                              size="small"
-                              label={s.crop}
-                              sx={{
-                                bgcolor: alpha(getCropColor(s.crop), 0.12),
-                                color: getCropColor(s.crop),
-                                fontWeight: 700,
-                                fontSize: '0.7rem',
-                                height: '20px',
-                              }}
-                            />
+                            <CropChip crop={s.crop} />
                           </Stack>
                           <Divider />
                           <Grid container spacing={1.5}>
@@ -1394,16 +1317,12 @@ const CycleDetailPageClient = ({
                             })}
                           >
                             <TableCell>
-                              <Typography
-                                variant="body2"
-                                fontWeight={700}
-                                color="secondary.dark"
-                              >
+                              <Typography variant="body1" fontWeight={700}>
                                 {formatDate(t.date)}
                               </Typography>
                             </TableCell>
                             <TableCell>
-                              <Typography variant="body2">
+                              <Typography variant="body1">
                                 {t.truckPlate || '—'}
                               </Typography>
                             </TableCell>
@@ -1419,7 +1338,7 @@ const CycleDetailPageClient = ({
                               />
                             </TableCell>
                             <TableCell>
-                              <Typography variant="body2">
+                              <Typography variant="body1">
                                 {t.destinationDetail ||
                                   t.destinationType ||
                                   '—'}
@@ -1427,7 +1346,7 @@ const CycleDetailPageClient = ({
                             </TableCell>
                             <TableCell align="right">
                               <Typography
-                                variant="body2"
+                                variant="body1"
                                 fontWeight={800}
                                 color="secondary.dark"
                               >
@@ -1435,21 +1354,9 @@ const CycleDetailPageClient = ({
                               </Typography>
                             </TableCell>
                             <TableCell>
-                              <Chip
-                                size="small"
-                                label={t.status || '—'}
-                                color={
-                                  t.status === 'Entregado'
-                                    ? 'success'
-                                    : t.status === 'En viaje'
-                                    ? 'warning'
-                                    : 'default'
-                                }
-                                sx={{
-                                  fontWeight: 600,
-                                  fontSize: '0.75rem',
-                                  color: 'text.primary',
-                                }}
+                              <StatusChip
+                                status={t.status}
+                                options={TRIP_STATUS_OPTIONS}
                               />
                             </TableCell>
                           </TableRow>
@@ -1510,17 +1417,9 @@ const CycleDetailPageClient = ({
                               >
                                 {formatDate(t.date)}
                               </Typography>
-                              <Chip
-                                size="small"
-                                label={t.status || '—'}
-                                color={
-                                  t.status === 'Entregado'
-                                    ? 'success'
-                                    : t.status === 'En viaje'
-                                    ? 'warning'
-                                    : 'default'
-                                }
-                                sx={{ fontWeight: 600, color: 'text.primary' }}
+                              <StatusChip
+                                status={t.status}
+                                options={TRIP_STATUS_OPTIONS}
                               />
                             </Stack>
                             <Typography
