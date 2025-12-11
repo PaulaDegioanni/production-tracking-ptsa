@@ -21,6 +21,7 @@ import {
   Card,
   CardContent,
   alpha,
+  outlinedInputClasses,
 } from '@mui/material';
 import PageContainer from '@/app/(DashboardLayout)/components/container/PageContainer';
 import DashboardCard from '@/app/(DashboardLayout)/components/shared/DashboardCard';
@@ -39,13 +40,25 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
   const router = useRouter();
 
   // estado de filtros
-  const [yearFilter, setYearFilter] = React.useState<string>('2025');
+  const [yearFilter, setYearFilter] = React.useState<string>('all');
   const [cropFilter, setCropFilter] = React.useState<string>('all');
   const [fieldFilter, setFieldFilter] = React.useState<string>('all');
   const [statusFilter, setStatusFilter] = React.useState<string>('all');
 
+  const periodOptions = React.useMemo(
+    () =>
+      Array.from(
+        new Set(
+          initialCiclos
+            .map((ciclo) => ciclo.period)
+            .filter((p): p is string => Boolean(p))
+        )
+      ).sort((a, b) => a.localeCompare(b)),
+    [initialCiclos]
+  );
+
   const filterCycles = (cycle: CycleItem) => {
-    const matchYear = yearFilter === 'all' || cycle.year === yearFilter;
+    const matchYear = yearFilter === 'all' || cycle.period === yearFilter;
 
     const matchCrop =
       cropFilter === 'all' ||
@@ -129,20 +142,22 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
                 sx={{ alignItems: { xs: 'stretch', md: 'center' } }}
               >
                 <FormControl fullWidth size="small">
-                  <InputLabel id="filtro-anio-label">Año</InputLabel>
+                  <InputLabel id="filtro-periodo-label">Período</InputLabel>
                   <Select
-                    labelId="filtro-anio-label"
-                    label="Año"
+                    labelId="filtro-periodo-label"
+                    label="Período"
                     value={yearFilter}
                     onChange={(e) => setYearFilter(e.target.value)}
                     sx={{ bgcolor: 'background.paper' }}
                   >
-                    <MenuItem value="2025">2025</MenuItem>
-                    <MenuItem value="2024">2024</MenuItem>
-                    <MenuItem value="all">Todas</MenuItem>
+                    <MenuItem value="all">Todos los períodos</MenuItem>
+                    {periodOptions.map((period) => (
+                      <MenuItem key={period} value={period}>
+                        {period}
+                      </MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
-
                 <FormControl fullWidth size="small">
                   <InputLabel id="filtro-cultivo-label">Cultivo</InputLabel>
                   <Select
@@ -286,7 +301,7 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
                     })}
                   >
                     <TableRow>
-                      <TableCell>ID Ciclo</TableCell>
+                      <TableCell>ID Ciclo / Período</TableCell>
                       <TableCell>Estado</TableCell>
                       <TableCell>Cultivo</TableCell>
                       <TableCell
@@ -361,9 +376,26 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
                         onClick={() => handleClickCycle(cycle.id)}
                       >
                         <TableCell>
-                          <Typography variant="body1" fontWeight={600}>
-                            {cycle.cycleId}
-                          </Typography>
+                          <Stack spacing={1} justifyItems="flex-start">
+                            <Typography variant="body1" fontWeight={600}>
+                              {cycle.cycleId}
+                            </Typography>
+                            <Chip
+                              size="small"
+                              label={cycle.period ?? 'Sin período'}
+                              sx={(theme) => ({
+                                alignSelf: 'flex-start',
+                                fontWeight: 600,
+                                fontSize: theme.typography.caption,
+                                bgcolor: alpha(
+                                  theme.palette.primary.main,
+                                  0.05
+                                ),
+                                color: theme.palette.primary.main,
+                                borderRadius: '999px',
+                              })}
+                            />
+                          </Stack>
                         </TableCell>
 
                         <TableCell>
@@ -548,7 +580,7 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
                         <Stack direction="row" spacing={1} alignItems="center">
                           <CropChip crop={cycle.crop} />
                           <Typography variant="body2" color="text.secondary">
-                            {cycle.field} · {cycle.year}
+                            {cycle.field} · {cycle.period}
                           </Typography>
                         </Stack>
 

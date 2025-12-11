@@ -38,7 +38,7 @@ export type CycleRaw = {
   'Kgs Camión desde Stock'?: number;
   'Kgs Camión desde Cosecha'?: number;
   'Kgs Check'?: number;
-  'Año de campaña'?: string;
+  Periodo?: string;
   'Fecha de siembra'?: string;
   'Fecha estimada de cosecha'?: string;
   'Inicio cosecha'?: string;
@@ -67,7 +67,7 @@ export interface CycleDto {
   stockKgs: number;
   truckKgs: number;
   checkKgs: number;
-  year: string;
+  period: string;
   sowingDate?: string;
   estimatedHarvestDate?: string;
   harvestStartDate?: string | null;
@@ -107,7 +107,7 @@ function mapCycleRow(row: CycleRaw): CycleDto {
     stockKgs: toNumber(row['Kgs en Stock']),
     truckKgs: truckFromStock + truckFromHarvest,
     checkKgs: toNumber(row['Kgs Check']),
-    year: String(row['Año de campaña'] ?? ''),
+    period: String(row['Periodo'] ?? ''),
     sowingDate: row['Fecha de siembra'],
     estimatedHarvestDate: row['Fecha estimada de cosecha'],
     harvestStartDate: row['Inicio cosecha'] ?? null,

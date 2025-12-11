@@ -160,7 +160,7 @@ const CycleDetailPageClient = ({
             color="text.secondary"
             sx={{ maxWidth: '900px', mb: 2 }}
           >
-            {cycle.crop} · {cycle.field} · Campaña {cycle.year}
+            {cycle.crop} · {cycle.field} · Campaña {cycle.period}
           </Typography>
 
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
