@@ -2,9 +2,10 @@
 import { getTableRows } from './client';
 import {
   extractLinkRowIds,
+  extractLinkRowLabels,
+  extractLinkRowLabelsTrimmed,
   toNumber,
-  toStringOrEmpty,
-  normalizeField, // 👈 añadimos esto
+  normalizeField,
 } from './utils';
 
 const STOCK_TABLE_ID = Number(process.env.NEXT_PUBLIC_BASEROW_STOCK_TABLE_ID);
@@ -35,20 +36,22 @@ export type StockRaw = {
   Cultivo?: any; // option / lookup
 };
 
-export type StockStatus = 'Vacío' | 'Parcial' | 'Completo' | string;
+export type StockStatus = 'Nuevo' | 'Vacío' | 'Parcial' | 'Completo' | string;
 
 export interface StockDto {
   id: number;
   name: string;
   notes?: string;
   cycleIds: number[];
+  cycleLabels: string[];
   unitType: string;
   createdAt: string | null;
   originHarvestIds: number[];
+  originHarvestsLabels: string[];
   harvestedKgs: number;
   totalInKgs: number;
   truckTripIds: number[];
-  totalOutKgs: number;
+  truckTripLabels: string[];
   totalOutFromHarvestKgs: number;
   currentKgs: number;
   status: StockStatus | null;
@@ -58,8 +61,15 @@ export interface StockDto {
 
 function mapStockRawToDto(row: StockRaw): StockDto {
   const cycleIds = extractLinkRowIds(row['Ciclo de siembra']);
+  const cycleLabels = extractLinkRowLabels(row['Ciclo de siembra']);
   const originHarvestIds = extractLinkRowIds(row['Cosechas Origen']);
+  const originHarvestsLabels = extractLinkRowLabelsTrimmed(
+    row['Cosechas Origen']
+  );
   const truckTripIds = extractLinkRowIds(
+    row['Viajes de camión desde stock'] as unknown
+  );
+  const truckTripLabels = extractLinkRowLabelsTrimmed(
     row['Viajes de camión desde stock'] as unknown
   );
 
@@ -68,14 +78,15 @@ function mapStockRawToDto(row: StockRaw): StockDto {
     name: normalizeField(row.Name),
     notes: row.Notas ?? undefined,
     cycleIds,
-    // aquí usamos normalizeField por si 'Tipo unidad' es opción/lookup
+    cycleLabels,
     unitType: normalizeField(row['Tipo unidad']),
     createdAt: row['Fecha de creación'] ?? null,
     originHarvestIds,
+    originHarvestsLabels,
     harvestedKgs: toNumber(row['Kgs Cosechados']),
     totalInKgs: toNumber(row['Total kgs ingresados']),
     truckTripIds,
-    totalOutKgs: toNumber(row['Kgs egresados']),
+    truckTripLabels,
     totalOutFromHarvestKgs: toNumber(row['Total kgs egresados cosecha']),
     currentKgs: toNumber(row['Kgs actuales']),
     status: (normalizeField(row.Estado) as StockStatus) ?? null,

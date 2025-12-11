@@ -42,6 +42,61 @@ export function extractLinkRowIds(value: unknown): number[] {
     .filter((id): id is number => typeof id === 'number');
 }
 
+export function extractLinkRowLabels(value: any): string[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item) => {
+      if (
+        item &&
+        typeof item === 'object' &&
+        ('value' in item || typeof item.value === 'string')
+      ) {
+        return String(item.value).trim();
+      }
+      return '';
+    })
+    .filter((v) => Boolean(v));
+}
+
+/**
+ * Extracts shortened labels from a Baserow link_row array.
+ *
+ * Example:
+ *   "VC4-FGZ083-La Victoria-Cerealista" → "VC4-FGZ083"
+ *   "co-30/11/2025 10:46-La Victoria"   → "co-30/11/2025 10:46"
+ *
+ * Rules:
+ *   - Keep only the part up to the SECOND occurrence of "-"
+ *   - If there is only one "-", return everything (no cut)
+ *   - If no "-", return the whole string
+ */
+export function extractLinkRowLabelsTrimmed(value: any): string[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item) => {
+      const raw =
+        item && typeof item === 'object' && typeof item.value === 'string'
+          ? item.value.trim()
+          : '';
+
+      if (!raw) return '';
+
+      // Split by "-"
+      const parts = raw.split('-');
+
+      if (parts.length <= 2) {
+        // If there's 0 or 1 "-", return whole string
+        return raw;
+      }
+
+      // Take first two pieces and join with "-"
+      return `${parts[0]}-${parts[1]}`;
+    })
+    .filter((v) => Boolean(v));
+}
+
 export function includesLinkRowId(value: unknown, id: number): boolean {
   return extractLinkRowIds(value).includes(id);
 }

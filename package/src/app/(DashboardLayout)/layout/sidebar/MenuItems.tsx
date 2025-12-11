@@ -4,6 +4,7 @@ import {
   IconTruck,
   IconLogin,
   IconUserPlus,
+  IconMoneybag,
 } from '@tabler/icons-react';
 
 import { uniqueId } from 'lodash';
@@ -25,6 +26,12 @@ const Menuitems = [
     title: 'Ciclos de siembra',
     icon: IconPlant2,
     href: '/ciclos',
+  },
+  {
+    id: uniqueId(),
+    title: 'Stock',
+    icon: IconMoneybag,
+    href: '/stock',
   },
   {
     id: uniqueId(),
