@@ -206,6 +206,24 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
     originFilter,
   ]);
 
+  const filteredTotals = React.useMemo(
+    () =>
+      filteredTrips.reduce(
+        (acc, trip) => {
+          const originKgs = trip.totalKgsOrigin ?? 0;
+          const destinationKgs = trip.totalKgsDestination ?? 0;
+
+          acc.totalKgsOrigin += originKgs;
+          acc.totalKgsDestination += destinationKgs;
+          acc.totalDifference += destinationKgs - originKgs;
+
+          return acc;
+        },
+        { totalKgsOrigin: 0, totalKgsDestination: 0, totalDifference: 0 }
+      ),
+    [filteredTrips]
+  );
+
   return (
     <PageContainer
       title="Viajes de camión"
@@ -477,17 +495,18 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                           )}`,
                         })}
                       />
-                      <TableCell align="right">Kgs</TableCell>
+                      <TableCell align="right">Kgs Origen</TableCell>
+                      <TableCell align="right">Kgs Destino</TableCell>
+                      <TableCell align="right">Kgs Diferencia</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {filteredTrips.map((trip, index) => {
-                      const fieldLabel =
-                        trip.originField ||
-                        trip.originFieldFromStock ||
-                        trip.originFieldFromHarvest ||
-                        '';
                       const { date, time } = formatDateTimeParts(trip.date);
+                      const originKgs = trip.totalKgsOrigin ?? 0;
+                      const destinationKgs = trip.totalKgsDestination ?? 0;
+                      const differenceKgs = destinationKgs - originKgs;
+
                       return (
                         <TableRow
                           key={trip.id}
@@ -637,17 +656,95 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                           />
                           {/* Kgs */}
                           <TableCell align="right">
+                            <Typography variant="body1" fontWeight={600}>
+                              {originKgs.toLocaleString('es-ES')}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
                             <Typography
                               variant="body1"
                               fontWeight={700}
                               color="primary"
                             >
-                              {trip.totalKgs.toLocaleString('es-ES')}
+                              {destinationKgs.toLocaleString('es-ES')}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography
+                              variant="body1"
+                              fontWeight={700}
+                              color={
+                                differenceKgs >= 0
+                                  ? 'success.main'
+                                  : 'error.main'
+                              }
+                            >
+                              {differenceKgs.toLocaleString('es-ES')}
                             </Typography>
                           </TableCell>
                         </TableRow>
                       );
                     })}
+
+                    <TableRow
+                      sx={(theme) => ({
+                        background: theme.palette.grey.A100,
+                        '& .MuiTableCell-root': {
+                          borderTop: `2px solid ${theme.palette.grey[300]}`,
+                          fontWeight: 800,
+                          color: theme.palette.primary.main,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          py: 1.5,
+                          fontSize: '0.85rem',
+                        },
+                      })}
+                    >
+                      <TableCell colSpan={8} align="right">
+                        Total
+                      </TableCell>
+                      <TableCell
+                        sx={(theme) => ({
+                          borderLeft: `2px solid ${alpha(
+                            theme.palette.primary.main,
+                            0.08
+                          )}`,
+                        })}
+                      />
+                      <TableCell align="right">
+                        <Typography variant="body1" fontWeight={600}>
+                          {filteredTotals.totalKgsOrigin.toLocaleString(
+                            'es-ES'
+                          )}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography
+                          variant="body1"
+                          fontWeight={700}
+                          color="primary"
+                        >
+                          {filteredTotals.totalKgsDestination.toLocaleString(
+                            'es-ES'
+                          )}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography
+                          variant="body1"
+                          fontWeight={700}
+                          color={
+                            filteredTotals.totalDifference >= 0
+                              ? 'success.main'
+                              : 'error.main'
+                          }
+                        >
+                          {filteredTotals.totalDifference.toLocaleString(
+                            'es-ES'
+                          )}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
                   </TableBody>
                 </Table>
               </TableContainer>
@@ -656,8 +753,87 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
             {/* Mobile cards */}
             <Box sx={{ display: { xs: 'block', md: 'none' } }}>
               <Stack spacing={2}>
+                <Card
+                  sx={(theme) => ({
+                    borderRadius: 2,
+                    border: `1px solid ${alpha(
+                      theme.palette.primary.main,
+                      0.2
+                    )}`,
+                    background: `linear-gradient(135deg, ${alpha(
+                      theme.palette.primary.main,
+                      0.05
+                    )} 0%, ${alpha(theme.palette.primary.light, 0.05)} 100%)`,
+                  })}
+                >
+                  <CardContent sx={{ p: 2 }}>
+                    <Typography
+                      variant="subtitle2"
+                      color="primary"
+                      fontWeight={700}
+                      mb={1}
+                    >
+                      TOTAL
+                    </Typography>
+                    <Stack
+                      spacing={1.2}
+                      direction="row"
+                      justifyContent="space-between"
+                    >
+                      <Stack spacing={0.2}>
+                        <Typography variant="caption" color="text.secondary">
+                          Kgs Origen
+                        </Typography>
+                        <Typography variant="body1" fontWeight={600}>
+                          {filteredTotals.totalKgsOrigin.toLocaleString(
+                            'es-ES'
+                          )}{' '}
+                          kg
+                        </Typography>
+                      </Stack>
+                      <Stack spacing={0.2}>
+                        <Typography variant="caption" color="text.secondary">
+                          Kgs Destino
+                        </Typography>
+                        <Typography
+                          variant="body1"
+                          fontWeight={700}
+                          color="primary"
+                        >
+                          {filteredTotals.totalKgsDestination.toLocaleString(
+                            'es-ES'
+                          )}{' '}
+                          kg
+                        </Typography>
+                      </Stack>
+                      <Stack spacing={0.2}>
+                        <Typography variant="caption" color="text.secondary">
+                          Kgs Diferencia
+                        </Typography>
+                        <Typography
+                          variant="body1"
+                          fontWeight={700}
+                          color={
+                            filteredTotals.totalDifference >= 0
+                              ? 'success.main'
+                              : 'error.main'
+                          }
+                        >
+                          {filteredTotals.totalDifference.toLocaleString(
+                            'es-ES'
+                          )}{' '}
+                          kg
+                        </Typography>
+                      </Stack>
+                    </Stack>
+                  </CardContent>
+                </Card>
+
                 {filteredTrips.map((trip) => {
                   const { date, time } = formatDateTimeParts(trip.date);
+                  const originKgs = trip.totalKgsOrigin ?? 0;
+                  const destinationKgs = trip.totalKgsDestination ?? 0;
+                  const differenceKgs = destinationKgs - originKgs;
                   return (
                     <Card
                       key={trip.id}
@@ -712,50 +888,32 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                             })}
                           />
 
-                          {/* Origen + Kgs */}
-                          <Stack direction="row" justifyContent="space-between">
-                            <Stack
-                              direction="row"
-                              spacing={4}
-                              justifyContent="flex-start"
-                            >
-                              <Stack spacing={1.5} alignItems="center">
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                  fontWeight={700}
-                                >
-                                  Origen
-                                </Typography>
-                                <Chip
-                                  size="small"
-                                  variant="outlined"
-                                  label={getOriginLabel(trip.originType)}
-                                  sx={(theme) => ({
-                                    fontWeight: 600,
-                                    fontSize: '0.7rem',
-                                    color: `${getOriginChipColor(
-                                      trip.originType
-                                    )}`,
-                                    border: `2px solid ${alpha(
-                                      theme.palette.primary.main,
-                                      0.08
-                                    )}`,
-                                  })}
-                                />
-                              </Stack>
-                              <Stack spacing={1.5} alignItems="start">
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                  fontWeight={700}
-                                >
-                                  Destino
-                                </Typography>
-                                <Typography variant="body2" mt={0.5}>
-                                  {getDestinationLabel(trip)}
-                                </Typography>
-                              </Stack>
+                          {/* Origen y destino */}
+                          <Stack direction="row" spacing={4}>
+                            <Stack spacing={1.5} alignItems="center">
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                fontWeight={700}
+                              >
+                                Origen
+                              </Typography>
+                              <Chip
+                                size="small"
+                                variant="outlined"
+                                label={getOriginLabel(trip.originType)}
+                                sx={(theme) => ({
+                                  fontWeight: 600,
+                                  fontSize: '0.7rem',
+                                  color: `${getOriginChipColor(
+                                    trip.originType
+                                  )}`,
+                                  border: `2px solid ${alpha(
+                                    theme.palette.primary.main,
+                                    0.08
+                                  )}`,
+                                })}
+                              />
                             </Stack>
                             <Stack spacing={1.5} alignItems="start">
                               <Typography
@@ -763,15 +921,66 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                                 color="text.secondary"
                                 fontWeight={700}
                               >
-                                Kgs
+                                Destino
+                              </Typography>
+                              <Typography variant="body2" mt={0.5}>
+                                {getDestinationLabel(trip)}
+                              </Typography>
+                            </Stack>
+                          </Stack>
+
+                          {/* Kilos */}
+                          <Stack
+                            spacing={1.2}
+                            direction="row"
+                            justifyContent="space-between"
+                          >
+                            <Stack spacing={0.3}>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                fontWeight={700}
+                              >
+                                Kgs Origen
+                              </Typography>
+                              <Typography variant="body2" fontWeight={600}>
+                                {originKgs.toLocaleString('es-ES')} kg
+                              </Typography>
+                            </Stack>
+                            <Stack spacing={0.3}>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                fontWeight={700}
+                              >
+                                Kgs Destino
                               </Typography>
                               <Typography
-                                variant="body1"
-                                mt={0.3}
-                                fontWeight={800}
-                                color="text.primary"
+                                variant="body2"
+                                fontWeight={700}
+                                color="primary"
                               >
-                                {trip.totalKgs.toLocaleString('es-ES')} kg
+                                {destinationKgs.toLocaleString('es-ES')} kg
+                              </Typography>
+                            </Stack>
+                            <Stack spacing={0.3}>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                fontWeight={700}
+                              >
+                                Diferencia
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                fontWeight={700}
+                                color={
+                                  differenceKgs >= 0
+                                    ? 'success.main'
+                                    : 'error.main'
+                                }
+                              >
+                                {differenceKgs.toLocaleString('es-ES')} kg
                               </Typography>
                             </Stack>
                           </Stack>

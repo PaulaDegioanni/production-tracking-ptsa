@@ -32,7 +32,8 @@ export type TruckTripRaw = {
   'Tipo destino'?: any; // single select
   'Detalle Destino (opcional)'?: string | null;
 
-  'Kg carga'?: string | number | null;
+  'Kg carga origen'?: string | number | null;
+  'Kg carga destino'?: string | number | null;
   Estado?: any; // single select
 
   'Cosecha Origen (opcional)'?: any; // link_row a Cosechas
@@ -60,7 +61,8 @@ export interface TruckTripDto {
   destinationType: string; // Tipo destino (Puerto, Acopio, etc.)
   destinationDetail: string;
 
-  totalKgs: number; // Kg carga
+  totalKgsOrigin: number; // Kg carga origen
+  totalKgsDestination: number; // Kg carga destino
   status: string; // Estado (Entregado, Pendiente, etc.)
 
   harvestOriginIds: number[]; // Cosecha Origen (opcional)
@@ -94,7 +96,8 @@ function mapTruckTripRawToDto(row: TruckTripRaw): TruckTripDto {
     destinationType: normalizeField(row['Tipo destino']),
     destinationDetail: toStringOrEmpty(row['Detalle Destino (opcional)']),
 
-    totalKgs: toNumber(row['Kg carga']),
+    totalKgsOrigin: toNumber(row['Kg carga origen']),
+    totalKgsDestination: toNumber(row['Kg carga destino']),
     status: normalizeField(row.Estado),
 
     harvestOriginIds,
