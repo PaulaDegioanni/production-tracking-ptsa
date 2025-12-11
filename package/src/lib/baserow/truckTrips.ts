@@ -30,6 +30,7 @@ export type TruckTripRaw = {
 
   'Campo Origen Cosecha'?: any; // array de opciones / lookups
   'Tipo destino'?: any; // single select
+  Proveedor?: any;
   'Detalle Destino (opcional)'?: string | null;
 
   'Kg carga origen'?: string | number | null;
@@ -60,6 +61,7 @@ export interface TruckTripDto {
   truckPlate: string; // Camión
   destinationType: string; // Tipo destino (Puerto, Acopio, etc.)
   destinationDetail: string;
+  provider: string;
 
   totalKgsOrigin: number; // Kg carga origen
   totalKgsDestination: number; // Kg carga destino
@@ -95,6 +97,7 @@ function mapTruckTripRawToDto(row: TruckTripRaw): TruckTripDto {
     truckPlate: normalizeField(row['Camión']),
     destinationType: normalizeField(row['Tipo destino']),
     destinationDetail: toStringOrEmpty(row['Detalle Destino (opcional)']),
+    provider: normalizeField(row['Proveedor']),
 
     totalKgsOrigin: toNumber(row['Kg carga origen']),
     totalKgsDestination: toNumber(row['Kg carga destino']),

@@ -97,6 +97,7 @@ const TRIP_STATUS_OPTIONS: StatusChipOption[] = [
 ];
 
 const getDestinationLabel = (trip: TruckTripDto): string => {
+  if (trip.provider) return trip.provider;
   if (trip.destinationDetail) return trip.destinationDetail;
   if (trip.destinationType) return trip.destinationType;
   return '—';
@@ -340,7 +341,7 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                 </FormControl>
                 <FormControl fullWidth size="small">
                   <TextField
-                    label="Destino"
+                    label="Destino / Proveedor"
                     select
                     value={destinationFilter}
                     onChange={(e) => setDestinationFilter(e.target.value)}
@@ -486,7 +487,7 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                       />
                       <TableCell>Ciclo</TableCell>
                       <TableCell>Origen</TableCell>
-                      <TableCell>Destino</TableCell>
+                      <TableCell>Destino / Proveedor</TableCell>
                       <TableCell
                         sx={(theme) => ({
                           borderLeft: `2px solid ${alpha(
@@ -921,7 +922,7 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                                 color="text.secondary"
                                 fontWeight={700}
                               >
-                                Destino
+                                Destino / Proveedor
                               </Typography>
                               <Typography variant="body2" mt={0.5}>
                                 {getDestinationLabel(trip)}
