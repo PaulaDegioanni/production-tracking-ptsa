@@ -24,7 +24,8 @@ export type LotRaw = {
   Campo?: any;
   'Superficie (ha)'?: number | string | null;
   Etiquetas?: any;
-  Ciclos?: any; // link_row to Cycles
+  Ciclos?: any; // legacy link field name
+  'Ciclos de Siembra'?: any; // current link field name
 };
 
 // DTO used by the UI
@@ -39,7 +40,8 @@ export interface LotDto {
 }
 
 function mapLotRawToDto(row: LotRaw): LotDto {
-  const cycleIds = extractLinkRowIds(row.Ciclos);
+  const cycleLink = row['Ciclos de Siembra'] ?? row.Ciclos;
+  const cycleIds = extractLinkRowIds(cycleLink);
 
   return {
     id: row.id,

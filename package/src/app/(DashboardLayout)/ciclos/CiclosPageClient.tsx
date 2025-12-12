@@ -77,6 +77,7 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
 
   const CYCLE_STATUS_OPTIONS: StatusChipOption[] = [
     { value: 'planificado', label: 'Planificado', color: 'default' },
+    { value: 'barbecho', label: 'Barbecho', color: 'warning' },
     { value: 'sembrado', label: 'Sembrado', color: 'info' },
     {
       value: 'listo-para-cosechar',

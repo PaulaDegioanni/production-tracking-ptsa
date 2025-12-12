@@ -1,6 +1,7 @@
 import {
   IconLayoutDashboard,
-  IconPlant2,
+  IconFreezeRowColumn,
+  IconSeedling,
   IconTruck,
   IconLogin,
   IconUserPlus,
@@ -23,8 +24,14 @@ const Menuitems = [
   },
   {
     id: uniqueId(),
+    title: 'Campos',
+    icon: IconFreezeRowColumn,
+    href: '/campos',
+  },
+  {
+    id: uniqueId(),
     title: 'Ciclos de siembra',
-    icon: IconPlant2,
+    icon: IconSeedling,
     href: '/ciclos',
   },
   {

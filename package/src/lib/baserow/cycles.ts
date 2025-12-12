@@ -40,6 +40,7 @@ export type CycleRaw = {
   'Kgs Check'?: number;
   Periodo?: string;
   'Fecha de siembra'?: string;
+  'Fecha inicio barbecho'?: string;
   'Fecha estimada de cosecha'?: string;
   'Inicio cosecha'?: string;
   'Fin cosecha'?: string;
@@ -49,6 +50,7 @@ export type CycleRaw = {
 // --- DTO: normalized shape used in the UI ---
 export type CycleStatus =
   | 'planificado'
+  | 'barbecho'
   | 'sembrado'
   | 'listo-para-cosechar'
   | 'en-cosecha'
@@ -69,6 +71,7 @@ export interface CycleDto {
   checkKgs: number;
   period: string;
   sowingDate?: string;
+  fallowStartDate?: string | null;
   estimatedHarvestDate?: string;
   harvestStartDate?: string | null;
   harvestEndDate?: string | null;
@@ -81,6 +84,7 @@ function normalizeStatus(option?: CycleRaw['Estado']): CycleStatus {
   const v = (option?.value || '').toLowerCase();
 
   if (v.includes('planificado')) return 'planificado';
+  if (v.includes('barbecho')) return 'barbecho';
   if (v.includes('sembrado')) return 'sembrado';
   if (v.includes('listo')) return 'listo-para-cosechar';
   if (v.includes('en cosecha')) return 'en-cosecha';
@@ -109,6 +113,7 @@ function mapCycleRow(row: CycleRaw): CycleDto {
     checkKgs: toNumber(row['Kgs Check']),
     period: String(row['Periodo'] ?? ''),
     sowingDate: row['Fecha de siembra'],
+    fallowStartDate: row['Fecha inicio barbecho'] ?? null,
     estimatedHarvestDate: row['Fecha estimada de cosecha'],
     harvestStartDate: row['Inicio cosecha'] ?? null,
     harvestEndDate: row['Fin cosecha'] ?? null,
