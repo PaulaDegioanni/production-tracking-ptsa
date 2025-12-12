@@ -1351,7 +1351,7 @@ const CycleDetailPageClient = ({
                                 fontWeight={800}
                                 color="secondary.dark"
                               >
-                                {t.totalKgs.toLocaleString('es-ES')}
+                                {t.totalKgsDestination.toLocaleString('es-ES')}
                               </Typography>
                             </TableCell>
                             <TableCell>
@@ -1480,7 +1480,8 @@ const CycleDetailPageClient = ({
                                 color="secondary.dark"
                                 mt={0.5}
                               >
-                                {t.totalKgs.toLocaleString('es-ES')} kg
+                                {t.totalKgsDestination.toLocaleString('es-ES')}{' '}
+                                kg
                               </Typography>
                             </Box>
                           </Stack>

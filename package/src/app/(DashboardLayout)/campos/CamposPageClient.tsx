@@ -24,11 +24,14 @@ import {
   TableRow,
   Typography,
 } from '@mui/material';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import Link from 'next/link';
 import PageContainer from '@/app/(DashboardLayout)/components/container/PageContainer';
 import DashboardCard from '@/app/(DashboardLayout)/components/shared/DashboardCard';
 import StatusChip, {
   StatusChipOption,
 } from '@/app/(DashboardLayout)/components/shared/StatusChip';
+import CropChip from '@/app/(DashboardLayout)/components/shared/CropChip';
 import type { FieldDto } from '@/lib/baserow/fields';
 import type { LotDto } from '@/lib/baserow/lots';
 import type { CycleDto } from '@/lib/baserow/cycles';
@@ -51,6 +54,12 @@ type FieldWithLots = {
   hasActiveCycle: boolean;
 };
 
+type CropProductionSummary = {
+  crop: string;
+  totalKgs: number;
+  avgYield: number | null;
+};
+
 const CYCLE_STATUS_OPTIONS: StatusChipOption[] = [
   { value: 'planificado', label: 'Planificado', color: 'default' },
   { value: 'barbecho', label: 'Barbecho', color: 'warning' },
@@ -68,6 +77,11 @@ const formatArea = (value: number) =>
   value.toLocaleString('es-AR', {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
+  });
+
+const formatKgs = (value: number) =>
+  value.toLocaleString('es-AR', {
+    maximumFractionDigits: 0,
   });
 
 const normalizePeriod = (period: string) => period?.trim();
@@ -89,6 +103,14 @@ const timestampValue = (value?: string | null) => {
   return Number.isNaN(ts) ? Number.NEGATIVE_INFINITY : ts;
 };
 
+const extractYear = (value?: string | null): number | null => {
+  if (!value) return null;
+  const date = new Date(value);
+  const time = date.getTime();
+  if (Number.isNaN(time)) return null;
+  return date.getFullYear();
+};
+
 const ACTIVE_CYCLE_STATUSES = new Set<CycleDto['status']>([
   'barbecho',
   'sembrado',
@@ -96,12 +118,55 @@ const ACTIVE_CYCLE_STATUSES = new Set<CycleDto['status']>([
   'en-cosecha',
 ]);
 
+const buildProductionSummary = (
+  fieldData?: FieldWithLots | null
+): CropProductionSummary[] => {
+  if (!fieldData) return [];
+
+  // Dedupe cycles (same cycle can appear in multiple lotsWithCycle)
+  const uniqueCycles = new Map<number, CycleDto>();
+  fieldData.lotsWithCycle.forEach(({ currentCycle }) => {
+    if (currentCycle) uniqueCycles.set(currentCycle.id, currentCycle);
+  });
+
+  const totalsKgs = new Map<string, number>();
+  const yieldSum = new Map<string, number>();
+  const yieldCount = new Map<string, number>();
+
+  uniqueCycles.forEach((cycle) => {
+    const cropName = cycle.crop || 'Sin cultivo';
+
+    totalsKgs.set(
+      cropName,
+      (totalsKgs.get(cropName) ?? 0) + (cycle.totalKgs || 0)
+    );
+
+    const y = cycle.actualYield;
+    if (typeof y === 'number' && y > 0) {
+      yieldSum.set(cropName, (yieldSum.get(cropName) ?? 0) + y);
+      yieldCount.set(cropName, (yieldCount.get(cropName) ?? 0) + 1);
+    }
+  });
+
+  return Array.from(totalsKgs.entries())
+    .map(([crop, totalKgs]) => {
+      const sum = yieldSum.get(crop) ?? 0;
+      const count = yieldCount.get(crop) ?? 0;
+      return {
+        crop,
+        totalKgs,
+        avgYield: count ? sum / count : null,
+      };
+    })
+    .sort((a, b) => b.totalKgs - a.totalKgs);
+};
+
 const CamposPageClient: React.FC<CamposPageClientProps> = ({
   fields,
   lots,
   cycles,
 }) => {
-  const periodOptions = React.useMemo(() => {
+  const { periodOptions, defaultPeriod } = React.useMemo(() => {
     const unique = Array.from(
       new Set(
         cycles
@@ -110,7 +175,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
       )
     );
 
-    return unique.sort((a, b) => {
+    const sorted = unique.sort((a, b) => {
       const yearsA = getPeriodYears(a);
       const yearsB = getPeriodYears(b);
 
@@ -124,11 +189,32 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
 
       return b.localeCompare(a);
     });
+
+    const currentYear = new Date().getFullYear();
+    const preferentialPeriods = new Set<string>();
+
+    cycles.forEach((cycle) => {
+      const period = normalizePeriod(cycle.period);
+      if (!period) return;
+      const fallowYear = extractYear(cycle.fallowStartDate);
+      if (fallowYear === currentYear) {
+        preferentialPeriods.add(period);
+      }
+    });
+
+    const prioritized =
+      sorted.find((period) => preferentialPeriods.has(period)) ??
+      sorted[0] ??
+      '';
+
+    return {
+      periodOptions: sorted,
+      defaultPeriod: prioritized,
+    };
   }, [cycles]);
 
-  const [selectedPeriod, setSelectedPeriod] = React.useState<string>(
-    () => periodOptions[0] ?? ''
-  );
+  const [selectedPeriod, setSelectedPeriod] =
+    React.useState<string>(defaultPeriod);
 
   React.useEffect(() => {
     setSelectedPeriod((current) => {
@@ -136,9 +222,9 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
       if (current && periodOptions.includes(current)) {
         return current;
       }
-      return periodOptions[0];
+      return defaultPeriod;
     });
-  }, [periodOptions]);
+  }, [periodOptions, defaultPeriod]);
 
   const handleChangePeriod = (event: SelectChangeEvent<string>) => {
     setSelectedPeriod(event.target.value);
@@ -153,9 +239,17 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
 
   const renderFieldLocationLink = React.useCallback((location?: string) => {
     const normalized = (location ?? '').trim();
+
     if (!normalized) {
       return (
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          sx={(theme) => ({
+            fontSize: {
+              xs: theme.typography.body2.fontSize,
+            },
+          })}
+          color="text.secondary"
+        >
           Sin ubicación
         </Typography>
       );
@@ -165,17 +259,35 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
     const href = hasProtocol ? normalized : `https://${normalized}`;
 
     return (
-      <Typography
-        variant="body2"
+      <Box
         component="a"
-        color="primary"
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        sx={{ textDecoration: 'none', fontWeight: 600 }}
+        sx={(theme) => ({
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 0.5,
+          color: theme.palette.primary.main,
+          textDecoration: 'none',
+          fontWeight: 600,
+          '&:hover': {
+            textDecoration: 'underline',
+          },
+        })}
       >
-        {normalized}
-      </Typography>
+        <Typography
+          sx={(theme) => ({
+            fontSize: {
+              xs: theme.typography.body2.fontSize,
+            },
+          })}
+          component="span"
+        >
+          Ver ubicación
+        </Typography>
+        <OpenInNewIcon sx={{ fontSize: 12 }} />
+      </Box>
     );
   }, []);
 
@@ -257,12 +369,11 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
         return acc + item.lot.areaHa;
       }, 0);
 
-      const hasActiveCycle = lotsWithCycle.some(
-        ({ lot, currentCycle }) =>
-          lot.isActive &&
-          Boolean(currentCycle) &&
-          ACTIVE_CYCLE_STATUSES.has(currentCycle.status)
-      );
+      const hasActiveCycle = lotsWithCycle.some(({ lot, currentCycle }) => {
+        if (!lot.isActive) return false;
+        if (!currentCycle) return false;
+        return ACTIVE_CYCLE_STATUSES.has(currentCycle.status);
+      });
 
       return {
         field,
@@ -273,15 +384,16 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
     });
   }, [fields, lotsById, lotsByFieldName, getCurrentCycleForLot]);
 
-  const sortedFields = React.useMemo(
-    () =>
-      [...fieldsWithLots].sort((a, b) =>
-        a.field.name.localeCompare(b.field.name, undefined, {
-          sensitivity: 'base',
-        })
-      ),
-    [fieldsWithLots]
-  );
+  const sortedFields = React.useMemo(() => {
+    return [...fieldsWithLots].sort((a, b) => {
+      if (a.hasActiveCycle !== b.hasActiveCycle) {
+        return a.hasActiveCycle ? -1 : 1;
+      }
+      return a.field.name.localeCompare(b.field.name, undefined, {
+        sensitivity: 'base',
+      });
+    });
+  }, [fieldsWithLots]);
 
   const [selectedFieldId, setSelectedFieldId] = React.useState<number | null>(
     () => sortedFields[0]?.field.id ?? null
@@ -339,7 +451,10 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
     });
 
     setExpandedFieldId((current) => {
-      if (current !== null && filteredFields.some((item) => item.field.id === current)) {
+      if (
+        current !== null &&
+        filteredFields.some((item) => item.field.id === current)
+      ) {
         return current;
       }
       return filteredFields[0].field.id;
@@ -353,6 +468,11 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
           null
         : null,
     [filteredFields, selectedFieldId]
+  );
+
+  const selectedFieldProduction = React.useMemo(
+    () => buildProductionSummary(selectedField),
+    [selectedField]
   );
 
   const lotsWithCurrentCycle = selectedField?.lotsWithCycle ?? [];
@@ -496,92 +616,80 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                       No hay campos para los filtros seleccionados.
                     </Box>
                   )}
-                  {filteredFields.map(({ field, activeAreaHa, hasActiveCycle }) => {
-                    const isSelected = selectedFieldId === field.id;
-                    const statusChip = hasActiveCycle
-                      ? {
-                          label: 'Activo',
-                          color: 'success' as const,
-                          variant: 'filled' as const,
-                        }
-                      : {
-                          label: 'Sin actividad',
-                          color: 'default' as const,
-                          variant: 'outlined' as const,
-                        };
-                    return (
-                      <Box
-                        key={field.id}
-                        onClick={() => handleSelectField(field.id)}
-                        sx={(theme) => ({
-                          p: 2,
-                          borderRadius: 2,
-                          border: `1px solid ${
-                            isSelected
-                              ? alpha(theme.palette.primary.main, 0.6)
-                              : theme.palette.divider
-                          }`,
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          background: isSelected
-                            ? alpha(theme.palette.primary.light, 0.12)
-                            : alpha(theme.palette.background.default, 0.6),
-                          boxShadow: isSelected
-                            ? `0 6px 16px ${alpha(
-                                theme.palette.primary.main,
-                                0.15
-                              )}`
-                            : 'none',
-                        })}
-                      >
-                        <Stack spacing={1}>
-                          <Box>
-                            <Typography fontWeight={700}>
-                              {field.name || 'Sin nombre'}
-                            </Typography>
-                          </Box>
-                          <Stack
-                            direction="row"
-                            spacing={1}
-                            justifyContent="space-between"
-                            flexWrap="wrap"
-                          >
-                            <Typography variant="body2" color="text.secondary">
-                              Sup. total:{' '}
-                              <Typography
-                                component="span"
-                                fontWeight={600}
-                                color="text.primary"
+                  {filteredFields.map(
+                    ({ field, activeAreaHa, hasActiveCycle }) => {
+                      const isSelected = selectedFieldId === field.id;
+                      const statusChip = hasActiveCycle
+                        ? {
+                            label: 'Activo',
+                            color: 'success' as const,
+                            variant: 'filled' as const,
+                          }
+                        : {
+                            label: 'Sin actividad',
+                            color: 'default' as const,
+                            variant: 'filled' as const,
+                          };
+                      return (
+                        <Box
+                          key={field.id}
+                          onClick={() => handleSelectField(field.id)}
+                          sx={(theme) => ({
+                            p: 2,
+                            borderRadius: 2,
+                            border: `1px solid ${
+                              isSelected
+                                ? alpha(theme.palette.primary.main, 0.6)
+                                : theme.palette.divider
+                            }`,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            background: isSelected
+                              ? alpha(theme.palette.primary.light, 0.12)
+                              : alpha(theme.palette.background.default, 0.6),
+                            boxShadow: isSelected
+                              ? `0 6px 16px ${alpha(
+                                  theme.palette.primary.main,
+                                  0.15
+                                )}`
+                              : 'none',
+                          })}
+                        >
+                          <Stack spacing={2}>
+                            <Box>
+                              <Stack
+                                direction="row"
+                                spacing={1}
+                                justifyContent="space-between"
+                                flexWrap="wrap"
                               >
-                                {formatArea(field.totalAreaHa)} ha
-                              </Typography>
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              Sup. activa:{' '}
-                              <Typography
-                                component="span"
-                                fontWeight={600}
-                                color="text.primary"
-                              >
-                                {selectedPeriod
-                                  ? `${formatArea(activeAreaHa)} ha`
-                                  : '—'}
-                              </Typography>
-                            </Typography>
+                                <Typography fontWeight={700}>
+                                  {field.name || 'Sin nombre'}
+                                </Typography>
+                                <Stack
+                                  direction="row"
+                                  spacing={1}
+                                  flexWrap="wrap"
+                                >
+                                  <Chip
+                                    size="small"
+                                    variant="outlined"
+                                    label={
+                                      field.isRented ? 'Alquiler' : 'Propio'
+                                    }
+                                    color={
+                                      field.isRented ? 'secondary' : 'primary'
+                                    }
+                                  />
+                                  <Chip size="small" {...statusChip} />
+                                </Stack>
+                              </Stack>
+                            </Box>
                           </Stack>
-                          <Stack direction="row" spacing={1} flexWrap="wrap">
-                            <Chip
-                              size="small"
-                              label={field.isRented ? 'Alquiler' : 'Propio'}
-                              color={field.isRented ? 'warning' : 'default'}
-                              variant={field.isRented ? 'filled' : 'outlined'}
-                            />
-                            <Chip size="small" {...statusChip} />
-                          </Stack>
-                        </Stack>
-                      </Box>
-                    );
-                  })}
+                        </Box>
+                      );
+                    }
+                  )}
                 </Stack>
               </Box>
 
@@ -613,10 +721,12 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                 ) : (
                   <Stack spacing={3}>
                     <Box>
-                      <Typography variant="h5" fontWeight={700}>
-                        {selectedField.field.name || 'Campo sin nombre'}
-                      </Typography>
-                      {renderFieldLocationLink(selectedField.field.location)}
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Typography variant="h4" fontWeight={700}>
+                          {selectedField.field.name || 'Campo sin nombre'} -
+                        </Typography>
+                        {renderFieldLocationLink(selectedField.field.location)}
+                      </Stack>
                     </Box>
 
                     <Stack direction={{ xs: 'column', lg: 'row' }} spacing={2}>
@@ -632,10 +742,10 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                           )}`,
                         })}
                       >
-                        <Typography variant="body2" color="text.secondary">
-                          Sup. total
+                        <Typography variant="subtitle2" color="text.secondary">
+                          SUPERFICIE TOTAL
                         </Typography>
-                        <Typography fontWeight={700}>
+                        <Typography variant="h5" paddingTop="0.5rem">
                           {formatArea(selectedField.field.totalAreaHa)} ha
                         </Typography>
                       </Box>
@@ -655,10 +765,15 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                           ),
                         })}
                       >
-                        <Typography variant="body2" color="text.secondary">
-                          Sup. activa {selectedPeriod && `(${selectedPeriod})`}
+                        <Typography variant="subtitle2" color="text.secondary">
+                          SUPERFICIE ACTIVA{' '}
+                          {selectedPeriod && `(${selectedPeriod})`}
                         </Typography>
-                        <Typography fontWeight={700} color="success.main">
+                        <Typography
+                          variant="h5"
+                          paddingTop="0.5rem"
+                          color="success.main"
+                        >
                           {formatArea(selectedFieldActiveArea)} ha
                         </Typography>
                       </Box>
@@ -671,21 +786,101 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                           border: `1px solid ${theme.palette.divider}`,
                         })}
                       >
-                        <Typography variant="body2" color="text.secondary">
-                          Lotes con ciclo
+                        <Typography variant="subtitle2" color="text.secondary">
+                          LOTES ACTIVOS
                         </Typography>
-                        <Typography fontWeight={700}>
+                        <Typography variant="h5" paddingTop="0.5rem">
                           {lotsWithActiveCycle.length}/
                           {lotsWithCurrentCycle.length}
                         </Typography>
                       </Box>
                     </Stack>
 
+                    <Box paddingTop="1.5rem">
+                      <Typography variant="h6" fontWeight={700} mb={2}>
+                        Producción por cultivo
+                      </Typography>
+                      {!selectedFieldProduction.length ? (
+                        <Typography variant="body1" color="text.secondary">
+                          Sin producción registrada en este período
+                        </Typography>
+                      ) : (
+                        <TableContainer
+                          component={Paper}
+                          variant="outlined"
+                          sx={(theme) => ({
+                            borderRadius: 1.5,
+                            maxWidth: 350,
+                            backgroundColor: alpha(
+                              theme.palette.primary.light,
+                              0.04
+                            ),
+                          })}
+                        >
+                          <Table size="small">
+                            <TableHead
+                              sx={(theme) => ({
+                                '& .MuiTableCell-root': {
+                                  fontSize: theme.typography.subtitle2,
+                                  fontWeight: 700,
+                                  borderBottom: `1px solid ${alpha(
+                                    theme.palette.divider,
+                                    0.6
+                                  )}`,
+                                },
+                              })}
+                            >
+                              <TableRow>
+                                <TableCell>CULTIVO</TableCell>
+                                <TableCell align="right">TOTAL KGs</TableCell>
+                                <TableCell align="right">
+                                  RENDIMIENTO PROM. (qq/ha)
+                                </TableCell>
+                              </TableRow>
+                            </TableHead>
+
+                            <TableBody
+                              sx={(theme) => ({
+                                '.MuiTableCell-root': {
+                                  borderBottom: `1px solid ${alpha(
+                                    theme.palette.divider,
+                                    0.25
+                                  )}`,
+                                  fontSize: theme.typography.body1.fontSize,
+                                  paddingY: '1rem',
+                                },
+                              })}
+                            >
+                              {selectedFieldProduction.map((item) => (
+                                <TableRow key={item.crop}>
+                                  <TableCell>{item.crop}</TableCell>
+                                  <TableCell align="right">
+                                    {formatKgs(item.totalKgs)}
+                                  </TableCell>
+                                  <TableCell
+                                    align="right"
+                                    sx={(theme) => ({
+                                      fontWeight: 700,
+                                      color: theme.palette.primary.dark,
+                                    })}
+                                  >
+                                    {item.avgYield === null
+                                      ? '—'
+                                      : item.avgYield.toFixed(1)}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      )}
+                    </Box>
+
                     <Divider />
 
                     <Box>
                       <Typography variant="h6" fontWeight={700} mb={1.5}>
-                        Lotes del campo
+                        Lotes
                       </Typography>
                       <TableContainer
                         component={Paper}
@@ -736,7 +931,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                                   sx={(theme) => ({
                                     '& .MuiTableCell-root': {
                                       borderBottom: `1px solid ${theme.palette.divider}`,
-                                      py: 1,
+                                      py: 1.5,
                                     },
                                   })}
                                 >
@@ -747,7 +942,8 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                                       </Typography>
                                       {!currentCycle && (
                                         <Typography
-                                          variant="caption"
+                                          variant="body2"
+                                          paddingTop="0.5rem"
                                           color="text.secondary"
                                         >
                                           Sin ciclo en esta campaña
@@ -756,13 +952,41 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                                     </Stack>
                                   </TableCell>
                                   <TableCell align="right">
-                                    {formatArea(lot.areaHa)}
+                                    <Typography variant="body1">
+                                      {formatArea(lot.areaHa)}
+                                    </Typography>
                                   </TableCell>
                                   <TableCell>
-                                    {currentCycle ? currentCycle.cycleId : '—'}
+                                    {currentCycle ? (
+                                      <Typography
+                                        component={Link}
+                                        href={`/ciclos/${currentCycle.id}`}
+                                        color="primary"
+                                        sx={{
+                                          textDecoration: 'none',
+                                          fontWeight: 700,
+                                        }}
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        {currentCycle.cycleId}
+                                      </Typography>
+                                    ) : (
+                                      '—'
+                                    )}
                                   </TableCell>
                                   <TableCell>
-                                    {currentCycle ? currentCycle.crop : '—'}
+                                    {currentCycle ? (
+                                      currentCycle.crop ? (
+                                        <CropChip
+                                          crop={currentCycle.crop}
+                                          size="small"
+                                        />
+                                      ) : (
+                                        '—'
+                                      )
+                                    ) : (
+                                      '—'
+                                    )}
                                   </TableCell>
                                   <TableCell>
                                     {currentCycle ? (
@@ -813,6 +1037,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                   Boolean(item.currentCycle)
                 );
                 const isExpanded = expandedFieldId === field.id;
+                const productionSummary = buildProductionSummary(fieldItem);
                 const statusChip = hasActiveCycle
                   ? {
                       label: 'Activo',
@@ -838,7 +1063,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                     }}
                   >
                     <CardContent>
-                      <Stack spacing={1.5}>
+                      <Stack spacing={2}>
                         <Box
                           role="button"
                           onClick={() => toggleFieldExpansion(field.id)}
@@ -847,94 +1072,76 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                             cursor: 'pointer',
                           }}
                         >
-                          <Typography fontWeight={700}>
-                            {field.name || 'Sin nombre'}
-                          </Typography>
                           <Stack
                             direction="row"
-                            spacing={1}
                             flexWrap="wrap"
                             mt={1}
+                            justifyContent="space-between"
+                            alignItems="center"
                           >
-                            <Chip
-                              size="small"
-                              label={`Sup. ${formatArea(field.totalAreaHa)} ha`}
-                              variant="outlined"
-                            />
-                            <Chip
-                              size="small"
-                              label={
-                                selectedPeriod
-                                  ? `Activa ${formatArea(activeAreaHa)} ha`
-                                  : 'Sin campaña'
-                              }
-                              color="primary"
-                              variant="outlined"
-                            />
-                            <Chip
-                              size="small"
-                              label={field.isRented ? 'Alquiler' : 'Propio'}
-                              color={field.isRented ? 'warning' : 'default'}
-                              variant={field.isRented ? 'filled' : 'outlined'}
-                            />
-                            <Chip size="small" {...statusChip} />
+                            <Typography variant="body1" fontWeight={700}>
+                              {field.name || 'Sin nombre'}
+                            </Typography>
+                            <Stack
+                              direction="row"
+                              flexWrap="wrap"
+                              spacing={0.3}
+                            >
+                              <Chip
+                                size="small"
+                                label={field.isRented ? 'Alquiler' : 'Propio'}
+                                color={field.isRented ? 'secondary' : 'primary'}
+                                variant="outlined"
+                              />
+                              <Chip size="small" {...statusChip} />
+                            </Stack>
                           </Stack>
-                          <Typography
-                            variant="body2"
-                            color="primary"
-                            fontWeight={600}
-                            mt={1}
+
+                          <Stack
+                            direction="row"
+                            justifyContent="space-between"
+                            alignItems="center"
+                            justifyItems="center"
+                            marginTop="2rem"
                           >
-                            {isExpanded ? 'Ocultar lotes' : 'Ver lotes'}
-                          </Typography>
+                            <Typography
+                              variant="body2"
+                              color="primary"
+                              fontWeight={600}
+                            >
+                              {isExpanded ? 'Ocultar lotes' : 'Ver lotes'}
+                            </Typography>
+                            <Box>{renderFieldLocationLink(field.location)}</Box>
+                          </Stack>
                         </Box>
                         <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                           <Divider sx={{ my: 2 }} />
-                          <Stack spacing={2}>
-                            <Box>{renderFieldLocationLink(field.location)}</Box>
+                          <Stack
+                            direction={{ xs: 'column', sm: 'row' }}
+                            spacing={2}
+                          >
                             <Stack
-                              direction={{ xs: 'column', sm: 'row' }}
-                              spacing={2}
+                              direction="row"
+                              justifyContent="space-between"
+                              paddingBottom="2rem"
                             >
-                              <Box
-                                sx={(theme) => ({
-                                  flex: 1,
-                                  px: 2,
-                                  py: 1.25,
-                                  borderRadius: 1.5,
-                                  border: `1px solid ${alpha(
-                                    theme.palette.primary.main,
-                                    0.2
-                                  )}`,
-                                })}
-                              >
+                              <Stack spacing={0.75}>
                                 <Typography
-                                  variant="body2"
+                                  variant="caption"
                                   color="text.secondary"
                                 >
-                                  Sup. total
+                                  SUP. TOTAL
                                 </Typography>
                                 <Typography fontWeight={700}>
                                   {formatArea(field.totalAreaHa)} ha
                                 </Typography>
-                              </Box>
-                              <Box
-                                sx={(theme) => ({
-                                  flex: 1,
-                                  px: 2,
-                                  py: 1.25,
-                                  borderRadius: 1.5,
-                                  border: `1px solid ${alpha(
-                                    theme.palette.success.main,
-                                    0.2
-                                  )}`,
-                                })}
-                              >
+                              </Stack>
+                              <Stack spacing={0.75}>
                                 <Typography
-                                  variant="body2"
+                                  variant="caption"
                                   color="text.secondary"
                                 >
-                                  Sup. activa
+                                  SUP. ACTIVA
                                 </Typography>
                                 <Typography
                                   fontWeight={700}
@@ -942,69 +1149,179 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                                 >
                                   {formatArea(activeAreaHa)} ha
                                 </Typography>
-                              </Box>
-                              <Box
-                                sx={(theme) => ({
-                                  flex: 1,
-                                  px: 2,
-                                  py: 1.25,
-                                  borderRadius: 1.5,
-                                  border: `1px solid ${theme.palette.divider}`,
-                                })}
-                              >
+                              </Stack>
+                              <Stack spacing={0.75}>
                                 <Typography
-                                  variant="body2"
+                                  variant="caption"
                                   color="text.secondary"
                                 >
-                                  Lotes con ciclo
+                                  LOTES ACTIVOS
                                 </Typography>
                                 <Typography fontWeight={700}>
                                   {lotsWithActive.length}/{lotsWithCycleCount}
                                 </Typography>
-                              </Box>
+                              </Stack>
                             </Stack>
+                          </Stack>
+                          <Stack spacing={2}>
+                            <Box>
+                              <Typography
+                                variant="subtitle1"
+                                fontWeight={700}
+                                mb={0.5}
+                              >
+                                Producción por cultivo
+                              </Typography>
+
+                              {!productionSummary.length ? (
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
+                                  Sin producción registrada en este período
+                                </Typography>
+                              ) : (
+                                <Stack spacing={1}>
+                                  {productionSummary.map((item) => (
+                                    <Box
+                                      key={item.crop}
+                                      sx={(theme) => ({
+                                        p: 0.5,
+                                      })}
+                                    >
+                                      <Stack direction="row" alignItems="start">
+                                        {/* Columna cultivo */}
+                                        <Box sx={{ width: 75 }}>
+                                          <Typography
+                                            fontWeight={700}
+                                            variant="body2"
+                                            paddingTop="16px"
+                                          >
+                                            {item.crop}
+                                          </Typography>
+                                        </Box>
+
+                                        {/* Columna KGS */}
+                                        <Box sx={{ width: 100 }}>
+                                          <Typography
+                                            variant="caption"
+                                            color="text.secondary"
+                                          >
+                                            KGS
+                                          </Typography>
+                                          <Typography
+                                            fontWeight={700}
+                                            variant="body1"
+                                          >
+                                            {formatKgs(item.totalKgs)}
+                                          </Typography>
+                                        </Box>
+
+                                        {/* Columna rendimiento */}
+                                        <Box sx={{ width: 120 }}>
+                                          <Typography
+                                            variant="caption"
+                                            color="text.secondary"
+                                          >
+                                            REND. (qq/ha)
+                                          </Typography>
+                                          <Typography
+                                            fontWeight={700}
+                                            color="primary"
+                                          >
+                                            {item.avgYield === null
+                                              ? '—'
+                                              : item.avgYield.toFixed(1)}
+                                          </Typography>
+                                        </Box>
+                                      </Stack>
+                                    </Box>
+                                  ))}
+                                </Stack>
+                              )}
+                            </Box>
+
                             <Stack spacing={2}>
                               {lotsWithCycle.map(({ lot, currentCycle }) => (
                                 <Card key={lot.id} variant="outlined">
                                   <CardContent>
-                                    <Stack spacing={1}>
-                                      <Box>
-                                        <Typography fontWeight={700}>
-                                          {lot.code || `Lote ${lot.id}`}
-                                        </Typography>
-                                        <Typography
-                                          variant="body2"
-                                          color="text.secondary"
+                                    {currentCycle ? (
+                                      <Stack spacing={1}>
+                                        <Stack
+                                          direction="row"
+                                          justifyContent="space-between"
+                                          alignItems="center"
                                         >
-                                          {formatArea(lot.areaHa)} ha
-                                        </Typography>
-                                      </Box>
-                                      {currentCycle ? (
-                                        <Stack spacing={0.5}>
-                                          <Typography variant="body2">
-                                            Ciclo {currentCycle.cycleId}
-                                          </Typography>
-                                          <Typography
-                                            variant="body2"
-                                            color="text.secondary"
+                                          <Stack
+                                            direction="row"
+                                            alignItems="center"
                                           >
-                                            Cultivo:{' '}
-                                            {currentCycle.crop || 'Sin datos'}
-                                          </Typography>
+                                            <Typography fontWeight={700}>
+                                              {lot.code || `Lote ${lot.id}`} -
+                                            </Typography>
+                                            <Typography
+                                              variant="subtitle1"
+                                              paddingLeft="0.5rem"
+                                            >
+                                              {formatArea(lot.areaHa)} ha
+                                            </Typography>
+                                          </Stack>
+
                                           <StatusChip
                                             status={currentCycle.status}
                                             options={CYCLE_STATUS_OPTIONS}
                                           />
                                         </Stack>
-                                      ) : (
+                                        <Stack
+                                          direction="row"
+                                          alignItems="center"
+                                          justifyContent="space-between"
+                                          spacing={7}
+                                        >
+                                          <Typography
+                                            component={Link}
+                                            variant="body2"
+                                            href={`/ciclos/${currentCycle.id}`}
+                                            color="primary"
+                                            sx={{
+                                              textDecoration: 'none',
+                                              fontWeight: 700,
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
+                                          >
+                                            {currentCycle.cycleId}
+                                          </Typography>
+                                          <CropChip
+                                            crop={currentCycle.crop}
+                                            size="small"
+                                          />
+                                        </Stack>
+                                      </Stack>
+                                    ) : (
+                                      <Stack spacing={1}>
+                                        <Stack
+                                          direction="row"
+                                          alignItems="center"
+                                        >
+                                          <Typography fontWeight={700}>
+                                            {lot.code || `Lote ${lot.id}`} -
+                                          </Typography>
+                                          <Typography
+                                            variant="subtitle1"
+                                            paddingLeft="0.5rem"
+                                          >
+                                            {formatArea(lot.areaHa)} ha
+                                          </Typography>
+                                        </Stack>
+
                                         <Typography
                                           variant="body2"
                                           color="text.secondary"
                                         >
                                           Sin ciclo en esta campaña
                                         </Typography>
-                                      )}
-                                    </Stack>
+                                      </Stack>
+                                    )}
                                   </CardContent>
                                 </Card>
                               ))}
