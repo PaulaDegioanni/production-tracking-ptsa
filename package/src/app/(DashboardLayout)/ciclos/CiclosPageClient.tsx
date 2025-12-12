@@ -376,8 +376,12 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
                         onClick={() => handleClickCycle(cycle.id)}
                       >
                         <TableCell>
-                          <Stack spacing={1} justifyItems="flex-start">
-                            <Typography variant="body1" fontWeight={600}>
+                          <Stack spacing={1.5} justifyItems="flex-start">
+                            <Typography
+                              variant="body1"
+                              fontWeight={600}
+                              paddingLeft="0.5rem"
+                            >
                               {cycle.cycleId}
                             </Typography>
                             <Chip

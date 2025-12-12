@@ -331,24 +331,6 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                 </FormControl>
                 <FormControl fullWidth size="small">
                   <TextField
-                    label="Destino / Proveedor"
-                    select
-                    value={destinationFilter}
-                    onChange={(e) => setDestinationFilter(e.target.value)}
-                    fullWidth
-                    sx={{ bgcolor: 'background.paper' }}
-                    size="small"
-                  >
-                    <MenuItem value="all">Todos</MenuItem>
-                    {uniqueDestinations.map((dest) => (
-                      <MenuItem key={dest} value={dest}>
-                        {dest}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </FormControl>
-                <FormControl fullWidth size="small">
-                  <TextField
                     label="Origen"
                     select
                     value={originFilter}
@@ -363,6 +345,24 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                     <MenuItem value="harvest">Cosecha</MenuItem>
                     <MenuItem value="stock">Stock</MenuItem>
                     <MenuItem value="unknown">Sin origen</MenuItem>
+                  </TextField>
+                </FormControl>
+                <FormControl fullWidth size="small">
+                  <TextField
+                    label="Destino / Proveedor"
+                    select
+                    value={destinationFilter}
+                    onChange={(e) => setDestinationFilter(e.target.value)}
+                    fullWidth
+                    sx={{ bgcolor: 'background.paper' }}
+                    size="small"
+                  >
+                    <MenuItem value="all">Todos</MenuItem>
+                    {uniqueDestinations.map((dest) => (
+                      <MenuItem key={dest} value={dest}>
+                        {dest}
+                      </MenuItem>
+                    ))}
                   </TextField>
                 </FormControl>
               </Stack>
@@ -525,9 +525,33 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                         >
                           {/* ID */}
                           <TableCell>
-                            <Typography variant="body1" fontWeight={600}>
-                              {trip.tripId}
-                            </Typography>
+                            <Stack spacing={1.5} justifyItems="flex-start">
+                              <Typography
+                                variant="body1"
+                                fontWeight={600}
+                                paddingLeft="0.5rem"
+                              >
+                                {trip.tripId}
+                              </Typography>
+                              {trip.ctg ? (
+                                <Chip
+                                  size="small"
+                                  label={`CTG ${trip.ctg}`}
+                                  sx={(theme) => ({
+                                    alignSelf: 'flex-start',
+
+                                    fontWeight: 600,
+                                    fontSize: theme.typography.caption,
+                                    bgcolor: alpha(
+                                      theme.palette.primary.main,
+                                      0.05
+                                    ),
+                                    color: theme.palette.primary.main,
+                                    borderRadius: '999px',
+                                  })}
+                                />
+                              ) : null}
+                            </Stack>
                           </TableCell>
 
                           {/* Camión */}
@@ -847,12 +871,13 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                       })}
                     >
                       <CardContent sx={{ p: 2.5 }}>
-                        <Stack spacing={2}>
+                        <Stack spacing={1.5}>
                           {/* Header */}
                           <Stack
                             direction="row"
                             justifyContent="space-between"
                             alignItems="center"
+                            spacing={2}
                           >
                             <Typography
                               variant="subtitle1"
@@ -867,10 +892,32 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                               options={TRIP_STATUS_OPTIONS}
                             />
                           </Stack>
-
-                          <Typography variant="body2" fontWeight={700}>
-                            {date} - {time}
-                          </Typography>
+                          <Stack
+                            direction="row"
+                            spacing={1.5}
+                            alignItems="center"
+                          >
+                            {trip.ctg ? (
+                              <Chip
+                                size="small"
+                                label={`CTG ${trip.ctg}`}
+                                sx={(theme) => ({
+                                  alignSelf: 'flex-start',
+                                  fontWeight: 600,
+                                  fontSize: theme.typography.subtitle2,
+                                  bgcolor: alpha(
+                                    theme.palette.primary.main,
+                                    0.05
+                                  ),
+                                  color: theme.palette.primary.main,
+                                  borderRadius: '999px',
+                                })}
+                              />
+                            ) : null}
+                            <Typography variant="body2" fontWeight={700}>
+                              {date} - {time}
+                            </Typography>
+                          </Stack>
 
                           <Box
                             sx={(theme) => ({

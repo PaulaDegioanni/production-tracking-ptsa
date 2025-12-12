@@ -25,6 +25,7 @@ export type TruckTripRaw = {
   Notas?: string | null;
 
   Camión?: any; // link_row a camión (array con { id, value })
+  CTG?: number; //grain trazability code
   'Ciclo de siembra Cosecha'?: any; // (por ahora no lo usamos)
   'Fecha de salida'?: string | null;
   Periodo?: string | null;
@@ -61,6 +62,7 @@ export interface TruckTripDto {
   date: string | null; // Fecha de salida
   period: string | null;
   truckPlate: string; // Camión
+  ctg: number;
   destinationType: string; // Tipo destino (Puerto, Acopio, etc.)
   destinationDetail: string;
   provider: string;
@@ -98,6 +100,7 @@ function mapTruckTripRawToDto(row: TruckTripRaw): TruckTripDto {
     date: row['Fecha de salida'] ?? null,
     period: normalizeField(row['Periodo']) || null,
     truckPlate: normalizeField(row['Camión']),
+    ctg: toNumber(row['CTG']),
     destinationType: normalizeField(row['Tipo destino']),
     destinationDetail: toStringOrEmpty(row['Detalle Destino (opcional)']),
     provider: normalizeField(row['Proveedor']),
