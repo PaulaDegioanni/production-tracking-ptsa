@@ -27,6 +27,7 @@ export type HarvestRaw = {
   'Kgs Ingresados a Stock'?: number | string | null;
   Lotes?: unknown; // link_row
   'Ciclo de siembra'?: unknown; // link_row to cycles
+  Periodo?: unknown;
   Campo?: unknown;
   'Campo texto'?: unknown;
   Cultivo?: unknown;
@@ -45,8 +46,9 @@ export interface HarvestDto {
   harvestedKgs: number;
   lotsIds: number[];
   lotsLabels: string[];
-  cycleIds: number[];
-  cycleLabels: string[];
+  cycleId: number | null;
+  cycleLabel: string | null;
+  period: string | null;
   stockIds: number[];
   stockLabels: string[];
   stockKgs: number;
@@ -73,6 +75,10 @@ function mapHarvestRawToDto(row: HarvestRaw): HarvestDto {
   const fieldFromLink = normalizeField(row.Campo);
   const cropLabel = normalizeField(row.Cultivo);
 
+  const cycleId = cycleIds[0] ?? null;
+  const cycleLabel = cycleLabels[0] ?? null;
+  const period = normalizeField((row as any).Periodo) || null;
+
   return {
     id: row.id,
     harvestId: normalizedHarvestId || String(row.id),
@@ -82,8 +88,9 @@ function mapHarvestRawToDto(row: HarvestRaw): HarvestDto {
     harvestedKgs: toNumber(row['KG Cosechados']),
     lotsIds,
     lotsLabels,
-    cycleIds,
-    cycleLabels,
+    cycleId: cycleId,
+    cycleLabel: cycleLabel,
+    period,
     stockIds,
     stockLabels,
     stockKgs: toNumber(row['Kgs Ingresados a Stock']),
@@ -111,5 +118,5 @@ export async function getHarvestsByCycleIdDto(
   const rows = await getHarvestsRaw();
   return rows
     .map(mapHarvestRawToDto)
-    .filter((h) => h.cycleIds.includes(cycleId));
+    .filter((h) => h.cycleId.includes(cycleId));
 }

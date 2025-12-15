@@ -4,15 +4,14 @@ import * as React from 'react';
 import {
   alpha,
   Box,
+  Button,
   Card,
   CardContent,
   Chip,
   FormControl,
-  FormControlLabel,
   MenuItem,
   Paper,
   Stack,
-  Switch,
   Table,
   TableBody,
   TableCell,
@@ -61,41 +60,37 @@ const formatKgs = (value: number): string =>
     maximumFractionDigits: 0,
   });
 
-const getYearFromDate = (value: string | null): string | null => {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  return String(date.getFullYear());
-};
-
-const hasDirectTrips = (harvest: HarvestDto): boolean => {
-  if (harvest.directTruckTripIds.length > 0) return true;
-  if (harvest.directTruckKgs > 0) return true;
-  return false;
-};
-
 /* --------- Component --------- */
 
 const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
-  const [yearFilter, setYearFilter] = React.useState<string>('all');
+  const [periodFilter, setPeriodFilter] = React.useState<string>('all');
   const [fieldFilter, setFieldFilter] = React.useState<string>('all');
   const [cropFilter, setCropFilter] = React.useState<string>('all');
-  const [onlyWithKgs, setOnlyWithKgs] = React.useState<boolean>(true);
-  const [directTripsFilter, setDirectTripsFilter] = React.useState<
-    'all' | 'yes' | 'no'
-  >('all');
+  const [cycleFilter, setCycleFilter] = React.useState<string>('all');
 
-  const uniqueYears = React.useMemo(() => {
-    const years = Array.from(
-      new Set(
-        initialHarvests
-          .map((h) => getYearFromDate(h.date))
-          .filter((year): year is string => Boolean(year))
-      )
-    ).sort((a, b) => Number(b) - Number(a));
+  const uniquePeriods = React.useMemo(
+    () =>
+      Array.from(
+        new Set(
+          initialHarvests
+            .map((h) => (h.period ?? '').trim())
+            .filter((p) => Boolean(p))
+        )
+      ).sort((a, b) => b.localeCompare(a)), // más nuevo arriba si es "2025/2026"
+    [initialHarvests]
+  );
 
-    return years;
-  }, [initialHarvests]);
+  const uniqueCycles = React.useMemo(
+    () =>
+      Array.from(
+        new Set(
+          initialHarvests
+            .map((h) => h.cycleLabel?.trim() || '')
+            .filter((v) => Boolean(v))
+        )
+      ).sort(),
+    [initialHarvests]
+  );
 
   const uniqueFields = React.useMemo(
     () =>
@@ -119,27 +114,18 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
 
   const filteredHarvests = React.useMemo(() => {
     return initialHarvests.filter((harvest) => {
-      const year = getYearFromDate(harvest.date);
-      if (yearFilter !== 'all' && year !== yearFilter) return false;
-
+      const period = (harvest.period ?? '').trim();
+      if (periodFilter !== 'all' && period !== periodFilter) return false;
       if (fieldFilter !== 'all' && harvest.field !== fieldFilter) return false;
       if (cropFilter !== 'all' && harvest.crop !== cropFilter) return false;
-
-      if (onlyWithKgs && harvest.harvestedKgs === 0) return false;
-
-      if (directTripsFilter === 'yes' && !hasDirectTrips(harvest)) return false;
-      if (directTripsFilter === 'no' && hasDirectTrips(harvest)) return false;
+      if (cycleFilter !== 'all') {
+        const cycleLabel = harvest.cycleLabel?.trim() || '';
+        if (cycleLabel !== cycleFilter) return false;
+      }
 
       return true;
     });
-  }, [
-    initialHarvests,
-    yearFilter,
-    fieldFilter,
-    cropFilter,
-    onlyWithKgs,
-    directTripsFilter,
-  ]);
+  }, [initialHarvests, periodFilter, fieldFilter, cropFilter, cycleFilter]);
 
   const sortedHarvests = React.useMemo(() => {
     return [...filteredHarvests].sort((a, b) => {
@@ -217,18 +203,18 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
               >
                 <FormControl fullWidth size="small">
                   <TextField
-                    label="Año"
+                    label="Período"
                     select
-                    value={yearFilter}
-                    onChange={(event) => setYearFilter(event.target.value)}
+                    value={periodFilter}
+                    onChange={(event) => setPeriodFilter(event.target.value)}
                     fullWidth
                     size="small"
                     sx={{ bgcolor: 'background.paper' }}
                   >
                     <MenuItem value="all">Todos</MenuItem>
-                    {uniqueYears.map((year) => (
-                      <MenuItem key={year} value={year}>
-                        {year}
+                    {uniquePeriods.map((period) => (
+                      <MenuItem key={period} value={period}>
+                        {period}
                       </MenuItem>
                     ))}
                   </TextField>
@@ -271,67 +257,83 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
                 </FormControl>
                 <FormControl fullWidth size="small">
                   <TextField
-                    label="Viajes directos"
+                    label="Ciclo de siembra"
                     select
-                    value={directTripsFilter}
-                    onChange={(event) =>
-                      setDirectTripsFilter(
-                        event.target.value as 'all' | 'yes' | 'no'
-                      )
-                    }
+                    value={cycleFilter}
+                    onChange={(event) => setCycleFilter(event.target.value)}
                     fullWidth
                     size="small"
                     sx={{ bgcolor: 'background.paper' }}
                   >
                     <MenuItem value="all">Todos</MenuItem>
-                    <MenuItem value="yes">Solo con viajes</MenuItem>
-                    <MenuItem value="no">Sin viajes directos</MenuItem>
+                    {uniqueCycles.map((cycle) => (
+                      <MenuItem key={cycle} value={cycle}>
+                        {cycle}
+                      </MenuItem>
+                    ))}
                   </TextField>
                 </FormControl>
               </Stack>
+            </Box>
+            <Stack
+              direction={{ xs: 'column', md: 'row' }}
+              spacing={2}
+              sx={{
+                justifyContent: 'space-between',
+                alignItems: { xs: 'stretch', md: 'center' },
+                marginBottom: '2rem',
+              }}
+            >
+              <Box
+                sx={(theme) => ({
+                  px: 2,
+                  py: 1,
+                  borderRadius: 1.5,
+                  bgcolor: alpha(theme.palette.primary.main, 0.08),
+                  border: `1px solid ${alpha(
+                    theme.palette.primary.main,
+                    0.12
+                  )}`,
+                })}
+              >
+                <Typography
+                  variant="body2"
+                  color="primary.dark"
+                  fontWeight={600}
+                >
+                  {filteredHarvests.length} cosecha
+                  {filteredHarvests.length === 1 ? '' : 's'} registrada
+                  {filteredHarvests.length === 1 ? '' : 's'}
+                </Typography>
+              </Box>
               <Stack
-                direction={{ xs: 'column', md: 'row' }}
+                direction="row"
                 spacing={2}
                 sx={{
-                  mt: 2,
-                  alignItems: { xs: 'flex-start', md: 'center' },
-                  justifyContent: 'space-between',
+                  width: { xs: '100%', md: 'auto' },
+                  justifyContent: { xs: 'space-between', md: 'flex-end' },
                 }}
               >
-                <FormControlLabel
-                  control={
-                    <Switch
-                      color="primary"
-                      checked={onlyWithKgs}
-                      onChange={(event) => setOnlyWithKgs(event.target.checked)}
-                    />
-                  }
-                  label="Solo con kgs"
-                />
-                <Box
-                  sx={(theme) => ({
-                    px: 2,
-                    py: 1,
-                    borderRadius: 1.5,
-                    bgcolor: alpha(theme.palette.primary.main, 0.08),
-                    border: `1px solid ${alpha(
-                      theme.palette.primary.main,
-                      0.12
-                    )}`,
-                  })}
+                <Button
+                  variant="contained"
+                  color="primary"
+                  sx={{
+                    flexGrow: { xs: 1, md: 0 },
+                    boxShadow: (theme) =>
+                      `0 4px 12px ${alpha(theme.palette.primary.main, 0.25)}`,
+                    '&:hover': {
+                      boxShadow: (theme) =>
+                        `0 6px 16px ${alpha(theme.palette.primary.main, 0.35)}`,
+                    },
+                  }}
                 >
-                  <Typography
-                    variant="body2"
-                    color="primary.dark"
-                    fontWeight={600}
-                  >
-                    {filteredHarvests.length} cosecha
-                    {filteredHarvests.length === 1 ? '' : 's'} filtrada
-                    {filteredHarvests.length === 1 ? '' : 's'}
-                  </Typography>
-                </Box>
+                  Registrar nueva cosecha
+                </Button>
+                <Button variant="outlined" sx={{ flexGrow: { xs: 1, md: 0 } }}>
+                  Exportar CSV
+                </Button>
               </Stack>
-            </Box>
+            </Stack>
 
             {/* Desktop table */}
             <Box sx={{ display: { xs: 'none', md: 'block' } }}>
@@ -340,7 +342,8 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
                 variant="outlined"
                 sx={(theme) => ({
                   borderRadius: 2,
-                  overflow: 'hidden',
+                  width: '100%',
+                  overflowX: 'auto',
                   boxShadow: `0 2px 8px ${alpha(
                     theme.palette.grey[500],
                     0.08
@@ -392,7 +395,7 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
                         })}
                       />
                       <TableCell align="right">Kgs cosechados</TableCell>
-                      <TableCell align="center">
+                      <TableCell align="right">
                         Kgs ingresados a stock
                       </TableCell>
                       <TableCell align="right">
@@ -483,37 +486,19 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
                             })}
                           />
                           <TableCell>
-                            {harvest.cycleIds.length === 1 ? (
-                              <Typography
-                                component={Link}
-                                href={`/ciclos/${harvest.cycleIds[0]}`}
-                                sx={(theme) => ({
-                                  fontSize: '0.85rem',
-                                  fontWeight: 700,
-                                  color: theme.palette.primary.main,
-                                  textDecoration: 'none',
-                                  '&:hover': { textDecoration: 'underline' },
-                                })}
-                              >
-                                {harvest.cycleLabels[0] ||
-                                  `Ciclo ${harvest.cycleIds[0]}`}
-                              </Typography>
-                            ) : harvest.cycleIds.length > 1 ? (
-                              <Typography
-                                variant="body2"
-                                color="primary"
-                                fontWeight={700}
-                              >
-                                Ver ({harvest.cycleIds.length})
-                              </Typography>
-                            ) : (
-                              <Typography
-                                variant="body2"
-                                color="text.secondary"
-                              >
-                                —
-                              </Typography>
-                            )}
+                            <Typography
+                              component={Link}
+                              href={`/ciclos/${harvest.cycleId}`}
+                              sx={(theme) => ({
+                                fontSize: '0.85rem',
+                                fontWeight: 700,
+                                color: theme.palette.primary.main,
+                                textDecoration: 'none',
+                                '&:hover': { textDecoration: 'underline' },
+                              })}
+                            >
+                              {harvest.cycleLabel || `Ciclo ${harvest.cycleId}`}
+                            </Typography>
                           </TableCell>
                           <TableCell>
                             <Typography variant="body2" fontWeight={700}>
@@ -632,17 +617,17 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
                           )}`,
                         })}
                       />
-                      <TableCell align="left">
+                      <TableCell align="right">
                         <Typography variant="body1" fontWeight={700}>
                           {formatKgs(totals.totalHarvestedKgs)}
                         </Typography>
                       </TableCell>
-                      <TableCell align="left">
+                      <TableCell align="right">
                         <Typography variant="body1" fontWeight={700}>
                           {formatKgs(totals.totalToStockKgs)}
                         </Typography>
                       </TableCell>
-                      <TableCell align="left">
+                      <TableCell align="right">
                         <Typography
                           variant="body1"
                           fontWeight={700}
@@ -810,39 +795,29 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
                               background: `linear-gradient(90deg, ${theme.palette.divider} 0%, transparent 100%)`,
                             })}
                           />
-                          {harvest.cycleIds.length === 1 ? (
-                            <Stack spacing={0.5}>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                fontWeight={700}
-                              >
-                                Ciclo
-                              </Typography>
-                              <Typography
-                                component={Link}
-                                href={`/ciclos/${harvest.cycleIds[0]}`}
-                                sx={(theme) => ({
-                                  fontSize: '0.9rem',
-                                  fontWeight: 700,
-                                  color: theme.palette.primary.main,
-                                  textDecoration: 'none',
-                                  '&:hover': { textDecoration: 'underline' },
-                                })}
-                              >
-                                {harvest.cycleLabels[0] ||
-                                  `Ciclo ${harvest.cycleIds[0]}`}
-                              </Typography>
-                            </Stack>
-                          ) : harvest.cycleIds.length > 1 ? (
+                          <Stack spacing={0.5}>
                             <Typography
-                              variant="body2"
+                              variant="caption"
+                              color="text.secondary"
                               fontWeight={700}
-                              color="primary"
                             >
-                              Ver ({harvest.cycleIds.length})
+                              Ciclo
                             </Typography>
-                          ) : null}
+                            <Typography
+                              component={Link}
+                              href={`/ciclos/${harvest.cycleId}`}
+                              sx={(theme) => ({
+                                fontSize: '0.9rem',
+                                fontWeight: 700,
+                                color: theme.palette.primary.main,
+                                textDecoration: 'none',
+                                '&:hover': { textDecoration: 'underline' },
+                              })}
+                            >
+                              {harvest.cycleLabel || `Ciclo ${harvest.cycleId}`}
+                            </Typography>
+                          </Stack>
+
                           <Box
                             sx={(theme) => ({
                               height: 1,
