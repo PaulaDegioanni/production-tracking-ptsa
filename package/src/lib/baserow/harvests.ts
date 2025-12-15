@@ -8,7 +8,7 @@ import {
   toNumber,
 } from './utils';
 
-const HARVESTS_TABLE_ID = Number(
+export const HARVESTS_TABLE_ID = Number(
   process.env.NEXT_PUBLIC_BASEROW_HARVESTS_TABLE_ID
 );
 

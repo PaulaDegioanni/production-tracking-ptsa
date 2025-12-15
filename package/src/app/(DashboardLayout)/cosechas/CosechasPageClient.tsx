@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import {
+  Alert,
   alpha,
   Box,
   Button,
@@ -11,6 +12,7 @@ import {
   FormControl,
   MenuItem,
   Paper,
+  Snackbar,
   Stack,
   Table,
   TableBody,
@@ -22,10 +24,12 @@ import {
   Typography,
 } from '@mui/material';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import PageContainer from '@/app/(DashboardLayout)/components/container/PageContainer';
 import DashboardCard from '@/app/(DashboardLayout)/components/shared/DashboardCard';
 import CropChip from '@/app/(DashboardLayout)/components/shared/CropChip';
+import SimpleEntityDialogForm from '@/components/forms/SimpleEntityDialogForm';
 import type { HarvestDto } from '@/lib/baserow/harvests';
 
 type CosechasPageClientProps = {
@@ -63,10 +67,40 @@ const formatKgs = (value: number): string =>
 /* --------- Component --------- */
 
 const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
+  const router = useRouter();
   const [periodFilter, setPeriodFilter] = React.useState<string>('all');
   const [fieldFilter, setFieldFilter] = React.useState<string>('all');
   const [cropFilter, setCropFilter] = React.useState<string>('all');
   const [cycleFilter, setCycleFilter] = React.useState<string>('all');
+  const [createDialogOpen, setCreateDialogOpen] = React.useState(false);
+  const [snackbarState, setSnackbarState] = React.useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error';
+  }>({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
+
+  const harvestFormFields = React.useMemo(
+    () => [
+      { key: 'Fecha', label: 'Fecha', type: 'datetime', required: true },
+      {
+        key: 'KG Cosechados',
+        label: 'KG Cosechados',
+        type: 'number',
+        required: true,
+        step: 0.01,
+      },
+      {
+        key: 'Observaciones',
+        label: 'Observaciones / Notas',
+        type: 'textarea',
+      },
+    ],
+    []
+  );
 
   const uniquePeriods = React.useMemo(
     () =>
@@ -152,6 +186,73 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
       }
     );
   }, [sortedHarvests]);
+
+  const handleCreateSubmit = React.useCallback(
+    async (formValues: Record<string, any>) => {
+      const rawDate = formValues['Fecha'];
+      if (!rawDate) {
+        throw new Error('La fecha es obligatoria');
+      }
+      const parsedDate = new Date(rawDate);
+      if (Number.isNaN(parsedDate.getTime())) {
+        throw new Error('La fecha ingresada no es válida');
+      }
+
+      const rawKgs = formValues['KG Cosechados'];
+      const harvestedKgs = parseFloat(rawKgs);
+      if (Number.isNaN(harvestedKgs)) {
+        throw new Error('Ingresá un número válido para los kilos cosechados');
+      }
+
+      const payload: Record<string, any> = {
+        Fecha: parsedDate.toISOString(),
+        'KG Cosechados': harvestedKgs,
+      };
+
+      const notesValue = (formValues['Observaciones'] ?? '').trim();
+      if (notesValue) {
+        payload.Observaciones = notesValue;
+      }
+
+      const response = await fetch('/api/harvests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ payload }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        let message = 'No se pudo registrar la cosecha';
+        if (errorBody) {
+          try {
+            const parsed = JSON.parse(errorBody);
+            message = parsed?.error || errorBody;
+          } catch {
+            message = errorBody;
+          }
+        }
+        throw new Error(message);
+      }
+
+      setSnackbarState({
+        open: true,
+        message: 'Cosecha registrada correctamente',
+        severity: 'success',
+      });
+      router.refresh();
+    },
+    [router]
+  );
+
+  const handleSnackbarClose = (
+    _event?: React.SyntheticEvent | Event,
+    reason?: string
+  ) => {
+    if (reason === 'clickaway') return;
+    setSnackbarState((prev) => ({ ...prev, open: false }));
+  };
 
   return (
     <PageContainer
@@ -326,6 +427,7 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
                         `0 6px 16px ${alpha(theme.palette.primary.main, 0.35)}`,
                     },
                   }}
+                  onClick={() => setCreateDialogOpen(true)}
                 >
                   Registrar nueva cosecha
                 </Button>
@@ -886,6 +988,28 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
           </Stack>
         </DashboardCard>
       </Stack>
+      <SimpleEntityDialogForm
+        open={createDialogOpen}
+        title="Registrar nueva cosecha"
+        onClose={() => setCreateDialogOpen(false)}
+        onSubmit={handleCreateSubmit}
+        fields={harvestFormFields}
+      />
+      <Snackbar
+        open={snackbarState.open}
+        autoHideDuration={5000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={handleSnackbarClose}
+          severity={snackbarState.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbarState.message}
+        </Alert>
+      </Snackbar>
     </PageContainer>
   );
 };
