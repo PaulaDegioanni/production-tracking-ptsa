@@ -2,7 +2,9 @@
 import { getTableRows, getTableRowById } from './client';
 import { toNumber, normalizeField, extractLinkRowIds } from './utils';
 
-const CYCLES_TABLE_ID = Number(process.env.NEXT_PUBLIC_BASEROW_CYCLES_TABLE_ID);
+export const CYCLES_TABLE_ID = Number(
+  process.env.NEXT_PUBLIC_BASEROW_CYCLES_TABLE_ID
+);
 
 if (!CYCLES_TABLE_ID || Number.isNaN(CYCLES_TABLE_ID)) {
   throw new Error(
@@ -60,6 +62,7 @@ export interface CycleDto {
   id: number;
   cycleId: string;
   field: string;
+  fieldId: number | null;
   crop: string;
   areaHa: number;
   status: CycleStatus;
@@ -97,11 +100,14 @@ function mapCycleRow(row: CycleRaw): CycleDto {
   const stockKgs = toNumber(row['Kgs en Stock']);
   const truckFromStock = toNumber(row['Kgs Camión desde Stock']);
   const truckFromHarvest = toNumber(row['Kgs Camión desde Cosecha']);
+  const fieldIds = extractLinkRowIds(row.Campo as any);
+  const fieldId = fieldIds[0] ?? null;
 
   return {
     id: row.id,
     cycleId: String(row.ID ?? ''),
     field: normalizeField(row.Campo ?? ''),
+    fieldId,
     crop: normalizeField(row.Cultivo?.value ?? ''),
     areaHa: toNumber(row['Superficie (has)']),
     status: normalizeStatus(row.Estado),

@@ -7,7 +7,9 @@ import {
   normalizeField,
 } from './utils';
 
-const LOTS_TABLE_ID = Number(process.env.NEXT_PUBLIC_BASEROW_LOTS_TABLE_ID);
+export const LOTS_TABLE_ID = Number(
+  process.env.NEXT_PUBLIC_BASEROW_LOTS_TABLE_ID
+);
 
 if (!LOTS_TABLE_ID || Number.isNaN(LOTS_TABLE_ID)) {
   throw new Error(
@@ -33,6 +35,7 @@ export interface LotDto {
   code: string;
   notes: string;
   fieldName: string;
+  fieldId: number | null;
   areaHa: number;
   cycleIds: number[];
 }
@@ -40,6 +43,8 @@ export interface LotDto {
 function mapLotRawToDto(row: LotRaw): LotDto {
   const cycleLink = row['Ciclos de Siembra'] ?? row.Ciclos;
   const cycleIds = extractLinkRowIds(cycleLink);
+  const fieldIds = extractLinkRowIds(row.Campo);
+  const fieldId = fieldIds[0] ?? null;
 
   return {
     id: row.id,
@@ -48,6 +53,7 @@ function mapLotRawToDto(row: LotRaw): LotDto {
     notes: toStringOrEmpty(row.Notas),
     // Campo can also be option/lookup → normalizeField
     fieldName: normalizeField(row.Campo),
+    fieldId,
     areaHa: toNumber(row['Superficie (ha)']),
     cycleIds,
   };

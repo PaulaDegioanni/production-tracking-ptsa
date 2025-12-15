@@ -8,7 +8,7 @@ import {
   normalizeField,
 } from './utils';
 
-const TRUCK_TRIPS_TABLE_ID = Number(
+export const TRUCK_TRIPS_TABLE_ID = Number(
   process.env.NEXT_PUBLIC_BASEROW_TRUCK_TRIPS_TABLE_ID
 );
 

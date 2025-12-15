@@ -7,7 +7,9 @@ import {
   toStringOrEmpty,
 } from './utils';
 
-const FIELDS_TABLE_ID = Number(process.env.NEXT_PUBLIC_BASEROW_FIELDS_TABLE_ID);
+export const FIELDS_TABLE_ID = Number(
+  process.env.NEXT_PUBLIC_BASEROW_FIELDS_TABLE_ID
+);
 
 if (!FIELDS_TABLE_ID || Number.isNaN(FIELDS_TABLE_ID)) {
   throw new Error(

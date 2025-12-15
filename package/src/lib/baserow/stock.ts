@@ -8,7 +8,9 @@ import {
   normalizeField,
 } from './utils';
 
-const STOCK_TABLE_ID = Number(process.env.NEXT_PUBLIC_BASEROW_STOCK_TABLE_ID);
+export const STOCK_TABLE_ID = Number(
+  process.env.NEXT_PUBLIC_BASEROW_STOCK_TABLE_ID
+);
 
 if (!STOCK_TABLE_ID || Number.isNaN(STOCK_TABLE_ID)) {
   throw new Error(
@@ -56,6 +58,7 @@ export interface StockDto {
   currentKgs: number;
   status: StockStatus | null;
   field: string;
+  fieldId: number | null;
   crop: string;
 }
 
@@ -72,6 +75,9 @@ function mapStockRawToDto(row: StockRaw): StockDto {
   const truckTripLabels = extractLinkRowLabelsTrimmed(
     row['Viajes de camión desde stock'] as unknown
   );
+
+  const fieldIds = extractLinkRowIds(row.Campo);
+  const fieldId = fieldIds[0] ?? null;
 
   return {
     id: row.id,
@@ -91,6 +97,7 @@ function mapStockRawToDto(row: StockRaw): StockDto {
     currentKgs: toNumber(row['Kgs actuales']),
     status: (normalizeField(row.Estado) as StockStatus) ?? null,
     field: normalizeField(row.Campo),
+    fieldId,
     crop: normalizeField(row.Cultivo),
   };
 }
