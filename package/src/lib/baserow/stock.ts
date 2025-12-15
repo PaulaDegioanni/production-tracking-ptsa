@@ -25,7 +25,7 @@ export type StockRaw = {
   'Tipo unidad'?: any;
   'Fecha de creación'?: string | null;
   'Cosechas Origen'?: unknown; // link_row to harvests
-  'Kgs Cosechados'?: number | string | null;
+  'Kgs Ingresados a Stock'?: number | string | null;
   'Total kgs ingresados'?: number | string | null;
   'Viajes de camión desde stock'?: any; // link_row to trips
   'Kgs egresados'?: number | string | null;
@@ -83,7 +83,7 @@ function mapStockRawToDto(row: StockRaw): StockDto {
     createdAt: row['Fecha de creación'] ?? null,
     originHarvestIds,
     originHarvestsLabels,
-    harvestedKgs: toNumber(row['Kgs Cosechados']),
+    harvestedKgs: toNumber(row['Kgs Ingresados a Stock']),
     totalInKgs: toNumber(row['Total kgs ingresados']),
     truckTripIds,
     truckTripLabels,

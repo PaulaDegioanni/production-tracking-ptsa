@@ -116,7 +116,5 @@ export async function getHarvestsByCycleIdDto(
   cycleId: number
 ): Promise<HarvestDto[]> {
   const rows = await getHarvestsRaw();
-  return rows
-    .map(mapHarvestRawToDto)
-    .filter((h) => h.cycleId.includes(cycleId));
+  return rows.map(mapHarvestRawToDto).filter((h) => h.cycleId == cycleId);
 }

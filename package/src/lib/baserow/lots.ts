@@ -19,8 +19,7 @@ if (!LOTS_TABLE_ID || Number.isNaN(LOTS_TABLE_ID)) {
 export type LotRaw = {
   id: number;
   'Nombre / Código Lote'?: any;
-  Descripción?: string | null;
-  'Activo ?'?: boolean;
+  Notas?: string | null;
   Campo?: any;
   'Superficie (ha)'?: number | string | null;
   Etiquetas?: any;
@@ -32,8 +31,7 @@ export type LotRaw = {
 export interface LotDto {
   id: number;
   code: string;
-  description: string;
-  isActive: boolean;
+  notes: string;
   fieldName: string;
   areaHa: number;
   cycleIds: number[];
@@ -47,8 +45,7 @@ function mapLotRawToDto(row: LotRaw): LotDto {
     id: row.id,
     // Can be a simple string, formula or lookup → normalizeField
     code: normalizeField(row['Nombre / Código Lote']),
-    description: toStringOrEmpty(row.Descripción),
-    isActive: Boolean(row['Activo ?']),
+    notes: toStringOrEmpty(row.Notas),
     // Campo can also be option/lookup → normalizeField
     fieldName: normalizeField(row.Campo),
     areaHa: toNumber(row['Superficie (ha)']),
