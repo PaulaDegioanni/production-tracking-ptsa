@@ -19,7 +19,7 @@ if (!STOCK_TABLE_ID || Number.isNaN(STOCK_TABLE_ID)) {
 // Raw shape from Baserow
 export type StockRaw = {
   id: number;
-  Name?: string; // formula
+  ID?: string; // formula
   Notas?: string | null;
   'Ciclo de siembra'?: any; // link_row to cycles
   'Tipo unidad'?: any;
@@ -75,7 +75,7 @@ function mapStockRawToDto(row: StockRaw): StockDto {
 
   return {
     id: row.id,
-    name: normalizeField(row.Name),
+    name: normalizeField(row.ID),
     notes: row.Notas ?? undefined,
     cycleIds,
     cycleLabels,

@@ -154,13 +154,8 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
       (acc, harvest) => {
         acc.totalHarvestedKgs += harvest.harvestedKgs;
         acc.totalDirectTruckKgs += harvest.directTruckKgs;
-        acc.totalToStockKgs += Math.max(
-          harvest.harvestedKgs - harvest.directTruckKgs,
-          0
-        );
+        acc.totalToStockKgs += harvest.stockKgs;
         acc.harvestCount += 1;
-        acc.directTripCount += harvest.directTruckTripIds.length;
-        acc.stockTripCount += harvest.stockTruckTripIds.length;
         return acc;
       },
       {
@@ -168,8 +163,6 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
         totalDirectTruckKgs: 0,
         totalToStockKgs: 0,
         harvestCount: 0,
-        directTripCount: 0,
-        stockTripCount: 0,
       }
     );
   }, [sortedHarvests]);
@@ -374,24 +367,43 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
                   >
                     <TableRow>
                       <TableCell>ID Cosecha</TableCell>
-                      <TableCell>Fecha</TableCell>
-                      <TableCell>Campo</TableCell>
                       <TableCell>Cultivo</TableCell>
-                      <TableCell align="center">Lotes</TableCell>
+                      <TableCell>Fecha</TableCell>
+                      <TableCell>Lotes</TableCell>
+                      <TableCell
+                        sx={(theme) => ({
+                          borderLeft: `2px solid ${alpha(
+                            theme.palette.primary.main,
+                            0.15
+                          )}`,
+                        })}
+                      />
                       <TableCell>Ciclo</TableCell>
+                      <TableCell align="center">Stock asociado</TableCell>
+                      <TableCell align="center">
+                        Viajes de camión asociados
+                      </TableCell>
+                      <TableCell
+                        sx={(theme) => ({
+                          borderLeft: `2px solid ${alpha(
+                            theme.palette.primary.main,
+                            0.15
+                          )}`,
+                        })}
+                      />
                       <TableCell align="right">Kgs cosechados</TableCell>
-                      <TableCell align="right">Kgs camión directo</TableCell>
-                      <TableCell align="center">Viajes directos</TableCell>
-                      <TableCell align="center">Viajes desde stock</TableCell>
+                      <TableCell align="center">
+                        Kgs ingresados a stock
+                      </TableCell>
+                      <TableCell align="right">
+                        Kgs egresados en camión
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {sortedHarvests.map((harvest, index) => {
                       const { date, time } = formatDateTimeParts(harvest.date);
                       const harvestId = harvest.harvestId || `#${harvest.id}`;
-                      const lotsCount = harvest.lotsIds.length;
-                      const directTrips = harvest.directTruckTripIds.length;
-                      const stockTrips = harvest.stockTruckTripIds.length;
 
                       return (
                         <TableRow
@@ -422,14 +434,9 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
                             <Typography variant="body1" fontWeight={700}>
                               {harvestId}
                             </Typography>
-                            {time ? (
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                              >
-                                {time}
-                              </Typography>
-                            ) : null}
+                          </TableCell>
+                          <TableCell>
+                            <CropChip crop={harvest.crop} />
                           </TableCell>
                           <TableCell>
                             <Typography variant="body1" fontWeight={700}>
@@ -440,18 +447,41 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
                             </Typography>
                           </TableCell>
                           <TableCell>
-                            <Typography variant="body2" fontWeight={600}>
-                              {harvest.field || '—'}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <CropChip crop={harvest.crop} />
-                          </TableCell>
-                          <TableCell align="center">
                             <Typography variant="body2" fontWeight={700}>
-                              {lotsCount}
+                              {harvest.lotsIds.length ? (
+                                <Stack spacing={0.5} flexWrap="wrap">
+                                  {harvest.lotsIds.map((lid, i) => (
+                                    <Chip
+                                      key={lid}
+                                      size="small"
+                                      variant="outlined"
+                                      label={`${harvest.lotsLabels[i]}`}
+                                      sx={{
+                                        fontSize: 'body2',
+                                        fontWeight: 600,
+                                        mb: 0.5,
+                                      }}
+                                    />
+                                  ))}
+                                </Stack>
+                              ) : (
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
+                                  —
+                                </Typography>
+                              )}
                             </Typography>
                           </TableCell>
+                          <TableCell
+                            sx={(theme) => ({
+                              borderLeft: `2px solid ${alpha(
+                                theme.palette.primary.main,
+                                0.08
+                              )}`,
+                            })}
+                          />
                           <TableCell>
                             {harvest.cycleIds.length === 1 ? (
                               <Typography
@@ -485,6 +515,70 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
                               </Typography>
                             )}
                           </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight={700}>
+                              {harvest.stockIds.length ? (
+                                <Stack spacing={0.5} flexWrap="wrap">
+                                  {harvest.stockIds.map((sid, i) => (
+                                    <Chip
+                                      key={sid}
+                                      size="small"
+                                      variant="outlined"
+                                      label={`${harvest.stockLabels[i]}`}
+                                      sx={{
+                                        fontSize: 'body2',
+                                        fontWeight: 600,
+                                        mb: 0.5,
+                                      }}
+                                    />
+                                  ))}
+                                </Stack>
+                              ) : (
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
+                                  —
+                                </Typography>
+                              )}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight={700}>
+                              {harvest.directTruckTripIds.length ? (
+                                <Stack spacing={0.5} flexWrap="wrap">
+                                  {harvest.directTruckTripIds.map((tid, i) => (
+                                    <Chip
+                                      key={tid}
+                                      size="small"
+                                      variant="outlined"
+                                      label={`${harvest.directTruckLabels[i]}`}
+                                      sx={{
+                                        fontSize: 'body2',
+                                        fontWeight: 600,
+                                        mb: 0.5,
+                                      }}
+                                    />
+                                  ))}
+                                </Stack>
+                              ) : (
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
+                                  —
+                                </Typography>
+                              )}
+                            </Typography>
+                          </TableCell>
+                          <TableCell
+                            sx={(theme) => ({
+                              borderLeft: `2px solid ${alpha(
+                                theme.palette.primary.main,
+                                0.08
+                              )}`,
+                            })}
+                          />
                           <TableCell align="right">
                             <Typography variant="body1" fontWeight={700}>
                               {formatKgs(harvest.harvestedKgs)}
@@ -496,17 +590,16 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
                               fontWeight={700}
                               color="primary"
                             >
+                              {formatKgs(harvest.stockKgs)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography
+                              variant="body1"
+                              fontWeight={700}
+                              color="primary"
+                            >
                               {formatKgs(harvest.directTruckKgs)}
-                            </Typography>
-                          </TableCell>
-                          <TableCell align="center">
-                            <Typography variant="body1" fontWeight={600}>
-                              {directTrips}
-                            </Typography>
-                          </TableCell>
-                          <TableCell align="center">
-                            <Typography variant="body1" fontWeight={600}>
-                              {stockTrips}
                             </Typography>
                           </TableCell>
                         </TableRow>
@@ -526,41 +619,36 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
                         },
                       })}
                     >
-                      <TableCell colSpan={6} align="right">
-                        <Stack spacing={0.5} alignItems="flex-end">
-                          <Typography variant="body1" fontWeight={800}>
-                            Total
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Kgs a stock: {formatKgs(totals.totalToStockKgs)}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Cosechas: {totals.harvestCount}
-                          </Typography>
-                        </Stack>
+                      <TableCell colSpan={8} align="right">
+                        <Typography variant="body1" fontWeight={800}>
+                          Total
+                        </Typography>
                       </TableCell>
-                      <TableCell align="right">
+                      <TableCell
+                        sx={(theme) => ({
+                          borderLeft: `2px solid ${alpha(
+                            theme.palette.primary.main,
+                            0.08
+                          )}`,
+                        })}
+                      />
+                      <TableCell align="left">
                         <Typography variant="body1" fontWeight={700}>
                           {formatKgs(totals.totalHarvestedKgs)}
                         </Typography>
                       </TableCell>
-                      <TableCell align="right">
+                      <TableCell align="left">
+                        <Typography variant="body1" fontWeight={700}>
+                          {formatKgs(totals.totalToStockKgs)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="left">
                         <Typography
                           variant="body1"
                           fontWeight={700}
                           color="primary"
                         >
                           {formatKgs(totals.totalDirectTruckKgs)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="center">
-                        <Typography variant="body1" fontWeight={700}>
-                          {totals.directTripCount}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="center">
-                        <Typography variant="body1" fontWeight={700}>
-                          {totals.stockTripCount}
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -602,60 +690,44 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
                       >
                         <Stack spacing={0.2}>
                           <Typography variant="caption" color="text.secondary">
-                            Kgs cosechados
+                            Cosechados
                           </Typography>
-                          <Typography variant="body1" fontWeight={700}>
+                          <Typography
+                            variant="body1"
+                            fontWeight={700}
+                            align="left"
+                          >
                             {formatKgs(totals.totalHarvestedKgs)} kg
                           </Typography>
                         </Stack>
                         <Stack spacing={0.2}>
-                          <Typography variant="caption" color="text.secondary">
-                            Kgs directos
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            flexWrap="wrap"
+                          >
+                            Ingresados a Stock
                           </Typography>
                           <Typography
                             variant="body1"
                             fontWeight={700}
                             color="primary"
+                            align="left"
                           >
-                            {formatKgs(totals.totalDirectTruckKgs)} kg
-                          </Typography>
-                        </Stack>
-                        <Stack spacing={0.2}>
-                          <Typography variant="caption" color="text.secondary">
-                            Kgs a stock
-                          </Typography>
-                          <Typography variant="body1" fontWeight={700}>
                             {formatKgs(totals.totalToStockKgs)} kg
                           </Typography>
                         </Stack>
-                      </Stack>
-                      <Stack
-                        direction="row"
-                        justifyContent="space-between"
-                        spacing={1.5}
-                      >
                         <Stack spacing={0.2}>
                           <Typography variant="caption" color="text.secondary">
-                            Cosechas
+                            Egresados en Camión
                           </Typography>
-                          <Typography variant="body1" fontWeight={700}>
-                            {totals.harvestCount}
-                          </Typography>
-                        </Stack>
-                        <Stack spacing={0.2}>
-                          <Typography variant="caption" color="text.secondary">
-                            Viajes directos
-                          </Typography>
-                          <Typography variant="body1" fontWeight={700}>
-                            {totals.directTripCount}
-                          </Typography>
-                        </Stack>
-                        <Stack spacing={0.2}>
-                          <Typography variant="caption" color="text.secondary">
-                            Viajes desde stock
-                          </Typography>
-                          <Typography variant="body1" fontWeight={700}>
-                            {totals.stockTripCount}
+                          <Typography
+                            variant="body1"
+                            fontWeight={700}
+                            color="primary"
+                            align="left"
+                          >
+                            {formatKgs(totals.totalDirectTruckKgs)} kg
                           </Typography>
                         </Stack>
                       </Stack>
@@ -664,9 +736,6 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
                 </Card>
 
                 {sortedHarvests.map((harvest) => {
-                  const { date, time } = formatDateTimeParts(harvest.date);
-                  const directTrips = harvest.directTruckTripIds.length;
-                  const stockTrips = harvest.stockTruckTripIds.length;
                   return (
                     <Card
                       key={harvest.id}
@@ -690,53 +759,81 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
                     >
                       <CardContent sx={{ p: 2.5 }}>
                         <Stack spacing={1.5}>
-                          <Stack
-                            direction="row"
-                            justifyContent="space-between"
-                            alignItems="center"
+                          <Typography
+                            variant="subtitle1"
+                            fontWeight={700}
+                            color="primary"
                           >
-                            <Typography
-                              variant="subtitle1"
-                              fontWeight={700}
-                              color="primary"
-                            >
-                              {harvest.harvestId || `#${harvest.id}`}
-                            </Typography>
-                            <Typography variant="body2" fontWeight={600}>
-                              {date}
-                            </Typography>
-                          </Stack>
-                          <Typography variant="body2" color="text.secondary">
-                            {time || '—'}
+                            {harvest.harvestId || `#${harvest.id}`}
                           </Typography>
+
                           <Stack
                             direction="row"
                             spacing={1}
                             alignItems="center"
                           >
-                            <Chip
-                              size="small"
-                              label={harvest.field || 'Sin campo'}
-                              variant="outlined"
-                              sx={{ fontWeight: 600, fontSize: '0.75rem' }}
-                            />
                             <CropChip crop={harvest.crop} size="small" />
-                          </Stack>
-                          {harvest.cycleIds.length === 1 ? (
-                            <Typography
-                              component={Link}
-                              href={`/ciclos/${harvest.cycleIds[0]}`}
-                              sx={(theme) => ({
-                                fontSize: '0.8rem',
-                                fontWeight: 700,
-                                color: theme.palette.primary.main,
-                                textDecoration: 'none',
-                                '&:hover': { textDecoration: 'underline' },
-                              })}
-                            >
-                              {harvest.cycleLabels[0] ||
-                                `Ciclo ${harvest.cycleIds[0]}`}
+                            <Typography variant="body2" fontWeight={700}>
+                              {harvest.lotsIds.length ? (
+                                <Stack
+                                  spacing={0.5}
+                                  flexWrap="wrap"
+                                  direction="row"
+                                >
+                                  {harvest.lotsIds.map((lid, i) => (
+                                    <Chip
+                                      key={lid}
+                                      size="small"
+                                      variant="outlined"
+                                      label={`${harvest.lotsLabels[i]}`}
+                                      sx={{
+                                        fontSize: 'body2',
+                                        fontWeight: 600,
+                                        mb: 0.5,
+                                      }}
+                                    />
+                                  ))}
+                                </Stack>
+                              ) : (
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
+                                  —
+                                </Typography>
+                              )}
                             </Typography>
+                          </Stack>
+                          <Box
+                            sx={(theme) => ({
+                              height: '1px',
+                              background: `linear-gradient(90deg, ${theme.palette.divider} 0%, transparent 100%)`,
+                            })}
+                          />
+                          {harvest.cycleIds.length === 1 ? (
+                            <Stack spacing={0.5}>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                fontWeight={700}
+                              >
+                                Ciclo
+                              </Typography>
+                              <Typography
+                                component={Link}
+                                href={`/ciclos/${harvest.cycleIds[0]}`}
+                                sx={(theme) => ({
+                                  fontSize: '0.9rem',
+                                  fontWeight: 700,
+                                  color: theme.palette.primary.main,
+                                  textDecoration: 'none',
+                                  '&:hover': { textDecoration: 'underline' },
+                                })}
+                              >
+                                {harvest.cycleLabels[0] ||
+                                  `Ciclo ${harvest.cycleIds[0]}`}
+                              </Typography>
+                            </Stack>
                           ) : harvest.cycleIds.length > 1 ? (
                             <Typography
                               variant="body2"
@@ -753,47 +850,54 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
                             })}
                           />
                           <Stack direction="row" justifyContent="space-between">
-                            <Stack spacing={0.2}>
+                            <Stack spacing={0.5}>
                               <Typography
                                 variant="caption"
                                 color="text.secondary"
                                 fontWeight={700}
                               >
-                                Kgs cosechados
+                                Cosechados
                               </Typography>
-                              <Typography variant="body1" fontWeight={700}>
+                              <Typography
+                                variant="body1"
+                                fontWeight={700}
+                                align="left"
+                              >
                                 {formatKgs(harvest.harvestedKgs)} kg
                               </Typography>
                             </Stack>
-                            <Stack spacing={0.2}>
+                            <Stack spacing={0.5}>
                               <Typography
                                 variant="caption"
                                 color="text.secondary"
                                 fontWeight={700}
                               >
-                                Kgs directos
+                                Ingresados a Stock
                               </Typography>
                               <Typography
                                 variant="body1"
                                 fontWeight={700}
                                 color="primary"
+                                align="left"
                               >
-                                {formatKgs(harvest.directTruckKgs)} kg
+                                {formatKgs(harvest.stockKgs)} kg
                               </Typography>
                             </Stack>
-                            <Stack spacing={0.2} alignItems="flex-end">
+                            <Stack spacing={0.5} alignItems="flex-end">
                               <Typography
                                 variant="caption"
                                 color="text.secondary"
                                 fontWeight={700}
                               >
-                                Viajes
+                                Egresados en Camión
                               </Typography>
-                              <Typography variant="body2" fontWeight={700}>
-                                Dir: {directTrips}
-                              </Typography>
-                              <Typography variant="body2" fontWeight={700}>
-                                Stock: {stockTrips}
+                              <Typography
+                                variant="body1"
+                                fontWeight={700}
+                                color="primary"
+                                align="left"
+                              >
+                                {formatKgs(harvest.directTruckKgs)} kg
                               </Typography>
                             </Stack>
                           </Stack>

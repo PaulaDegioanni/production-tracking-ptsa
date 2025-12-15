@@ -3,6 +3,7 @@ import {
   IconFreezeRowColumn,
   IconSeedling,
   IconTruck,
+  IconTractor,
   IconLogin,
   IconUserPlus,
   IconMoneybag,
@@ -33,6 +34,12 @@ const Menuitems = [
     title: 'Ciclos de siembra',
     icon: IconSeedling,
     href: '/ciclos',
+  },
+  {
+    id: uniqueId(),
+    title: 'Cosechas',
+    icon: IconTractor,
+    href: '/cosechas',
   },
   {
     id: uniqueId(),

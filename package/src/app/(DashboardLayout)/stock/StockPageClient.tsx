@@ -357,7 +357,7 @@ const StockPageClient = ({ initialStock }: StockPageClientProps) => {
                   >
                     <TableRow>
                       <TableCell>ID Stock</TableCell>
-                      <TableCell>Tipo</TableCell>
+                      <TableCell>Tipo / Cultivo</TableCell>
                       <TableCell>Fecha creación</TableCell>
                       <TableCell>Estado</TableCell>
                       <TableCell
@@ -368,7 +368,7 @@ const StockPageClient = ({ initialStock }: StockPageClientProps) => {
                           )}`,
                         })}
                       />
-                      <TableCell>Ciclo / Cultivo</TableCell>
+                      <TableCell>Ciclo </TableCell>
                       <TableCell>Cosechas asociadas</TableCell>
                       <TableCell>Viajes camión</TableCell>
                       <TableCell
@@ -389,8 +389,6 @@ const StockPageClient = ({ initialStock }: StockPageClientProps) => {
                       const { date } = formatDateParts(s.createdAt);
                       const firstCycleId = s.cycleIds[0];
                       const firstCycleLabel = s.cycleLabels[0];
-                      const harvestLabel = s.originHarvestsLabels[0];
-                      const truckTripLabel = s.truckTripLabels[0];
 
                       return (
                         <TableRow
@@ -500,7 +498,7 @@ const StockPageClient = ({ initialStock }: StockPageClientProps) => {
                           <TableCell>
                             {s.originHarvestIds.length ? (
                               <Stack spacing={0.5} flexWrap="wrap">
-                                {s.originHarvestIds.map((hid) => (
+                                {s.originHarvestIds.map((hid, i) => (
                                   <Chip
                                     key={hid}
                                     component={Link}
@@ -508,7 +506,7 @@ const StockPageClient = ({ initialStock }: StockPageClientProps) => {
                                     clickable
                                     size="small"
                                     variant="outlined"
-                                    label={`${harvestLabel}`}
+                                    label={`${s.originHarvestsLabels[i]}`}
                                     sx={{
                                       fontSize: 'body2',
                                       fontWeight: 600,
@@ -531,7 +529,7 @@ const StockPageClient = ({ initialStock }: StockPageClientProps) => {
                           <TableCell>
                             {s.truckTripIds.length ? (
                               <Stack spacing={0.5} flexWrap="wrap">
-                                {s.truckTripIds.map((tid) => (
+                                {s.truckTripIds.map((tid, i) => (
                                   <Chip
                                     key={tid}
                                     component={Link}
@@ -539,7 +537,7 @@ const StockPageClient = ({ initialStock }: StockPageClientProps) => {
                                     href={`/viajes-de-camion/${tid}`}
                                     clickable
                                     size="small"
-                                    label={`${truckTripLabel}`}
+                                    label={`${s.truckTripLabels[i]}`}
                                     sx={{
                                       fontSize: 'body2',
                                       fontWeight: 600,

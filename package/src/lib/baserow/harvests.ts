@@ -3,6 +3,7 @@ import { getTableRows } from './client';
 import {
   extractLinkRowIds,
   extractLinkRowLabels,
+  extractLinkRowLabelsTrimmed,
   normalizeField,
   toNumber,
 } from './utils';
@@ -23,6 +24,7 @@ export type HarvestRaw = {
   ID?: unknown; // formula field returned as array
   Fecha?: string | null; // ISO date string
   'KG Cosechados'?: number | string | null;
+  'Kgs Ingresados a Stock'?: number | string | null;
   Lotes?: unknown; // link_row
   'Ciclo de siembra'?: unknown; // link_row to cycles
   Campo?: unknown;
@@ -30,9 +32,8 @@ export type HarvestRaw = {
   Cultivo?: unknown;
   Stock?: unknown; // link_row to stock
   'Viajes camión directos'?: unknown; // link_row to trips
-  'Total kgs en camión directo'?: number | string | null;
-  'Viajes camion desde stock'?: unknown; // lookup desde stock
-  Observaciones?: string | null;
+  'Kgs Egresados Camión Directo'?: number | string | null;
+  Notas?: string | null;
 };
 
 export interface HarvestDto {
@@ -43,12 +44,15 @@ export interface HarvestDto {
   crop: string;
   harvestedKgs: number;
   lotsIds: number[];
+  lotsLabels: string[];
   cycleIds: number[];
   cycleLabels: string[];
   stockIds: number[];
+  stockLabels: string[];
+  stockKgs: number;
   directTruckTripIds: number[];
+  directTruckLabels: string[];
   directTruckKgs: number;
-  stockTruckTripIds: number[];
   notes?: string;
 }
 
@@ -57,12 +61,13 @@ function mapHarvestRawToDto(row: HarvestRaw): HarvestDto {
   const cycleIds = extractLinkRowIds(cycleRaw);
   const cycleLabels = extractLinkRowLabels(cycleRaw);
   const lotsIds = extractLinkRowIds(row.Lotes);
+  const lotsLabels = extractLinkRowLabelsTrimmed(row.Lotes);
   const stockIds = extractLinkRowIds(row.Stock);
+  const stockLabels = extractLinkRowLabelsTrimmed(row.Stock);
   const directTruckTripIds = extractLinkRowIds(row['Viajes camión directos']);
-  const stockTruckTripIds = extractLinkRowIds(
-    (row as any)['Viajes camion desde stock']
+  const directTruckLabels = extractLinkRowLabelsTrimmed(
+    row['Viajes camión directos']
   );
-
   const normalizedHarvestId = normalizeField(row.ID);
   const fieldFromText = normalizeField(row['Campo texto']);
   const fieldFromLink = normalizeField(row.Campo);
@@ -76,13 +81,16 @@ function mapHarvestRawToDto(row: HarvestRaw): HarvestDto {
     crop: cropLabel,
     harvestedKgs: toNumber(row['KG Cosechados']),
     lotsIds,
+    lotsLabels,
     cycleIds,
     cycleLabels,
     stockIds,
+    stockLabels,
+    stockKgs: toNumber(row['Kgs Ingresados a Stock']),
     directTruckTripIds,
-    directTruckKgs: toNumber(row['Total kgs en camión directo']),
-    stockTruckTripIds,
-    notes: row.Observaciones ?? undefined,
+    directTruckLabels,
+    directTruckKgs: toNumber(row['Kgs Egresados Camión Directo']),
+    notes: row.Notas ?? undefined,
   };
 }
 
