@@ -22,6 +22,7 @@ import {
   Card,
   CardContent,
 } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import Link from 'next/link';
 
 import PageContainer from '@/app/(DashboardLayout)/components/container/PageContainer';
@@ -409,8 +410,13 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                 <Button
                   variant="contained"
                   color="primary"
+                  startIcon={<AddIcon />}
                   sx={{
                     flexGrow: { xs: 1, md: 0 },
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    fontWeight: 700,
+                    px: 3,
                     boxShadow: (theme) =>
                       `0 4px 12px ${alpha(theme.palette.primary.main, 0.25)}`,
                     '&:hover': {
@@ -419,11 +425,19 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                     },
                   }}
                 >
-                  Registrar nuevo viaje
+                  Nuevo Viaje de Camión
                 </Button>
-                <Button variant="outlined" sx={{ flexGrow: { xs: 1, md: 0 } }}>
+                {/* <Button
+                  variant="outlined"
+                  sx={{
+                    flexGrow: { xs: 1, md: 0 },
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    fontWeight: 600,
+                  }}
+                >
                   Exportar CSV
-                </Button>
+                </Button> */}
               </Stack>
             </Stack>
 

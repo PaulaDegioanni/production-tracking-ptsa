@@ -1196,7 +1196,7 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
                 >
                   Nueva cosecha
                 </Button>
-                <Button
+                {/* <Button
                   variant="outlined"
                   sx={{
                     flexGrow: { xs: 1, md: 0 },
@@ -1206,7 +1206,7 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
                   }}
                 >
                   Exportar CSV
-                </Button>
+                </Button> */}
               </Stack>
             </Stack>
 

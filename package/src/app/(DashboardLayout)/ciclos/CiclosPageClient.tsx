@@ -23,6 +23,7 @@ import {
   alpha,
   outlinedInputClasses,
 } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import PageContainer from '@/app/(DashboardLayout)/components/container/PageContainer';
 import DashboardCard from '@/app/(DashboardLayout)/components/shared/DashboardCard';
 import { useRouter } from 'next/navigation';
@@ -250,8 +251,13 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
                 <Button
                   variant="contained"
                   color="primary"
+                  startIcon={<AddIcon />}
                   sx={{
                     flexGrow: { xs: 1, md: 0 },
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    fontWeight: 700,
+                    px: 3,
                     boxShadow: (theme) =>
                       `0 4px 12px ${alpha(theme.palette.primary.main, 0.25)}`,
                     '&:hover': {
@@ -260,11 +266,19 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
                     },
                   }}
                 >
-                  Crear nuevo ciclo
+                  Nuevo Ciclo de Siembra
                 </Button>
-                <Button variant="outlined" sx={{ flexGrow: { xs: 1, md: 0 } }}>
+                {/* <Button
+                  variant="outlined"
+                  sx={{
+                    flexGrow: { xs: 1, md: 0 },
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    fontWeight: 600,
+                  }}
+                >
                   Exportar CSV
-                </Button>
+                </Button> */}
               </Stack>
             </Stack>
 

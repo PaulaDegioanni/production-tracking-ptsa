@@ -4,6 +4,7 @@ import * as React from 'react';
 import {
   alpha,
   Box,
+  Button,
   Card,
   CardContent,
   Chip,
@@ -25,6 +26,7 @@ import {
   Typography,
 } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import AddIcon from '@mui/icons-material/Add';
 import Link from 'next/link';
 import PageContainer from '@/app/(DashboardLayout)/components/container/PageContainer';
 import DashboardCard from '@/app/(DashboardLayout)/components/shared/DashboardCard';
@@ -365,12 +367,11 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
       }));
 
       const activeAreaHa = lotsWithCycle.reduce((acc, item) => {
-        if (!item.lot.isActive || !item.currentCycle) return acc;
+        if (!item.currentCycle) return acc;
         return acc + item.lot.areaHa;
       }, 0);
 
       const hasActiveCycle = lotsWithCycle.some(({ lot, currentCycle }) => {
-        if (!lot.isActive) return false;
         if (!currentCycle) return false;
         return ACTIVE_CYCLE_STATUSES.has(currentCycle.status);
       });
@@ -582,6 +583,46 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                 </FormControl>
               </Stack>
             </Box>
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{
+                width: { xs: '100%', md: 'auto' },
+                justifyContent: { xs: 'space-between', md: 'flex-end' },
+              }}
+            >
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<AddIcon />}
+                sx={{
+                  flexGrow: { xs: 1, md: 0 },
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  px: 3,
+                  boxShadow: (theme) =>
+                    `0 4px 12px ${alpha(theme.palette.primary.main, 0.25)}`,
+                  '&:hover': {
+                    boxShadow: (theme) =>
+                      `0 6px 16px ${alpha(theme.palette.primary.main, 0.35)}`,
+                  },
+                }}
+              >
+                Nuevo Campo
+              </Button>
+              {/* <Button
+							  variant="outlined"
+							  sx={{
+								flexGrow: { xs: 1, md: 0 },
+								borderRadius: 2,
+								textTransform: 'none',
+								fontWeight: 600,
+							  }}
+							>
+							  Exportar CSV
+							</Button> */}
+            </Stack>
 
             <Typography variant="h5" fontWeight={700}>
               {selectedPeriod ? `Campaña ${selectedPeriod}` : 'Campos y lotes'}
