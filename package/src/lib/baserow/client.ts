@@ -18,6 +18,18 @@ type BaserowResponse<T> = {
   results: T[];
 };
 
+export class BaserowRequestError extends Error {
+  status: number;
+  body: string;
+
+  constructor(message: string, status: number, body: string) {
+    super(message);
+    this.status = status;
+    this.body = body;
+    this.name = 'BaserowRequestError';
+  }
+}
+
 function buildTableUrl(
   tableId: number,
   params?: Record<string, string | number | boolean>
@@ -80,4 +92,59 @@ export async function getTableRowById<T>(
   }
 
   return (await res.json()) as T;
+}
+
+export async function patchTableRow<T>(
+  tableId: number,
+  rowId: number | string,
+  payload: Record<string, any>
+): Promise<T> {
+  const url = `${BASEROW_URL}/api/database/rows/table/${tableId}/${rowId}/?user_field_names=true`;
+
+  const res = await fetch(url, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Token ${BASEROW_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+    cache: 'no-store',
+  });
+
+  if (!res.ok) {
+    const errorBody = await res.text();
+    console.error('Error Baserow', res.status, errorBody);
+    throw new BaserowRequestError(
+      `Error al actualizar fila ${rowId} desde Baserow (tabla ${tableId})`,
+      res.status,
+      errorBody || res.statusText
+    );
+  }
+
+  return (await res.json()) as T;
+}
+
+export async function deleteTableRow(
+  tableId: number,
+  rowId: number | string
+): Promise<void> {
+  const url = `${BASEROW_URL}/api/database/rows/table/${tableId}/${rowId}/`;
+
+  const res = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Token ${BASEROW_TOKEN}`,
+    },
+    cache: 'no-store',
+  });
+
+  if (!res.ok) {
+    const errorBody = await res.text();
+    console.error('Error Baserow', res.status, errorBody);
+    throw new BaserowRequestError(
+      `Error al eliminar fila ${rowId} desde Baserow (tabla ${tableId})`,
+      res.status,
+      errorBody || res.statusText
+    );
+  }
 }

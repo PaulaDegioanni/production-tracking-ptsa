@@ -92,6 +92,187 @@ const getDefaultHarvestFormValues = () => ({
   Notas: '',
 });
 
+const normalizeArrayForComparison = (arr: unknown[]) => {
+  if (!arr.length) return [];
+
+  if (arr.every((value) => typeof value === 'number')) {
+    return [...arr].sort(
+      (a, b) => (Number(a) || 0) - (Number(b) || 0)
+    ) as number[];
+  }
+
+  if (arr.every((value) => typeof value === 'string')) {
+    return [...arr]
+      .map((value) => String(value))
+      .sort((a, b) => a.localeCompare(b));
+  }
+
+  return [...arr];
+};
+
+const isEqualValue = (a: unknown, b: unknown) => {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false;
+    const normalizedA = normalizeArrayForComparison(a);
+    const normalizedB = normalizeArrayForComparison(b);
+    return normalizedA.every(
+      (value, index) => value === normalizedB[index]
+    );
+  }
+
+  return a === b;
+};
+
+const computeDiffPayload = (
+  prevPayload: Record<string, any>,
+  nextPayload: Record<string, any>
+) => {
+  const diff: Record<string, any> = {};
+
+  Object.keys(nextPayload).forEach((key) => {
+    if (!isEqualValue(prevPayload[key], nextPayload[key])) {
+      diff[key] = nextPayload[key];
+    }
+  });
+
+  return diff;
+};
+
+const normalizeHarvestFormToBaserowPayload = (
+  formValues: Record<string, any>,
+  options?: { includeEmptyOptional?: boolean }
+) => {
+  const includeEmptyOptional = options?.includeEmptyOptional ?? false;
+
+  const rawDate = formValues['Fecha'];
+  if (!rawDate) {
+    throw new Error('La fecha es obligatoria');
+  }
+
+  const parsedDate = new Date(rawDate);
+  if (Number.isNaN(parsedDate.getTime())) {
+    throw new Error('La fecha ingresada no es válida');
+  }
+
+  const payload: Record<string, any> = {
+    Fecha: parsedDate.toISOString(),
+  };
+
+  const rawKgs = formValues['KG Cosechados'];
+  const harvestedKgs = parseFloat(rawKgs);
+  if (Number.isNaN(harvestedKgs)) {
+    throw new Error('Ingresá un número válido para los kilos cosechados');
+  }
+  payload['KG Cosechados'] = harvestedKgs;
+
+  const lotsValue = Array.isArray(formValues.Lotes) ? formValues.Lotes : [];
+  const lotIds = lotsValue
+    .map((value) => Number(value))
+    .filter((value) => !Number.isNaN(value));
+  if (!lotIds.length) {
+    throw new Error('Seleccioná al menos un lote');
+  }
+  payload.Lotes = lotIds;
+
+  const cycleValue = formValues['Ciclo de siembra'];
+  const cycleId = Number(cycleValue);
+  if (!cycleId || Number.isNaN(cycleId)) {
+    throw new Error('Seleccioná un ciclo de siembra válido');
+  }
+  payload['Ciclo de siembra'] = [cycleId];
+
+  const stockValue = formValues.Stock;
+  const stockId = Number(stockValue);
+  if (stockValue && stockId && !Number.isNaN(stockId)) {
+    payload.Stock = [stockId];
+  } else if (includeEmptyOptional) {
+    payload.Stock = [];
+  }
+
+  const tripValue = formValues['Viajes camión directos'];
+  const tripId = Number(tripValue);
+  if (tripValue && tripId && !Number.isNaN(tripId)) {
+    payload['Viajes camión directos'] = [tripId];
+  } else if (includeEmptyOptional) {
+    payload['Viajes camión directos'] = [];
+  }
+
+  const notesValue = (formValues['Notas'] ?? '').trim();
+  if (notesValue || includeEmptyOptional) {
+    payload.Notas = notesValue;
+  }
+
+  return payload;
+};
+
+const normalizeHarvestDtoToBaserowPayload = (harvest: HarvestDto) => {
+  const payload: Record<string, any> = {};
+
+  if (harvest.date) {
+    const parsedDate = new Date(harvest.date);
+    if (!Number.isNaN(parsedDate.getTime())) {
+      payload.Fecha = parsedDate.toISOString();
+    }
+  }
+
+  payload['KG Cosechados'] =
+    typeof harvest.harvestedKgs === 'number' ? harvest.harvestedKgs : 0;
+
+  payload.Lotes = Array.isArray(harvest.lotsIds)
+    ? [...harvest.lotsIds]
+    : [];
+
+  const cycleId =
+    typeof harvest.cycleId === 'number' && !Number.isNaN(harvest.cycleId)
+      ? harvest.cycleId
+      : null;
+
+  payload['Ciclo de siembra'] = cycleId ? [cycleId] : [];
+
+  const stockId =
+    Array.isArray(harvest.stockIds) && harvest.stockIds.length
+      ? harvest.stockIds[0]
+      : null;
+  payload.Stock =
+    typeof stockId === 'number' && !Number.isNaN(stockId) ? [stockId] : [];
+
+  const tripId =
+    Array.isArray(harvest.directTruckTripIds) &&
+    harvest.directTruckTripIds.length
+      ? harvest.directTruckTripIds[0]
+      : null;
+  payload['Viajes camión directos'] =
+    typeof tripId === 'number' && !Number.isNaN(tripId) ? [tripId] : [];
+
+  const notesValue =
+    typeof harvest.notes === 'string' ? harvest.notes.trim() : '';
+  payload.Notas = notesValue;
+
+  return payload;
+};
+
+const buildHarvestInitialValues = (harvest: HarvestDto) => {
+  const harvestDate = harvest.date ? new Date(harvest.date) : null;
+  const hasValidDate =
+    !!harvestDate && !Number.isNaN(harvestDate.getTime());
+  const harvestFieldId = (harvest as HarvestDto & { fieldId?: number | null })
+    .fieldId;
+
+  return {
+    Fecha: hasValidDate
+      ? formatDateTimeLocalInput(harvestDate)
+      : formatDateTimeLocalInput(new Date()),
+    'KG Cosechados': harvest.harvestedKgs ?? '',
+    Campo: harvestFieldId ?? '',
+    Lotes: harvest.lotsIds ?? [],
+    'Ciclo de siembra': harvest.cycleId ?? '',
+    Cultivo: harvest.crop ?? '',
+    Stock: harvest.stockIds[0] ?? '',
+    'Viajes camión directos': harvest.directTruckTripIds[0] ?? '',
+    Notas: harvest.notes ?? '',
+  };
+};
+
 type Option = {
   id: number;
   label: string;
@@ -123,7 +304,13 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
   const [fieldFilter, setFieldFilter] = React.useState<string>('all');
   const [cropFilter, setCropFilter] = React.useState<string>('all');
   const [cycleFilter, setCycleFilter] = React.useState<string>('all');
-  const [createDialogOpen, setCreateDialogOpen] = React.useState(false);
+  const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [dialogMode, setDialogMode] = React.useState<'create' | 'edit'>(
+    'create'
+  );
+  const [activeHarvest, setActiveHarvest] = React.useState<HarvestDto | null>(
+    null
+  );
   const [snackbarState, setSnackbarState] = React.useState<{
     open: boolean;
     message: string;
@@ -166,7 +353,8 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
     return dependenciesCache[selectedField.id] ?? emptyDependencies;
   }, [dependenciesCache, selectedField]);
 
-  const fetchFieldOptions = React.useCallback(async () => {
+  const fetchFieldOptions = React.useCallback(async (): Promise<Option[]> => {
+    let fields: Option[] = [];
     try {
       setFieldOptionsLoading(true);
       setFieldOptionsError(null);
@@ -182,7 +370,8 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
       }
 
       const data = (await response.json()) as { fields?: Option[] };
-      setFieldOptions(Array.isArray(data.fields) ? data.fields : []);
+      fields = Array.isArray(data.fields) ? data.fields : [];
+      setFieldOptions(fields);
     } catch (error) {
       const message =
         error instanceof Error
@@ -190,9 +379,11 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
           : 'Ocurrió un error al cargar la lista de campos';
       setFieldOptionsError(message);
       showToast(message, 'error');
+      fields = [];
     } finally {
       setFieldOptionsLoading(false);
     }
+    return fields;
   }, [showToast]);
 
   const fetchFieldDependencies = React.useCallback(
@@ -251,15 +442,10 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
   );
 
   React.useEffect(() => {
-    if (createDialogOpen && !fieldOptions.length && !fieldOptionsLoading) {
+    if (dialogOpen && !fieldOptions.length && !fieldOptionsLoading) {
       fetchFieldOptions();
     }
-  }, [
-    createDialogOpen,
-    fieldOptions.length,
-    fieldOptionsLoading,
-    fetchFieldOptions,
-  ]);
+  }, [dialogOpen, fieldOptions.length, fieldOptionsLoading, fetchFieldOptions]);
 
   const handleDialogFieldChange = React.useCallback(
     (key: string, rawValue: any) => {
@@ -291,15 +477,71 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
     [fieldOptions, fetchFieldDependencies]
   );
 
+  const openEditDialog = React.useCallback(
+    async (harvest: HarvestDto) => {
+      setDialogMode('edit');
+      setActiveHarvest(harvest);
+      setDependenciesError(null);
+      setSelectedField(null);
+
+      let availableFields = fieldOptions;
+      if (!availableFields.length) {
+        availableFields = await fetchFieldOptions();
+      }
+
+      const harvestInitialValues = buildHarvestInitialValues(harvest);
+
+      const harvestFieldId = (harvest as HarvestDto & {
+        fieldId?: number | null;
+      }).fieldId;
+
+      let matchedField: Option | null = null;
+
+      if (harvestFieldId) {
+        matchedField =
+          availableFields.find((option) => option.id === harvestFieldId) ?? null;
+      }
+
+      if (!matchedField) {
+        const harvestFieldLabel = harvest.field?.trim().toLowerCase() ?? '';
+        if (harvestFieldLabel) {
+          matchedField =
+            availableFields.find(
+              (option) =>
+                option.label.trim().toLowerCase() === harvestFieldLabel
+            ) ?? null;
+        }
+      }
+
+      if (matchedField) {
+        harvestInitialValues.Campo = matchedField.id;
+      }
+
+      setDialogInitialValues(harvestInitialValues);
+      setSelectedField(matchedField);
+
+      if (matchedField && !dependenciesCache[matchedField.id]) {
+        await fetchFieldDependencies(matchedField);
+      }
+
+      setDialogOpen(true);
+    },
+    [dependenciesCache, fetchFieldDependencies, fetchFieldOptions, fieldOptions]
+  );
+
   const handleOpenCreateDialog = React.useCallback(() => {
+    setDialogMode('create');
+    setActiveHarvest(null);
     setDialogInitialValues(getDefaultHarvestFormValues());
     setSelectedField(null);
     setDependenciesError(null);
-    setCreateDialogOpen(true);
+    setDialogOpen(true);
   }, []);
 
-  const handleCreateDialogClose = React.useCallback(() => {
-    setCreateDialogOpen(false);
+  const handleDialogClose = React.useCallback(() => {
+    setDialogOpen(false);
+    setDialogMode('create');
+    setActiveHarvest(null);
     setSelectedField(null);
     setDependenciesError(null);
     setDialogInitialValues(getDefaultHarvestFormValues());
@@ -594,59 +836,7 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
 
   const handleCreateSubmit = React.useCallback(
     async (formValues: Record<string, any>) => {
-      const rawDate = formValues['Fecha'];
-      if (!rawDate) {
-        throw new Error('La fecha es obligatoria');
-      }
-      const parsedDate = new Date(rawDate);
-      if (Number.isNaN(parsedDate.getTime())) {
-        throw new Error('La fecha ingresada no es válida');
-      }
-
-      const rawKgs = formValues['KG Cosechados'];
-      const harvestedKgs = parseFloat(rawKgs);
-      if (Number.isNaN(harvestedKgs)) {
-        throw new Error('Ingresá un número válido para los kilos cosechados');
-      }
-
-      const lotsValue = Array.isArray(formValues.Lotes) ? formValues.Lotes : [];
-      const lotIds = lotsValue
-        .map((value) => Number(value))
-        .filter((value) => !Number.isNaN(value));
-      if (!lotIds.length) {
-        throw new Error('Seleccioná al menos un lote');
-      }
-
-      const cycleValue = formValues['Ciclo de siembra'];
-      const cycleId = Number(cycleValue);
-      if (!cycleId || Number.isNaN(cycleId)) {
-        throw new Error('Seleccioná un ciclo de siembra válido');
-      }
-
-      const payload: Record<string, any> = {
-        Fecha: parsedDate.toISOString(),
-        'KG Cosechados': harvestedKgs,
-        Lotes: lotIds,
-        'Ciclo de siembra': [cycleId],
-      };
-
-      const stockValue = formValues.Stock;
-      const stockId = Number(stockValue);
-      if (stockValue && stockId && !Number.isNaN(stockId)) {
-        payload.Stock = [stockId];
-      }
-
-      const tripValue = formValues['Viajes camión directos'];
-      const tripId = Number(tripValue);
-      if (tripValue && tripId && !Number.isNaN(tripId)) {
-        payload['Viajes camión directos'] = [tripId];
-      }
-
-      const notesValue = (formValues['Notas'] ?? '').trim();
-      if (notesValue) {
-        payload.Notas = notesValue;
-      }
-
+      const payload = normalizeHarvestFormToBaserowPayload(formValues);
       const response = await fetch('/api/harvests', {
         method: 'POST',
         headers: {
@@ -676,6 +866,52 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
     [router, showToast]
   );
 
+  const handleEditSubmit = React.useCallback(
+    async (formValues: Record<string, any>) => {
+      if (!activeHarvest) {
+        throw new Error('No se encontró la cosecha a editar');
+      }
+
+      const nextPayload = normalizeHarvestFormToBaserowPayload(formValues, {
+        includeEmptyOptional: true,
+      });
+      const prevPayload = normalizeHarvestDtoToBaserowPayload(activeHarvest);
+      const diffPayload = computeDiffPayload(prevPayload, nextPayload);
+
+      if (!Object.keys(diffPayload).length) {
+        showToast('No hay cambios para guardar', 'info');
+        return;
+      }
+
+      const response = await fetch(`/api/harvests/${activeHarvest.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ payload: diffPayload }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        let message = 'No se pudo actualizar la cosecha';
+        if (errorBody) {
+          try {
+            const parsed = JSON.parse(errorBody);
+            message = parsed?.error || errorBody;
+          } catch {
+            message = errorBody;
+          }
+        }
+        showToast(message, 'error');
+        throw new Error(message);
+      }
+
+      showToast('Cosecha actualizada correctamente', 'success');
+      router.refresh();
+    },
+    [activeHarvest, router, showToast]
+  );
+
   const handleSnackbarClose = (
     _event?: React.SyntheticEvent | Event,
     reason?: string
@@ -683,6 +919,17 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
     if (reason === 'clickaway') return;
     setSnackbarState((prev) => ({ ...prev, open: false }));
   };
+
+  const editHarvestIdentifier =
+    activeHarvest?.harvestId || (activeHarvest ? `#${activeHarvest.id}` : null);
+  const dialogTitle =
+    dialogMode === 'create'
+      ? 'Registrar nueva cosecha'
+      : editHarvestIdentifier
+        ? `Editar cosecha ${editHarvestIdentifier}`
+        : 'Editar cosecha';
+  const dialogSubmitHandler =
+    dialogMode === 'create' ? handleCreateSubmit : handleEditSubmit;
 
   return (
     <PageContainer
@@ -957,6 +1204,9 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
                         <TableRow
                           key={harvest.id}
                           hover
+                          onClick={() => {
+                            void openEditDialog(harvest);
+                          }}
                           sx={(theme) => ({
                             cursor: 'pointer',
                             transition: 'all 0.2s ease',
@@ -1030,6 +1280,7 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
                             <Typography
                               component={Link}
                               href={`/ciclos/${harvest.cycleId}`}
+                              onClick={(event) => event.stopPropagation()}
                               sx={(theme) => ({
                                 fontSize: '0.85rem',
                                 fontWeight: 700,
@@ -1261,6 +1512,9 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
                   return (
                     <Card
                       key={harvest.id}
+                      onClick={() => {
+                        void openEditDialog(harvest);
+                      }}
                       sx={(theme) => ({
                         borderRadius: 2.5,
                         border: `1px solid ${theme.palette.divider}`,
@@ -1269,6 +1523,7 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
                           0.08
                         )}`,
                         transition: 'all 0.2s ease',
+                        cursor: 'pointer',
                         '&:hover': {
                           transform: 'translateY(-4px)',
                           boxShadow: `0 8px 24px ${alpha(
@@ -1342,6 +1597,7 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
                             <Typography
                               component={Link}
                               href={`/ciclos/${harvest.cycleId}`}
+                              onClick={(event) => event.stopPropagation()}
                               sx={(theme) => ({
                                 fontSize: '0.9rem',
                                 fontWeight: 700,
@@ -1423,10 +1679,10 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
         </DashboardCard>
       </Stack>
       <SimpleEntityDialogForm
-        open={createDialogOpen}
-        title="Registrar nueva cosecha"
-        onClose={handleCreateDialogClose}
-        onSubmit={handleCreateSubmit}
+        open={dialogOpen}
+        title={dialogTitle}
+        onClose={handleDialogClose}
+        onSubmit={dialogSubmitHandler}
         fields={harvestFormFields}
         sections={harvestFormSections}
         initialValues={dialogInitialValues}
