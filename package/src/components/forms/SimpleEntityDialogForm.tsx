@@ -75,6 +75,10 @@ export type SimpleEntityDialogFieldConfig = {
     label: string;
     onClick: (context: { values: Record<string, any> }) => void;
   }>;
+  renderValue?: (context: {
+    value: any;
+    field: SimpleEntityDialogFieldConfig;
+  }) => React.ReactNode;
 };
 
 export type SimpleEntityDialogSection = {
@@ -481,6 +485,14 @@ const SimpleEntityDialogForm = ({
   };
 
   const renderField = (field: SimpleEntityDialogFieldConfig) => {
+    if (field.renderValue) {
+      return (
+        <Box key={field.key} sx={{ width: '100%' }}>
+          {field.renderValue({ value: values[field.key], field })}
+        </Box>
+      );
+    }
+
     if (field.type === 'select') {
       return renderSelectField(field, false);
     }
@@ -549,7 +561,6 @@ const SimpleEntityDialogForm = ({
           key={field.key}
           {...commonProps}
           type="datetime-local"
-          InputLabelProps={{ shrink: true }}
           slotProps={{
             inputLabel: { shrink: true },
           }}
@@ -558,8 +569,11 @@ const SimpleEntityDialogForm = ({
     }
 
     if (field.type === 'date') {
-      const { value: _ignoreValue, onChange: _ignoreOnChange, ...textFieldProps } =
-        commonProps;
+      const {
+        value: _ignoreValue,
+        onChange: _ignoreOnChange,
+        ...textFieldProps
+      } = commonProps;
       const raw = (values[field.key] ?? '') as string;
       const pickerValue = raw ? dayjs(raw, 'YYYY-MM-DD', true) : null;
 
@@ -584,8 +598,11 @@ const SimpleEntityDialogForm = ({
     }
 
     if (field.type === 'time') {
-      const { value: _ignoreValue, onChange: _ignoreOnChange, ...textFieldProps } =
-        commonProps;
+      const {
+        value: _ignoreValue,
+        onChange: _ignoreOnChange,
+        ...textFieldProps
+      } = commonProps;
       const raw = (values[field.key] ?? '') as string;
       const pickerValue = raw ? dayjs(raw, 'HH:mm', true) : null;
 
@@ -631,29 +648,42 @@ const SimpleEntityDialogForm = ({
     return <TextField key={field.key} {...commonProps} type="text" />;
   };
 
-  const chunkFields = (
-    sectionFields: SimpleEntityDialogFieldConfig[],
-    sectionIndex: number
-  ): SimpleEntityDialogFieldConfig[][] => {
-    if (sectionIndex === 0) {
-      const firstRow = sectionFields.slice(0, 3);
-      const rest = sectionFields.slice(3);
-      const rowList: SimpleEntityDialogFieldConfig[][] = [];
-      if (firstRow.length) {
-        rowList.push(firstRow);
-      }
-      for (let i = 0; i < rest.length; i += 2) {
-        rowList.push(rest.slice(i, i + 2));
-      }
-      return rowList;
+const chunkFields = (
+  sectionFields: SimpleEntityDialogFieldConfig[],
+  sectionIndex: number
+): SimpleEntityDialogFieldConfig[][] => {
+  if (sectionIndex === 0) {
+    const firstRow = sectionFields.slice(0, 3);
+    const rest = sectionFields.slice(3);
+    const rowList: SimpleEntityDialogFieldConfig[][] = [];
+    if (firstRow.length) {
+      rowList.push(firstRow);
     }
+    for (let i = 0; i < rest.length; i += 2) {
+      rowList.push(rest.slice(i, i + 2));
+    }
+    return rowList;
+  }
 
+  if (sectionIndex === 1) {
+    const firstGroup = sectionFields.slice(0, 3);
+    const rest = sectionFields.slice(3);
     const rows: SimpleEntityDialogFieldConfig[][] = [];
-    for (let i = 0; i < sectionFields.length; i += 2) {
-      rows.push(sectionFields.slice(i, i + 2));
+    if (firstGroup.length) {
+      rows.push(firstGroup);
+    }
+    for (let i = 0; i < rest.length; i += 2) {
+      rows.push(rest.slice(i, i + 2));
     }
     return rows;
-  };
+  }
+
+  const rows: SimpleEntityDialogFieldConfig[][] = [];
+  for (let i = 0; i < sectionFields.length; i += 2) {
+    rows.push(sectionFields.slice(i, i + 2));
+  }
+  return rows;
+};
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
@@ -761,6 +791,8 @@ const SimpleEntityDialogForm = ({
                       {rows.map((row, rowIndex) => {
                         const isFirstSectionFirstRow =
                           sectionIndex === 0 && rowIndex === 0;
+                        const isOriginFirstRow =
+                          sectionIndex === 1 && rowIndex === 0;
 
                         if (isFirstSectionFirstRow) {
                           const areaMap: Record<string, string> = {
@@ -784,6 +816,46 @@ const SimpleEntityDialogForm = ({
                                 gridTemplateAreas: {
                                   xs: '"fecha hora" "kgs kgs"',
                                   md: '"fecha hora kgs"',
+                                },
+                              }}
+                            >
+                              {row.map((field) => (
+                                <Box
+                                  key={field.key}
+                                  sx={{
+                                    minWidth: 0,
+                                    gridArea: areaMap[field.key] ?? 'auto',
+                                  }}
+                                >
+                                  {renderField(field)}
+                                </Box>
+                              ))}
+                            </Box>
+                          );
+                        }
+
+                        if (isOriginFirstRow) {
+                          const areaMap: Record<string, string> = {
+                            Campo: 'campo',
+                            'Ciclo de siembra': 'ciclo',
+                            Cultivo: 'cultivo',
+                          };
+                          return (
+                            <Box
+                              key={
+                                row.map((field) => field.key).join('-') ||
+                                `row-${rowIndex}`
+                              }
+                              sx={{
+                                display: 'grid',
+                                gap: 2,
+                                gridTemplateColumns: {
+                                  xs: 'repeat(2, minmax(0, 1fr))',
+                                  md: '1.1fr 1.8fr 0.9fr',
+                                },
+                                gridTemplateAreas: {
+                                  xs: '"campo campo" "ciclo cultivo"',
+                                  md: '"campo ciclo cultivo"',
                                 },
                               }}
                             >

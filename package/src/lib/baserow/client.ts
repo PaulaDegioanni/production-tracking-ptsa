@@ -148,3 +148,39 @@ export async function deleteTableRow(
     );
   }
 }
+
+// --- Table field metadata (schema) ---
+
+export type BaserowTableField = {
+  id: number;
+  name: string;
+  type: string;
+  select_options?: {
+    id: number;
+    value: string;
+    color?: string | null;
+  }[];
+  single_select_default?: number | null;
+};
+
+export async function getTableFields(
+  tableId: number
+): Promise<BaserowTableField[]> {
+  const url = `${BASEROW_URL}/api/database/fields/table/${tableId}/`;
+
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Token ${BASEROW_TOKEN}`,
+    },
+    cache: 'no-store',
+  });
+
+  if (!res.ok) {
+    console.error('Error Baserow', res.status, await res.text());
+    throw new Error(
+      `Error al cargar definición de campos desde Baserow (tabla ${tableId})`
+    );
+  }
+
+  return (await res.json()) as BaserowTableField[];
+}

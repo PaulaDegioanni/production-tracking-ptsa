@@ -3,7 +3,7 @@
 import { getCycleByIdDto, CycleDto } from './cycles';
 import { LotDto, getLotsByIdsDto } from './lots';
 import { HarvestDto, getHarvestsByCycleIdDto } from './harvests';
-import { StockDto, getStockByCycleIdDto } from './stock';
+import { StockDto, getStockByCycleIdDto } from './stocks';
 import { TruckTripDto, getTruckTripsByOriginsDto } from './truckTrips';
 
 export interface CycleDetailDto {

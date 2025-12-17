@@ -2,7 +2,7 @@
 import { getFieldsDto } from './fields';
 import { getLotsDto } from './lots';
 import { getCyclesDto } from './cycles';
-import { getStockDto } from './stock';
+import { getStockDto } from './stocks';
 import { getTruckTripsDto } from './truckTrips';
 
 export type BasicOption = {

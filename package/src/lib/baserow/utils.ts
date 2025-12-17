@@ -6,6 +6,16 @@ export type BaserowOption = {
   color?: string | null;
 };
 
+// --- Baserow table field metadata ---
+
+export type BaserowTableField = {
+  id: number;
+  name: string;
+  type: string;
+  select_options?: BaserowOption[];
+  single_select_default?: number | null;
+};
+
 export function toNumber(value: unknown): number {
   if (typeof value === 'number') return value;
   if (typeof value === 'string' && value.trim() !== '') {

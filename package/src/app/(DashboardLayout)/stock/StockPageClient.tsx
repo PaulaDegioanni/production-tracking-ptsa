@@ -2,28 +2,36 @@
 
 import * as React from 'react';
 import {
+  Alert,
   Box,
-  Stack,
-  Typography,
-  FormControl,
-  Grid,
-  Paper,
-  alpha,
-  TextField,
-  MenuItem,
   Button,
-  Chip,
-  Table,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
-  TableContainer,
   Card,
   CardContent,
+  Chip,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControl,
+  MenuItem,
+  Paper,
+  Snackbar,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Typography,
+  alpha,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import PageContainer from '@/app/(DashboardLayout)/components/container/PageContainer';
 import DashboardCard from '@/app/(DashboardLayout)/components/shared/DashboardCard';
@@ -31,12 +39,19 @@ import StatusChip, {
   StatusChipOption,
 } from '@/app/(DashboardLayout)/components/shared/StatusChip';
 import CropChip from '@/app/(DashboardLayout)/components/shared/CropChip';
-import type { StockDto, StockStatus } from '@/lib/baserow/stock';
+import type { StockDto } from '@/lib/baserow/stocks';
+import SimpleEntityDialogForm, {
+  type SimpleEntityDialogFieldConfig,
+  type SimpleEntityDialogSection,
+} from '@/components/forms/SimpleEntityDialogForm';
+import { normalizeStockFormToBaserowPayload } from '@/lib/stocks/formPayload';
 
 /* --------- Props --------- */
 
 type StockPageClientProps = {
   initialStock: StockDto[];
+  unitTypeOptions: Option[];
+  statusOptions: Option[];
 };
 
 /* --------- Helpers puros --------- */
@@ -69,9 +84,277 @@ const STOCK_STATUS_OPTIONS: StatusChipOption[] = [
 const formatKgs = (value: number): string =>
   value.toLocaleString('es-ES', { maximumFractionDigits: 0 });
 
+type Option = {
+  id: number;
+  label: string;
+};
+
+type CycleOption = Option & {
+  crop: string;
+};
+
+type FieldDependencies = {
+  cycles: CycleOption[];
+};
+
+const emptyDependencies: FieldDependencies = {
+  cycles: [],
+};
+
+const getTodayDateString = () => {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+type StockFormValues = {
+  'Tipo unidad': number | '';
+  Campo: number | '';
+  'Ciclo de siembra': number | '';
+  Cultivo: string;
+  'Fecha de creación': string;
+  Estado: number | '';
+  Notas: string;
+  ID: string;
+  'Kgs actuales': string;
+  'Total kgs ingresados': string;
+  'Total kgs egresados': string;
+  'Cosechas asociadas': string[];
+  'Viajes de camión desde stock': string[];
+};
+
+type SnackbarState = {
+  open: boolean;
+  message: string;
+  severity: 'success' | 'error' | 'info';
+};
+
+const getDefaultStockFormValues = (params: {
+  unitTypeOptions: Option[];
+  statusOptions: Option[];
+}): StockFormValues => {
+  const { unitTypeOptions, statusOptions } = params;
+
+  return {
+    'Tipo unidad': unitTypeOptions[0]?.id ?? '',
+    Campo: '',
+    'Ciclo de siembra': '',
+    Cultivo: '',
+    'Fecha de creación': getTodayDateString(),
+    Estado: statusOptions[0]?.id ?? '',
+    Notas: '',
+    ID: '',
+    'Kgs actuales': '—',
+    'Total kgs ingresados': '—',
+    'Total kgs egresados': '—',
+    'Cosechas asociadas': [],
+    'Viajes de camión desde stock': [],
+  };
+};
+
+const formatReadonlyKg = (value: number): string => `${formatKgs(value)} kg`;
+
+const buildChipValues = (items?: string[]): string[] => {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((label) => (typeof label === 'string' ? label.trim() : ''))
+    .filter((label) => Boolean(label));
+};
+
+const createChipRenderer =
+  (title: string, emptyLabel: string) =>
+  ({ value }: { value: unknown }) => {
+    const chips = Array.isArray(value)
+      ? (value as string[]).filter(
+          (chip) => typeof chip === 'string' && chip.trim() !== ''
+        )
+      : [];
+
+    return (
+      <Stack spacing={1}>
+        <Typography variant="subtitle1" color="text.secondary">
+          {title}
+        </Typography>
+        {chips.length ? (
+          <Stack
+            direction="row"
+            flexWrap="wrap"
+            sx={{
+              columnGap: 0.75,
+              rowGap: 0.75,
+            }}
+          >
+            {chips.map((chip, index) => (
+              <Chip
+                key={`${title}-${index}-${chip}`}
+                label={chip}
+                size="small"
+                variant="outlined"
+                sx={{
+                  fontWeight: 600,
+                  maxWidth: '100%',
+                }}
+              />
+            ))}
+          </Stack>
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            {emptyLabel}
+          </Typography>
+        )}
+      </Stack>
+    );
+  };
+
+const renderHarvestChipField = createChipRenderer(
+  'Cosechas asociadas',
+  'Sin cosechas asociadas'
+);
+const renderTruckChipField = createChipRenderer(
+  'Viajes de camión desde stock',
+  'Sin viajes asociados'
+);
+
+const buildStockInitialValues = (stock: StockDto): StockFormValues => {
+  const firstCycleId = stock.cycleIds?.[0] ?? '';
+  const createdDate = stock.createdAt
+    ? stock.createdAt.slice(0, 10)
+    : getTodayDateString();
+
+  return {
+    'Tipo unidad': stock.unitTypeId ?? '',
+    Campo: stock.fieldId ?? '',
+    'Ciclo de siembra': firstCycleId,
+    Cultivo: stock.crop ?? '',
+    'Fecha de creación': createdDate,
+    Estado: stock.statusId ?? '',
+    Notas: stock.notes ?? '',
+    ID: stock.name || `#${stock.id}`,
+    'Kgs actuales': formatReadonlyKg(stock.currentKgs ?? 0),
+    'Total kgs ingresados': formatReadonlyKg(stock.totalInKgs ?? 0),
+    'Total kgs egresados': formatReadonlyKg(stock.totalOutFromHarvestKgs ?? 0),
+    'Cosechas asociadas': buildChipValues(stock.originHarvestsLabels),
+    'Viajes de camión desde stock': buildChipValues(stock.truckTripLabels),
+  };
+};
+
+const normalizeStockDtoToBaserowPayload = (stock: StockDto) => {
+  const payload: Record<string, any> = {};
+  const cycleId = stock.cycleIds?.[0];
+  payload['Tipo unidad'] = stock.unitTypeId ?? null;
+  payload['Ciclo de siembra'] = cycleId ? [cycleId] : [];
+  payload['Fecha de creación'] = stock.createdAt
+    ? stock.createdAt.slice(0, 10)
+    : '';
+  payload.Estado = stock.statusId ?? null;
+  payload.Notas = stock.notes ?? '';
+  return payload;
+};
+
+const normalizeArrayForComparison = (arr: unknown[]) => {
+  if (!arr.length) return [];
+
+  if (arr.every((value) => typeof value === 'number')) {
+    return [...arr].sort(
+      (a, b) => (Number(a) || 0) - (Number(b) || 0)
+    ) as number[];
+  }
+
+  if (arr.every((value) => typeof value === 'string')) {
+    return [...arr]
+      .map((value) => String(value))
+      .sort((a, b) => a.localeCompare(b));
+  }
+
+  return [...arr];
+};
+
+const isEqualValue = (a: unknown, b: unknown) => {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false;
+    const normalizedA = normalizeArrayForComparison(a);
+    const normalizedB = normalizeArrayForComparison(b);
+    return normalizedA.every((value, index) => value === normalizedB[index]);
+  }
+
+  return a === b;
+};
+
+const computeDiffPayload = (
+  prevPayload: Record<string, any>,
+  nextPayload: Record<string, any>
+) => {
+  const diff: Record<string, any> = {};
+
+  Object.keys(nextPayload).forEach((key) => {
+    if (!isEqualValue(prevPayload[key], nextPayload[key])) {
+      diff[key] = nextPayload[key];
+    }
+  });
+
+  return diff;
+};
+
 /* --------- Componente principal --------- */
 
-const StockPageClient = ({ initialStock }: StockPageClientProps) => {
+const StockPageClient = ({
+  initialStock,
+  unitTypeOptions,
+  statusOptions,
+}: StockPageClientProps) => {
+  const router = useRouter();
+  const buildDefaultFormValues = React.useCallback(
+    () =>
+      getDefaultStockFormValues({
+        unitTypeOptions,
+        statusOptions,
+      }),
+    [statusOptions, unitTypeOptions]
+  );
+  const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [dialogMode, setDialogMode] = React.useState<'create' | 'edit'>(
+    'create'
+  );
+  const [activeStock, setActiveStock] = React.useState<StockDto | null>(null);
+  const [dialogInitialValues, setDialogInitialValues] =
+    React.useState<StockFormValues>(buildDefaultFormValues);
+
+  const [snackbarState, setSnackbarState] = React.useState<SnackbarState>({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
+  const [fieldOptions, setFieldOptions] = React.useState<Option[]>([]);
+  const [fieldOptionsLoading, setFieldOptionsLoading] = React.useState(false);
+  const [selectedField, setSelectedField] = React.useState<Option | null>(null);
+  const [dependenciesCache, setDependenciesCache] = React.useState<
+    Record<number, FieldDependencies>
+  >({});
+  const [dependenciesLoading, setDependenciesLoading] = React.useState(false);
+  const [dependenciesError, setDependenciesError] = React.useState<
+    string | null
+  >(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
+  const [deleteLoading, setDeleteLoading] = React.useState(false);
+
+  const currentDependencies = React.useMemo(() => {
+    if (!selectedField) return emptyDependencies;
+    return dependenciesCache[selectedField.id] ?? emptyDependencies;
+  }, [dependenciesCache, selectedField]);
+
+  const showToast = React.useCallback(
+    (message: string, severity: 'success' | 'error' | 'info') => {
+      setSnackbarState({
+        open: true,
+        message,
+        severity,
+      });
+    },
+    []
+  );
+
   // Filtros
   const [fieldFilter, setFieldFilter] = React.useState<string>('all');
   const [cycleFilter, setCycleFilter] = React.useState<string>('all'); // guarda el id de ciclo como string
@@ -114,23 +397,146 @@ const StockPageClient = ({ initialStock }: StockPageClientProps) => {
     [initialStock]
   );
 
+  const fetchFieldOptions = React.useCallback(async (): Promise<Option[]> => {
+    let fields: Option[] = [];
+    try {
+      setFieldOptionsLoading(true);
+      const response = await fetch('/api/stocks/options', {
+        cache: 'no-store',
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(
+          errorBody || 'No se pudieron cargar los campos disponibles'
+        );
+      }
+
+      const data = (await response.json()) as { fields?: Option[] };
+      fields = Array.isArray(data.fields) ? data.fields : [];
+      setFieldOptions(fields);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Ocurrió un error al cargar la lista de campos';
+      showToast(message, 'error');
+      fields = [];
+    } finally {
+      setFieldOptionsLoading(false);
+    }
+    return fields;
+  }, [showToast]);
+
+  const fetchFieldDependencies = React.useCallback(
+    async (field: Option) => {
+      if (!field) return;
+      if (dependenciesCache[field.id]) return;
+
+      try {
+        setDependenciesLoading(true);
+        setDependenciesError(null);
+
+        const params = new URLSearchParams({
+          campoId: String(field.id),
+        });
+        if (field.label) {
+          params.set('campoName', field.label);
+        }
+
+        const response = await fetch(
+          `/api/stocks/options?${params.toString()}`,
+          {
+            cache: 'no-store',
+          }
+        );
+
+        if (!response.ok) {
+          const errorBody = await response.text();
+          throw new Error(
+            errorBody ||
+              'No se pudieron cargar los ciclos para el campo seleccionado'
+          );
+        }
+
+        const data = (await response.json()) as {
+          cycles?: CycleOption[];
+        };
+
+        setDependenciesCache((prev) => ({
+          ...prev,
+          [field.id]: {
+            cycles: Array.isArray(data.cycles) ? data.cycles : [],
+          },
+        }));
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Ocurrió un error al cargar las opciones dependientes';
+        setDependenciesError(message);
+        showToast(message, 'error');
+      } finally {
+        setDependenciesLoading(false);
+      }
+    },
+    [dependenciesCache, showToast]
+  );
+
+  React.useEffect(() => {
+    if (dialogOpen && !fieldOptions.length && !fieldOptionsLoading) {
+      fetchFieldOptions();
+    }
+  }, [dialogOpen, fieldOptions.length, fieldOptionsLoading, fetchFieldOptions]);
+
+  const handleDialogFieldChange = React.useCallback(
+    (key: string, rawValue: any) => {
+      if (key !== 'Campo') return;
+
+      if (rawValue === '' || rawValue === null || rawValue === undefined) {
+        setSelectedField(null);
+        setDependenciesError(null);
+        return;
+      }
+
+      const parsedValue =
+        typeof rawValue === 'number' ? rawValue : Number(rawValue);
+      if (!parsedValue || Number.isNaN(parsedValue)) {
+        setSelectedField(null);
+        setDependenciesError(null);
+        return;
+      }
+
+      const field =
+        fieldOptions.find((option) => option.id === parsedValue) ?? null;
+      setSelectedField(field);
+      setDependenciesError(null);
+
+      if (field) {
+        void fetchFieldDependencies(field);
+      }
+    },
+    [fieldOptions, fetchFieldDependencies]
+  );
+
   // Stock filtrado
   const filteredStock = React.useMemo<StockDto[]>(() => {
-    return initialStock.filter((s) => {
-      // Campo
-      if (fieldFilter !== 'all' && s.field !== fieldFilter) return false;
-
-      // Ciclo (consideramos que un stock puede tener varios ciclos, usamos inclusion)
-      if (cycleFilter !== 'all') {
-        if (!s.cycleLabels.includes(cycleFilter)) return false;
-      }
-      // Estado
-      if (statusFilter !== 'all') {
-        if (!s.status || s.status !== statusFilter) return false;
-      }
-
-      return true;
-    });
+    return initialStock
+      .filter((s) => {
+        if (fieldFilter !== 'all' && s.field !== fieldFilter) return false;
+        if (cycleFilter !== 'all') {
+          if (!s.cycleLabels.includes(cycleFilter)) return false;
+        }
+        if (statusFilter !== 'all') {
+          if (!s.status || s.status !== statusFilter) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return timeB - timeA;
+      });
   }, [initialStock, fieldFilter, cycleFilter, statusFilter]);
 
   const filteredTotals = React.useMemo(
@@ -146,6 +552,411 @@ const StockPageClient = ({ initialStock }: StockPageClientProps) => {
       ),
     [filteredStock]
   );
+
+  const stockFormSections = React.useMemo<SimpleEntityDialogSection[]>(() => {
+    const sections: SimpleEntityDialogSection[] = [
+      {
+        title: 'Información básica',
+        description: 'Tipo de unidad, fecha de creación y estado',
+        fields: ['Tipo unidad', 'Fecha de creación', 'Estado'],
+      },
+      {
+        title: 'Origen',
+        description: 'Campo, ciclo y cultivo asociados',
+        fields: ['Campo', 'Ciclo de siembra', 'Cultivo'],
+      },
+    ];
+
+    if (dialogMode === 'edit') {
+      sections.push({
+        title: 'Resumen',
+        description: 'Datos calculados del stock',
+        fields: [
+          'ID',
+          'Kgs actuales',
+          'Total kgs ingresados',
+          'Total kgs egresados',
+        ],
+      });
+
+      sections.push({
+        title: 'Movimientos',
+        description: 'Relación con cosechas y viajes de camión',
+        fields: ['Cosechas asociadas', 'Viajes de camión desde stock'],
+      });
+    }
+
+    sections.push({
+      title: 'Notas',
+      description: 'Observaciones y comentarios adicionales',
+      fields: ['Notas'],
+    });
+
+    return sections;
+  }, [dialogMode]);
+
+  const stockFormFields = React.useMemo<SimpleEntityDialogFieldConfig[]>(() => {
+    const campoOptions = fieldOptions.map((field) => ({
+      label: field.label,
+      value: field.id,
+    }));
+
+    const cycleOptions = currentDependencies.cycles.map((cycle) => ({
+      label: cycle.label,
+      value: cycle.id,
+      meta: { crop: cycle.crop },
+    }));
+
+    const unitTypeSelectOptions = unitTypeOptions.map((o) => ({
+      label: o.label,
+      value: o.id,
+    }));
+
+    const statusSelectOptions = statusOptions.map((o) => ({
+      label: o.label,
+      value: o.id,
+    }));
+
+    const dependentHelperText = selectedField
+      ? dependenciesError ?? undefined
+      : 'Seleccioná un campo primero';
+    const dependentDisabled = !selectedField || dependenciesLoading;
+
+    const fields: SimpleEntityDialogFieldConfig[] = [
+      {
+        key: 'Tipo unidad',
+        label: 'Tipo de unidad',
+        type: 'select',
+        required: true,
+        options: unitTypeSelectOptions,
+      },
+      {
+        key: 'Fecha de creación',
+        label: 'Fecha de creación',
+        type: 'date',
+        required: true,
+      },
+      {
+        key: 'Estado',
+        label: 'Estado',
+        type: 'select',
+        required: true,
+        options: statusSelectOptions,
+      },
+      {
+        key: 'Campo',
+        label: 'Campo',
+        type: 'select',
+        required: true,
+        options: campoOptions,
+        loading: fieldOptionsLoading,
+        onValueChange: () => ({
+          'Ciclo de siembra': '',
+          Cultivo: '',
+        }),
+      },
+      {
+        key: 'Ciclo de siembra',
+        label: 'Ciclo de siembra',
+        type: 'select',
+        required: false,
+        options: cycleOptions,
+        loading: dependenciesLoading,
+        disabled: dependentDisabled,
+        helperText: dependentHelperText,
+        onValueChange: (value) => {
+          const cycle = cycleOptions.find((option) => option.value === value);
+          return {
+            Cultivo: cycle?.meta?.crop ?? '',
+          };
+        },
+      },
+      {
+        key: 'Cultivo',
+        label: 'Cultivo',
+        type: 'readonly',
+        helperText: 'Se completa automáticamente según el ciclo',
+      },
+    ];
+
+    if (dialogMode === 'edit') {
+      fields.push(
+        {
+          key: 'ID',
+          label: 'ID',
+          type: 'readonly',
+        },
+        {
+          key: 'Kgs actuales',
+          label: 'Kgs actuales',
+          type: 'readonly',
+        },
+        {
+          key: 'Total kgs ingresados',
+          label: 'Total kgs ingresados',
+          type: 'readonly',
+        },
+        {
+          key: 'Total kgs egresados',
+          label: 'Total kgs egresados',
+          type: 'readonly',
+        },
+        {
+          key: 'Cosechas asociadas',
+          label: 'Cosechas asociadas',
+          type: 'readonly',
+          helperText: 'Resumen de cosechas vinculadas',
+          renderValue: renderHarvestChipField,
+        },
+        {
+          key: 'Viajes de camión desde stock',
+          label: 'Viajes de camión desde stock',
+          type: 'readonly',
+          helperText: 'Resumen de viajes directos asociados',
+          renderValue: renderTruckChipField,
+        }
+      );
+    }
+
+    fields.push({
+      key: 'Notas',
+      label: 'Notas',
+      type: 'textarea',
+      placeholder: 'Escribí tus observaciones...',
+    });
+
+    return fields;
+  }, [
+    currentDependencies.cycles,
+    dependenciesError,
+    dependenciesLoading,
+    dialogMode,
+    fieldOptions,
+    fieldOptionsLoading,
+    selectedField,
+    statusOptions,
+    unitTypeOptions,
+  ]);
+
+  const openEditDialog = React.useCallback(
+    async (stock: StockDto) => {
+      setDialogMode('edit');
+      setActiveStock(stock);
+      setDependenciesError(null);
+      setDeleteConfirmOpen(false);
+      setDeleteLoading(false);
+
+      let availableFields = fieldOptions;
+      if (!availableFields.length) {
+        availableFields = await fetchFieldOptions();
+      }
+
+      const initialValues = buildStockInitialValues(stock);
+
+      let matchedField: Option | null = null;
+      if (stock.fieldId) {
+        matchedField =
+          availableFields.find((option) => option.id === stock.fieldId) ?? null;
+      }
+
+      if (!matchedField) {
+        const normalizedField = stock.field?.trim().toLowerCase() ?? '';
+        if (normalizedField) {
+          matchedField =
+            availableFields.find(
+              (option) => option.label.trim().toLowerCase() === normalizedField
+            ) ?? null;
+        }
+      }
+
+      if (matchedField) {
+        initialValues.Campo = matchedField.id;
+        setSelectedField(matchedField);
+
+        if (!dependenciesCache[matchedField.id]) {
+          await fetchFieldDependencies(matchedField);
+        }
+      } else {
+        initialValues.Campo = '';
+        setSelectedField(null);
+      }
+
+      setDialogInitialValues(initialValues);
+      setDialogOpen(true);
+    },
+    [dependenciesCache, fetchFieldDependencies, fetchFieldOptions, fieldOptions]
+  );
+
+  const handleOpenCreateDialog = React.useCallback(() => {
+    setDialogMode('create');
+    setActiveStock(null);
+    setDialogInitialValues(buildDefaultFormValues());
+    setSelectedField(null);
+    setDependenciesError(null);
+    setDeleteConfirmOpen(false);
+    setDeleteLoading(false);
+    setDialogOpen(true);
+  }, [buildDefaultFormValues]);
+
+  const handleDialogClose = React.useCallback(() => {
+    setDialogOpen(false);
+    setDialogMode('create');
+    setActiveStock(null);
+    setSelectedField(null);
+    setDependenciesError(null);
+    setDialogInitialValues(buildDefaultFormValues());
+    setDeleteConfirmOpen(false);
+    setDeleteLoading(false);
+  }, [buildDefaultFormValues]);
+
+  const handleCreateSubmit = React.useCallback(
+    async (formValues: Record<string, any>) => {
+      const payload = normalizeStockFormToBaserowPayload(formValues);
+
+      const response = await fetch('/api/stocks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ payload }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        let message = 'No se pudo registrar el stock';
+        if (errorBody) {
+          try {
+            const parsed = JSON.parse(errorBody);
+            message = parsed?.error || errorBody;
+          } catch {
+            message = errorBody;
+          }
+        }
+        showToast(message, 'error');
+        throw new Error(message);
+      }
+
+      showToast('Stock registrado correctamente', 'success');
+      router.refresh();
+    },
+    [router, showToast]
+  );
+
+  const handleEditSubmit = React.useCallback(
+    async (formValues: Record<string, any>) => {
+      if (!activeStock) {
+        throw new Error('No se encontró el stock a editar');
+      }
+
+      const nextPayload = normalizeStockFormToBaserowPayload(formValues, {
+        includeEmptyOptional: true,
+      });
+      const prevPayload = normalizeStockDtoToBaserowPayload(activeStock);
+      const diffPayload = computeDiffPayload(prevPayload, nextPayload);
+
+      if (!Object.keys(diffPayload).length) {
+        showToast('No hay cambios para guardar', 'info');
+        return;
+      }
+
+      const response = await fetch(`/api/stocks/${activeStock.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ payload: diffPayload }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        let message = 'No se pudo actualizar el stock';
+        if (errorBody) {
+          try {
+            const parsed = JSON.parse(errorBody);
+            message = parsed?.error || errorBody;
+          } catch {
+            message = errorBody;
+          }
+        }
+        showToast(message, 'error');
+        throw new Error(message);
+      }
+
+      showToast('Stock actualizado correctamente', 'success');
+      router.refresh();
+    },
+    [activeStock, router, showToast]
+  );
+
+  const handleSnackbarClose = (
+    _event?: React.SyntheticEvent | Event,
+    reason?: string
+  ) => {
+    if (reason === 'clickaway') return;
+    setSnackbarState((prev) => ({ ...prev, open: false }));
+  };
+
+  const openDeleteConfirm = React.useCallback(() => {
+    if (!activeStock) return;
+    setDeleteConfirmOpen(true);
+  }, [activeStock]);
+
+  const handleCloseDeleteConfirm = React.useCallback(() => {
+    if (deleteLoading) return;
+    setDeleteConfirmOpen(false);
+  }, [deleteLoading]);
+
+  const handleDeleteConfirmed = React.useCallback(async () => {
+    if (!activeStock) {
+      showToast('No se encontró el stock a borrar', 'error');
+      return;
+    }
+
+    try {
+      setDeleteLoading(true);
+      const response = await fetch(`/api/stocks/${activeStock.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        let message = 'No se pudo borrar el stock';
+        if (errorBody) {
+          try {
+            const parsed = JSON.parse(errorBody);
+            message = parsed?.error || errorBody;
+          } catch {
+            message = errorBody;
+          }
+        }
+        throw new Error(message);
+      }
+
+      showToast('Stock borrado correctamente', 'success');
+      setDeleteConfirmOpen(false);
+      handleDialogClose();
+      router.refresh();
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Ocurrió un error al borrar el stock';
+      showToast(message, 'error');
+    } finally {
+      setDeleteLoading(false);
+    }
+  }, [activeStock, handleDialogClose, router, showToast]);
+
+  const editStockIdentifier =
+    activeStock?.name || (activeStock ? `#${activeStock.id}` : null);
+  const dialogTitle =
+    dialogMode === 'create'
+      ? 'Registrar nuevo stock'
+      : editStockIdentifier
+      ? `Editar stock ${editStockIdentifier}`
+      : 'Editar stock';
+  const dialogSubmitHandler =
+    dialogMode === 'create' ? handleCreateSubmit : handleEditSubmit;
 
   return (
     <PageContainer
@@ -306,6 +1117,7 @@ const StockPageClient = ({ initialStock }: StockPageClientProps) => {
                   variant="contained"
                   color="primary"
                   startIcon={<AddIcon />}
+                  onClick={handleOpenCreateDialog}
                   sx={{
                     flexGrow: { xs: 1, md: 0 },
                     borderRadius: 2,
@@ -408,6 +1220,9 @@ const StockPageClient = ({ initialStock }: StockPageClientProps) => {
                         <TableRow
                           key={s.id}
                           hover
+                          onClick={() => {
+                            void openEditDialog(s);
+                          }}
                           sx={(theme) => ({
                             cursor: 'pointer',
                             transition: 'all 0.2s ease',
@@ -484,6 +1299,7 @@ const StockPageClient = ({ initialStock }: StockPageClientProps) => {
                               <Typography
                                 component={Link}
                                 href={`/ciclos/${firstCycleId}`}
+                                onClick={(event) => event.stopPropagation()}
                                 sx={(theme) => ({
                                   fontSize: 'body2',
                                   fontWeight: 700,
@@ -517,6 +1333,9 @@ const StockPageClient = ({ initialStock }: StockPageClientProps) => {
                                     key={hid}
                                     component={Link}
                                     href={`/cosechas/${hid}`}
+                                    onClick={(event: React.MouseEvent) =>
+                                      event.stopPropagation()
+                                    }
                                     clickable
                                     size="small"
                                     variant="outlined"
@@ -549,6 +1368,9 @@ const StockPageClient = ({ initialStock }: StockPageClientProps) => {
                                     component={Link}
                                     variant="outlined"
                                     href={`/viajes-de-camion/${tid}`}
+                                    onClick={(event: React.MouseEvent) =>
+                                      event.stopPropagation()
+                                    }
                                     clickable
                                     size="small"
                                     label={`${s.truckTripLabels[i]}`}
@@ -743,6 +1565,9 @@ const StockPageClient = ({ initialStock }: StockPageClientProps) => {
                   return (
                     <Card
                       key={s.id}
+                      onClick={() => {
+                        void openEditDialog(s);
+                      }}
                       sx={(theme) => ({
                         cursor: 'pointer',
                         borderRadius: 2.5,
@@ -827,6 +1652,7 @@ const StockPageClient = ({ initialStock }: StockPageClientProps) => {
                               <Typography
                                 component={Link}
                                 href={`/ciclos/${firstCycleId}`}
+                                onClick={(event) => event.stopPropagation()}
                                 sx={(theme) => ({
                                   fontSize: '0.9rem',
                                   fontWeight: 700,
@@ -911,6 +1737,85 @@ const StockPageClient = ({ initialStock }: StockPageClientProps) => {
             </Box>
           </Stack>
         </DashboardCard>
+
+        <SimpleEntityDialogForm
+          open={dialogOpen}
+          title={dialogTitle}
+          onClose={handleDialogClose}
+          onSubmit={dialogSubmitHandler}
+          fields={stockFormFields}
+          sections={stockFormSections}
+          initialValues={dialogInitialValues}
+          onFieldChange={handleDialogFieldChange}
+          extraActions={
+            dialogMode === 'edit' ? (
+              <Button
+                color="error"
+                variant="outlined"
+                onClick={openDeleteConfirm}
+                startIcon={<DeleteOutlineIcon />}
+                sx={{
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  px: 2.5,
+                }}
+              >
+                Borrar stock
+              </Button>
+            ) : undefined
+          }
+        />
+        <Dialog
+          open={deleteConfirmOpen}
+          onClose={handleCloseDeleteConfirm}
+          disableEscapeKeyDown={deleteLoading}
+        >
+          <DialogTitle>Borrar stock</DialogTitle>
+          <DialogContent>
+            <Typography variant="body1">
+              ¿Seguro que querés borrar este stock? Esta acción es irreversible.
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={handleCloseDeleteConfirm}
+              disabled={deleteLoading}
+              sx={{ textTransform: 'none' }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              color="error"
+              variant="contained"
+              onClick={handleDeleteConfirmed}
+              disabled={deleteLoading}
+              startIcon={
+                deleteLoading ? (
+                  <CircularProgress color="inherit" size={18} />
+                ) : null
+              }
+              sx={{ textTransform: 'none' }}
+            >
+              {deleteLoading ? 'Borrando...' : 'Borrar'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+        <Snackbar
+          open={snackbarState.open}
+          autoHideDuration={5000}
+          onClose={handleSnackbarClose}
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        >
+          <Alert
+            onClose={handleSnackbarClose}
+            severity={snackbarState.severity}
+            variant="filled"
+            sx={{ width: '100%' }}
+          >
+            {snackbarState.message}
+          </Alert>
+        </Snackbar>
       </Stack>
     </PageContainer>
   );
