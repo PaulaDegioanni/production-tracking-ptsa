@@ -461,7 +461,7 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
         disabled: dependentDisabled,
         helperText: dependentHelperText
           ? dependentHelperText
-          : 'Opcional: asociá esta cosecha a un stock existente',
+          : 'Opcional: asocia esta cosecha a un stock existente',
       },
       {
         key: 'Viajes camión directos',
@@ -995,32 +995,28 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
                             </Typography>
                           </TableCell>
                           <TableCell>
-                            <Typography variant="body2" fontWeight={700}>
-                              {harvest.lotsIds.length ? (
-                                <Stack spacing={0.5} flexWrap="wrap">
-                                  {harvest.lotsIds.map((lid, i) => (
-                                    <Chip
-                                      key={lid}
-                                      size="small"
-                                      variant="outlined"
-                                      label={`${harvest.lotsLabels[i]}`}
-                                      sx={{
-                                        fontSize: 'body2',
-                                        fontWeight: 600,
-                                        mb: 0.5,
-                                      }}
-                                    />
-                                  ))}
-                                </Stack>
-                              ) : (
-                                <Typography
-                                  variant="body2"
-                                  color="text.secondary"
-                                >
-                                  —
-                                </Typography>
-                              )}
-                            </Typography>
+                            {harvest.lotsIds.length ? (
+                              <Stack spacing={0.5} flexWrap="wrap">
+                                {harvest.lotsIds.map((lid, i) => (
+                                  <Chip
+                                    key={lid}
+                                    size="small"
+                                    variant="outlined"
+                                    label={
+                                      harvest.lotsLabels[i] ?? `Lote ${lid}`
+                                    }
+                                    sx={{ fontWeight: 600 }}
+                                  />
+                                ))}
+                              </Stack>
+                            ) : (
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                —
+                              </Typography>
+                            )}
                           </TableCell>
                           <TableCell
                             sx={(theme) => ({
@@ -1046,60 +1042,56 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
                             </Typography>
                           </TableCell>
                           <TableCell>
-                            <Typography variant="body2" fontWeight={700}>
-                              {harvest.stockIds.length ? (
-                                <Stack spacing={0.5} flexWrap="wrap">
-                                  {harvest.stockIds.map((sid, i) => (
-                                    <Chip
-                                      key={sid}
-                                      size="small"
-                                      variant="outlined"
-                                      label={`${harvest.stockLabels[i]}`}
-                                      sx={{
-                                        fontSize: 'body2',
-                                        fontWeight: 600,
-                                        mb: 0.5,
-                                      }}
-                                    />
-                                  ))}
-                                </Stack>
-                              ) : (
-                                <Typography
-                                  variant="body2"
-                                  color="text.secondary"
-                                >
-                                  —
-                                </Typography>
-                              )}
-                            </Typography>
+                            {harvest.stockIds.length ? (
+                              <Stack spacing={0.5} flexWrap="wrap">
+                                {harvest.stockIds.map((sid, i) => (
+                                  <Chip
+                                    key={sid}
+                                    size="small"
+                                    variant="outlined"
+                                    label={`${harvest.stockLabels[i]}`}
+                                    sx={{
+                                      fontSize: 'body2',
+                                      fontWeight: 600,
+                                      mb: 0.5,
+                                    }}
+                                  />
+                                ))}
+                              </Stack>
+                            ) : (
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                —
+                              </Typography>
+                            )}
                           </TableCell>
                           <TableCell>
-                            <Typography variant="body2" fontWeight={700}>
-                              {harvest.directTruckTripIds.length ? (
-                                <Stack spacing={0.5} flexWrap="wrap">
-                                  {harvest.directTruckTripIds.map((tid, i) => (
-                                    <Chip
-                                      key={tid}
-                                      size="small"
-                                      variant="outlined"
-                                      label={`${harvest.directTruckLabels[i]}`}
-                                      sx={{
-                                        fontSize: 'body2',
-                                        fontWeight: 600,
-                                        mb: 0.5,
-                                      }}
-                                    />
-                                  ))}
-                                </Stack>
-                              ) : (
-                                <Typography
-                                  variant="body2"
-                                  color="text.secondary"
-                                >
-                                  —
-                                </Typography>
-                              )}
-                            </Typography>
+                            {harvest.directTruckTripIds.length ? (
+                              <Stack spacing={0.5} flexWrap="wrap">
+                                {harvest.directTruckTripIds.map((tid, i) => (
+                                  <Chip
+                                    key={tid}
+                                    size="small"
+                                    variant="outlined"
+                                    label={`${harvest.directTruckLabels[i]}`}
+                                    sx={{
+                                      fontSize: 'body2',
+                                      fontWeight: 600,
+                                      mb: 0.5,
+                                    }}
+                                  />
+                                ))}
+                              </Stack>
+                            ) : (
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                —
+                              </Typography>
+                            )}
                           </TableCell>
                           <TableCell
                             sx={(theme) => ({
@@ -1303,36 +1295,35 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
                             alignItems="center"
                           >
                             <CropChip crop={harvest.crop} size="small" />
-                            <Typography variant="body2" fontWeight={700}>
-                              {harvest.lotsIds.length ? (
-                                <Stack
-                                  spacing={0.5}
-                                  flexWrap="wrap"
-                                  direction="row"
-                                >
-                                  {harvest.lotsIds.map((lid, i) => (
-                                    <Chip
-                                      key={lid}
-                                      size="small"
-                                      variant="outlined"
-                                      label={`${harvest.lotsLabels[i]}`}
-                                      sx={{
-                                        fontSize: 'body2',
-                                        fontWeight: 600,
-                                        mb: 0.5,
-                                      }}
-                                    />
-                                  ))}
-                                </Stack>
-                              ) : (
-                                <Typography
-                                  variant="body2"
-                                  color="text.secondary"
-                                >
-                                  —
-                                </Typography>
-                              )}
-                            </Typography>
+
+                            {harvest.lotsIds.length ? (
+                              <Stack
+                                spacing={0.5}
+                                flexWrap="wrap"
+                                direction="row"
+                              >
+                                {harvest.lotsIds.map((lid, i) => (
+                                  <Chip
+                                    key={lid}
+                                    size="small"
+                                    variant="outlined"
+                                    label={`${harvest.lotsLabels[i]}`}
+                                    sx={{
+                                      fontSize: 'body2',
+                                      fontWeight: 600,
+                                      mb: 0.5,
+                                    }}
+                                  />
+                                ))}
+                              </Stack>
+                            ) : (
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                —
+                              </Typography>
+                            )}
                           </Stack>
                           <Box
                             sx={(theme) => ({

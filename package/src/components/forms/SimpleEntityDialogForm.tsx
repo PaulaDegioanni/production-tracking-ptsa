@@ -201,6 +201,13 @@ const SimpleEntityDialogForm = ({
     const validationErrors = validate();
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) {
+      setTouched((prev) => {
+        const next = { ...prev };
+        Object.keys(validationErrors).forEach((k) => {
+          next[k] = true;
+        });
+        return next;
+      });
       return;
     }
 
@@ -582,7 +589,7 @@ const SimpleEntityDialogForm = ({
         },
       }}
     >
-      <Box component="form" onSubmit={handleSubmit}>
+      <Box component="form" onSubmit={handleSubmit} noValidate>
         <DialogTitle
           sx={{
             background: `linear-gradient(135deg, ${alpha(
