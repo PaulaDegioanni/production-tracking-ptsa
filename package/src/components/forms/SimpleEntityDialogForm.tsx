@@ -24,6 +24,16 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import 'dayjs/locale/es';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { TimePicker } from '@mui/x-date-pickers/TimePicker';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+import dayjs, { type Dayjs } from 'dayjs';
+dayjs.extend(customParseFormat);
+dayjs.locale('es');
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+
 import CloseIcon from '@mui/icons-material/Close';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
@@ -44,6 +54,8 @@ export type SimpleEntityDialogFieldConfig = {
     | 'textarea'
     | 'number'
     | 'datetime'
+    | 'date'
+    | 'time'
     | 'select'
     | 'multi-select'
     | 'readonly';
@@ -86,6 +98,7 @@ export type SimpleEntityDialogFormProps = {
     value: any,
     values: Record<string, any>
   ) => void;
+  extraActions?: React.ReactNode;
 };
 
 const cloneInitialValues = (initials?: Record<string, any>) => {
@@ -113,6 +126,7 @@ const SimpleEntityDialogForm = ({
   initialValues,
   sections,
   onFieldChange,
+  extraActions,
 }: SimpleEntityDialogFormProps) => {
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
@@ -520,8 +534,10 @@ const SimpleEntityDialogForm = ({
           key={field.key}
           {...commonProps}
           type="number"
-          inputProps={{
-            step: field.step ?? 1,
+          slotProps={{
+            htmlInput: {
+              step: field.step ?? 1,
+            },
           }}
         />
       );
@@ -534,6 +550,62 @@ const SimpleEntityDialogForm = ({
           {...commonProps}
           type="datetime-local"
           InputLabelProps={{ shrink: true }}
+          slotProps={{
+            inputLabel: { shrink: true },
+          }}
+        />
+      );
+    }
+
+    if (field.type === 'date') {
+      const { value: _ignoreValue, onChange: _ignoreOnChange, ...textFieldProps } =
+        commonProps;
+      const raw = (values[field.key] ?? '') as string;
+      const pickerValue = raw ? dayjs(raw, 'YYYY-MM-DD', true) : null;
+
+      return (
+        <DatePicker
+          key={field.key}
+          label={field.labelNode ?? field.label}
+          format="DD-MM-YYYY"
+          value={pickerValue && pickerValue.isValid() ? pickerValue : null}
+          onChange={(newVal: Dayjs | null) => {
+            const next =
+              newVal && newVal.isValid() ? newVal.format('YYYY-MM-DD') : '';
+            handleFieldValueChange(field, next);
+          }}
+          slotProps={{
+            textField: {
+              ...textFieldProps,
+            },
+          }}
+        />
+      );
+    }
+
+    if (field.type === 'time') {
+      const { value: _ignoreValue, onChange: _ignoreOnChange, ...textFieldProps } =
+        commonProps;
+      const raw = (values[field.key] ?? '') as string;
+      const pickerValue = raw ? dayjs(raw, 'HH:mm', true) : null;
+
+      return (
+        <TimePicker
+          key={field.key}
+          label={field.labelNode ?? field.label}
+          value={pickerValue && pickerValue.isValid() ? pickerValue : null}
+          onChange={(newVal: Dayjs | null) => {
+            const next =
+              newVal && newVal.isValid() ? newVal.format('HH:mm') : '';
+            handleFieldValueChange(field, next);
+          }}
+          ampm={false}
+          format="HH:mm"
+          slotProps={{
+            textField: {
+              ...textFieldProps,
+            },
+          }}
         />
       );
     }
@@ -543,8 +615,8 @@ const SimpleEntityDialogForm = ({
         <TextField
           key={field.key}
           {...commonProps}
-          InputProps={{
-            readOnly: true,
+          slotProps={{
+            input: { readOnly: true },
           }}
           sx={{
             ...commonProps.sx,
@@ -560,8 +632,22 @@ const SimpleEntityDialogForm = ({
   };
 
   const chunkFields = (
-    sectionFields: SimpleEntityDialogFieldConfig[]
+    sectionFields: SimpleEntityDialogFieldConfig[],
+    sectionIndex: number
   ): SimpleEntityDialogFieldConfig[][] => {
+    if (sectionIndex === 0) {
+      const firstRow = sectionFields.slice(0, 3);
+      const rest = sectionFields.slice(3);
+      const rowList: SimpleEntityDialogFieldConfig[][] = [];
+      if (firstRow.length) {
+        rowList.push(firstRow);
+      }
+      for (let i = 0; i < rest.length; i += 2) {
+        rowList.push(rest.slice(i, i + 2));
+      }
+      return rowList;
+    }
+
     const rows: SimpleEntityDialogFieldConfig[][] = [];
     for (let i = 0; i < sectionFields.length; i += 2) {
       rows.push(sectionFields.slice(i, i + 2));
@@ -570,201 +656,275 @@ const SimpleEntityDialogForm = ({
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={() => {
-        if (!loading) {
-          handleCancel();
-        }
-      }}
-      fullScreen={fullScreen}
-      maxWidth="md"
-      fullWidth
-      TransitionComponent={Fade}
-      TransitionProps={{ timeout: 300 }}
-      PaperProps={{
-        sx: {
-          borderRadius: { xs: 0, md: 3 },
-          overflow: 'hidden',
-        },
-      }}
-    >
-      <Box component="form" onSubmit={handleSubmit} noValidate>
-        <DialogTitle
-          sx={{
-            background: `linear-gradient(135deg, ${alpha(
-              theme.palette.primary.main,
-              0.08
-            )} 0%, ${alpha(theme.palette.primary.light, 0.08)} 100%)`,
-            borderBottom: `1px solid ${theme.palette.divider}`,
-            pb: 2,
-          }}
-        >
-          <Stack
-            direction="row"
-            alignItems="center"
-            justifyContent="space-between"
+    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
+      <Dialog
+        open={open}
+        onClose={() => {
+          if (!loading) {
+            handleCancel();
+          }
+        }}
+        fullScreen={fullScreen}
+        maxWidth="md"
+        fullWidth
+        TransitionComponent={Fade}
+        TransitionProps={{ timeout: 300 }}
+        PaperProps={{
+          sx: {
+            borderRadius: { xs: 0, md: 3 },
+            overflow: 'hidden',
+          },
+        }}
+      >
+        <Box component="form" onSubmit={handleSubmit} noValidate>
+          <DialogTitle
+            sx={{
+              background: `linear-gradient(135deg, ${alpha(
+                theme.palette.primary.main,
+                0.08
+              )} 0%, ${alpha(theme.palette.primary.light, 0.08)} 100%)`,
+              borderBottom: `1px solid ${theme.palette.divider}`,
+              pb: 2,
+            }}
           >
-            <Box>
-              <Typography variant="h5" fontWeight={700} color="primary.main">
-                {title}
-              </Typography>
-              {subtitle && (
-                <Typography variant="body2" color="text.secondary" mt={0.5}>
-                  {subtitle}
+            <Stack
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+            >
+              <Box>
+                <Typography variant="h5" fontWeight={700} color="primary.main">
+                  {title}
                 </Typography>
-              )}
-            </Box>
-            <IconButton
+                {subtitle && (
+                  <Typography variant="body2" color="text.secondary" mt={0.5}>
+                    {subtitle}
+                  </Typography>
+                )}
+              </Box>
+              <IconButton
+                onClick={handleCancel}
+                disabled={loading}
+                sx={{
+                  color: 'text.secondary',
+                  '&:hover': {
+                    backgroundColor: alpha(theme.palette.error.main, 0.1),
+                    color: 'error.main',
+                  },
+                }}
+              >
+                <CloseIcon />
+              </IconButton>
+            </Stack>
+          </DialogTitle>
+
+          <DialogContent
+            dividers
+            sx={{
+              px: { xs: 2, md: 3 },
+              py: 3,
+              backgroundColor: alpha(theme.palette.grey[50], 0.3),
+              maxHeight: {
+                xs: 'calc(100vh - 170px)',
+                md: '70vh',
+              },
+              overflowY: 'auto',
+            }}
+          >
+            <Stack spacing={4}>
+              {resolvedSections.map((section, sectionIndex) => {
+                if (!section.fields.length) return null;
+                const rows = chunkFields(section.fields, sectionIndex);
+                const showMeta = Boolean(
+                  section.title || section.description || section.icon
+                );
+
+                return (
+                  <Paper key={`${section.title}-${sectionIndex}`} elevation={0}>
+                    {showMeta && (
+                      <Box mb={3}>
+                        <Stack
+                          direction="row"
+                          spacing={1.5}
+                          alignItems="center"
+                        >
+                          {section.title && (
+                            <Typography variant="h6" color="text.primary">
+                              {section.title}
+                            </Typography>
+                          )}
+                        </Stack>
+                      </Box>
+                    )}
+
+                    <Stack spacing={2.5}>
+                      {rows.map((row, rowIndex) => {
+                        const isFirstSectionFirstRow =
+                          sectionIndex === 0 && rowIndex === 0;
+
+                        if (isFirstSectionFirstRow) {
+                          const areaMap: Record<string, string> = {
+                            Fecha_fecha: 'fecha',
+                            Fecha_hora: 'hora',
+                            'KG Cosechados': 'kgs',
+                          };
+                          return (
+                            <Box
+                              key={
+                                row.map((field) => field.key).join('-') ||
+                                `row-${rowIndex}`
+                              }
+                              sx={{
+                                display: 'grid',
+                                gap: 2,
+                                gridTemplateColumns: {
+                                  xs: 'repeat(2, minmax(0, 1fr))',
+                                  md: 'repeat(3, minmax(0, 1fr))',
+                                },
+                                gridTemplateAreas: {
+                                  xs: '"fecha hora" "kgs kgs"',
+                                  md: '"fecha hora kgs"',
+                                },
+                              }}
+                            >
+                              {row.map((field) => (
+                                <Box
+                                  key={field.key}
+                                  sx={{
+                                    minWidth: 0,
+                                    gridArea: areaMap[field.key] ?? 'auto',
+                                  }}
+                                >
+                                  {renderField(field)}
+                                </Box>
+                              ))}
+                            </Box>
+                          );
+                        }
+
+                        return (
+                          <Stack
+                            key={
+                              row.map((field) => field.key).join('-') ||
+                              rowIndex
+                            }
+                            direction={{
+                              xs: 'column',
+                              sm: row.length > 1 ? 'row' : 'column',
+                            }}
+                            spacing={2}
+                          >
+                            {row.map((field) => (
+                              <Box
+                                key={field.key}
+                                sx={{ flex: 1, minWidth: 0 }}
+                              >
+                                {renderField(field)}
+                              </Box>
+                            ))}
+                          </Stack>
+                        );
+                      })}
+                    </Stack>
+                  </Paper>
+                );
+              })}
+            </Stack>
+
+            <Collapse in={Boolean(formError)}>
+              <Alert
+                severity="error"
+                icon={<ErrorOutlineIcon />}
+                sx={{
+                  mt: 3,
+                  borderRadius: 2,
+                  '& .MuiAlert-message': {
+                    width: '100%',
+                  },
+                }}
+                onClose={() => setFormError(null)}
+              >
+                <Typography variant="body2" fontWeight={600}>
+                  {formError}
+                </Typography>
+              </Alert>
+            </Collapse>
+          </DialogContent>
+
+          <DialogActions
+            sx={{
+              px: 3,
+              py: 2.5,
+              background: `linear-gradient(135deg, ${alpha(
+                theme.palette.grey[50],
+                0.5
+              )} 0%, ${alpha(theme.palette.grey[100], 0.5)} 100%)`,
+              borderTop: `1px solid ${theme.palette.divider}`,
+              gap: 1.5,
+              flexWrap: 'wrap',
+            }}
+          >
+            {extraActions ? (
+              <Box
+                sx={{
+                  flexGrow: 1,
+                  display: 'flex',
+                  justifyContent: 'flex-start',
+                  alignItems: 'center',
+                  minWidth: { xs: '100%', sm: 'auto' },
+                  mb: { xs: 1.5, sm: 0 },
+                }}
+              >
+                {extraActions}
+              </Box>
+            ) : null}
+            <Button
               onClick={handleCancel}
               disabled={loading}
+              variant="outlined"
               sx={{
-                color: 'text.secondary',
-                '&:hover': {
-                  backgroundColor: alpha(theme.palette.error.main, 0.1),
-                  color: 'error.main',
-                },
-              }}
-            >
-              <CloseIcon />
-            </IconButton>
-          </Stack>
-        </DialogTitle>
-
-        <DialogContent
-          dividers
-          sx={{
-            px: { xs: 2, md: 3 },
-            py: 3,
-            backgroundColor: alpha(theme.palette.grey[50], 0.3),
-            maxHeight: {
-              xs: 'calc(100vh - 170px)',
-              md: '70vh',
-            },
-            overflowY: 'auto',
-          }}
-        >
-          <Stack spacing={4}>
-            {resolvedSections.map((section, sectionIndex) => {
-              if (!section.fields.length) return null;
-              const rows = chunkFields(section.fields);
-              const showMeta = Boolean(
-                section.title || section.description || section.icon
-              );
-
-              return (
-                <Paper key={`${section.title}-${sectionIndex}`} elevation={0}>
-                  {showMeta && (
-                    <Box mb={3}>
-                      <Stack direction="row" spacing={1.5} alignItems="center">
-                        {section.title && (
-                          <Typography variant="h6" color="text.primary">
-                            {section.title}
-                          </Typography>
-                        )}
-                      </Stack>
-                    </Box>
-                  )}
-
-                  <Stack spacing={2.5}>
-                    {rows.map((row, rowIndex) => (
-                      <Stack
-                        key={
-                          row.map((field) => field.key).join('-') || rowIndex
-                        }
-                        direction={{
-                          xs: 'column',
-                          sm: row.length > 1 ? 'row' : 'column',
-                        }}
-                        spacing={2}
-                      >
-                        {row.map((field) => (
-                          <Box key={field.key} sx={{ flex: 1, minWidth: 0 }}>
-                            {renderField(field)}
-                          </Box>
-                        ))}
-                      </Stack>
-                    ))}
-                  </Stack>
-                </Paper>
-              );
-            })}
-          </Stack>
-
-          <Collapse in={Boolean(formError)}>
-            <Alert
-              severity="error"
-              icon={<ErrorOutlineIcon />}
-              sx={{
-                mt: 3,
                 borderRadius: 2,
-                '& .MuiAlert-message': {
-                  width: '100%',
+                textTransform: 'none',
+                fontWeight: 600,
+                px: 3,
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={loading}
+              startIcon={
+                loading ? (
+                  <CircularProgress color="inherit" size={18} />
+                ) : (
+                  <CheckCircleOutlineIcon />
+                )
+              }
+              sx={{
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 700,
+                px: 4,
+                boxShadow: `0 4px 12px ${alpha(
+                  theme.palette.primary.main,
+                  0.3
+                )}`,
+                '&:hover': {
+                  boxShadow: `0 6px 16px ${alpha(
+                    theme.palette.primary.main,
+                    0.4
+                  )}`,
                 },
               }}
-              onClose={() => setFormError(null)}
             >
-              <Typography variant="body2" fontWeight={600}>
-                {formError}
-              </Typography>
-            </Alert>
-          </Collapse>
-        </DialogContent>
-
-        <DialogActions
-          sx={{
-            px: 3,
-            py: 2.5,
-            background: `linear-gradient(135deg, ${alpha(
-              theme.palette.grey[50],
-              0.5
-            )} 0%, ${alpha(theme.palette.grey[100], 0.5)} 100%)`,
-            borderTop: `1px solid ${theme.palette.divider}`,
-          }}
-        >
-          <Button
-            onClick={handleCancel}
-            disabled={loading}
-            variant="outlined"
-            sx={{
-              borderRadius: 2,
-              textTransform: 'none',
-              fontWeight: 600,
-              px: 3,
-            }}
-          >
-            Cancelar
-          </Button>
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={loading}
-            startIcon={
-              loading ? (
-                <CircularProgress color="inherit" size={18} />
-              ) : (
-                <CheckCircleOutlineIcon />
-              )
-            }
-            sx={{
-              borderRadius: 2,
-              textTransform: 'none',
-              fontWeight: 700,
-              px: 4,
-              boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
-              '&:hover': {
-                boxShadow: `0 6px 16px ${alpha(
-                  theme.palette.primary.main,
-                  0.4
-                )}`,
-              },
-            }}
-          >
-            {loading ? 'Guardando...' : 'Guardar'}
-          </Button>
-        </DialogActions>
-      </Box>
-    </Dialog>
+              {loading ? 'Guardando...' : 'Guardar'}
+            </Button>
+          </DialogActions>
+        </Box>
+      </Dialog>
+    </LocalizationProvider>
   );
 };
 

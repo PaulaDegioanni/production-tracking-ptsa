@@ -9,6 +9,11 @@ import {
   Card,
   CardContent,
   Chip,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControl,
   MenuItem,
   Paper,
@@ -28,10 +33,9 @@ import { useRouter } from 'next/navigation';
 import AddIcon from '@mui/icons-material/Add';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
-import InventoryIcon from '@mui/icons-material/Inventory';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
 import LandscapeIcon from '@mui/icons-material/Landscape';
-import SpaIcon from '@mui/icons-material/Spa';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 
 import PageContainer from '@/app/(DashboardLayout)/components/container/PageContainer';
 import DashboardCard from '@/app/(DashboardLayout)/components/shared/DashboardCard';
@@ -41,12 +45,29 @@ import SimpleEntityDialogForm, {
   SimpleEntityDialogSection,
 } from '@/components/forms/SimpleEntityDialogForm';
 import type { HarvestDto } from '@/lib/baserow/harvests';
+import { combineDateAndTimeToIso } from '@/lib/forms/datetime';
 
 type CosechasPageClientProps = {
   initialHarvests: HarvestDto[];
 };
 
 /* --------- Helpers --------- */
+
+type HarvestFormValues = {
+  Fecha_fecha: string; // YYYY-MM-DD (input date)
+  Fecha_hora: string; // HH:mm (input time)
+  'KG Cosechados': string;
+
+  Campo: '' | number;
+  Lotes: Array<string | number>;
+  'Ciclo de siembra': '' | number;
+
+  Cultivo: string; // readonly
+  Stock: '' | number;
+  'Viajes camión directos': '' | number;
+
+  Notas: string;
+};
 
 const formatDateTimeParts = (
   value: string | null
@@ -74,23 +95,21 @@ const formatKgs = (value: number): string =>
     maximumFractionDigits: 0,
   });
 
-const formatDateTimeLocalInput = (date: Date) => {
-  const offset = date.getTimezoneOffset();
-  const localDate = new Date(date.getTime() - offset * 60 * 1000);
-  return localDate.toISOString().slice(0, 16);
+const getDefaultHarvestFormValues = (): HarvestFormValues => {
+  const now = new Date();
+  return {
+    Fecha_fecha: now.toISOString().slice(0, 10),
+    Fecha_hora: now.toTimeString().slice(0, 5),
+    'KG Cosechados': '',
+    Campo: '',
+    Lotes: [],
+    'Ciclo de siembra': '',
+    Cultivo: '',
+    Stock: '',
+    'Viajes camión directos': '',
+    Notas: '',
+  };
 };
-
-const getDefaultHarvestFormValues = () => ({
-  Fecha: formatDateTimeLocalInput(new Date()),
-  'KG Cosechados': '',
-  Campo: '',
-  Lotes: [] as Array<string | number>,
-  'Ciclo de siembra': '',
-  Cultivo: '',
-  Stock: '',
-  'Viajes camión directos': '',
-  Notas: '',
-});
 
 const normalizeArrayForComparison = (arr: unknown[]) => {
   if (!arr.length) return [];
@@ -115,9 +134,7 @@ const isEqualValue = (a: unknown, b: unknown) => {
     if (a.length !== b.length) return false;
     const normalizedA = normalizeArrayForComparison(a);
     const normalizedB = normalizeArrayForComparison(b);
-    return normalizedA.every(
-      (value, index) => value === normalizedB[index]
-    );
+    return normalizedA.every((value, index) => value === normalizedB[index]);
   }
 
   return a === b;
@@ -144,18 +161,11 @@ const normalizeHarvestFormToBaserowPayload = (
 ) => {
   const includeEmptyOptional = options?.includeEmptyOptional ?? false;
 
-  const rawDate = formValues['Fecha'];
-  if (!rawDate) {
-    throw new Error('La fecha es obligatoria');
-  }
-
-  const parsedDate = new Date(rawDate);
-  if (Number.isNaN(parsedDate.getTime())) {
-    throw new Error('La fecha ingresada no es válida');
-  }
-
   const payload: Record<string, any> = {
-    Fecha: parsedDate.toISOString(),
+    Fecha: combineDateAndTimeToIso(
+      formValues['Fecha_fecha'],
+      formValues['Fecha_hora']
+    ),
   };
 
   const rawKgs = formValues['KG Cosechados'];
@@ -218,9 +228,7 @@ const normalizeHarvestDtoToBaserowPayload = (harvest: HarvestDto) => {
   payload['KG Cosechados'] =
     typeof harvest.harvestedKgs === 'number' ? harvest.harvestedKgs : 0;
 
-  payload.Lotes = Array.isArray(harvest.lotsIds)
-    ? [...harvest.lotsIds]
-    : [];
+  payload.Lotes = Array.isArray(harvest.lotsIds) ? [...harvest.lotsIds] : [];
 
   const cycleId =
     typeof harvest.cycleId === 'number' && !Number.isNaN(harvest.cycleId)
@@ -251,24 +259,33 @@ const normalizeHarvestDtoToBaserowPayload = (harvest: HarvestDto) => {
   return payload;
 };
 
-const buildHarvestInitialValues = (harvest: HarvestDto) => {
-  const harvestDate = harvest.date ? new Date(harvest.date) : null;
-  const hasValidDate =
-    !!harvestDate && !Number.isNaN(harvestDate.getTime());
-  const harvestFieldId = (harvest as HarvestDto & { fieldId?: number | null })
-    .fieldId;
+const buildHarvestInitialValues = (harvest: HarvestDto): HarvestFormValues => {
+  const d = harvest.date ? new Date(harvest.date) : new Date();
+  const dateObj = Number.isNaN(d.getTime()) ? new Date() : d;
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const yyyy = dateObj.getFullYear();
+  const mm = pad(dateObj.getMonth() + 1);
+  const dd = pad(dateObj.getDate());
+  const hh = pad(dateObj.getHours());
+  const min = pad(dateObj.getMinutes());
 
   return {
-    Fecha: hasValidDate
-      ? formatDateTimeLocalInput(harvestDate)
-      : formatDateTimeLocalInput(new Date()),
-    'KG Cosechados': harvest.harvestedKgs ?? '',
-    Campo: harvestFieldId ?? '',
-    Lotes: harvest.lotsIds ?? [],
-    'Ciclo de siembra': harvest.cycleId ?? '',
+    Fecha_fecha: `${yyyy}-${mm}-${dd}`,
+    Fecha_hora: `${hh}:${min}`,
+    'KG Cosechados':
+      harvest.harvestedKgs != null ? String(harvest.harvestedKgs) : '',
+
+    Campo: ((harvest as any).fieldId ?? '') as '' | number,
+    Lotes: (harvest.lotsIds ?? []) as Array<string | number>,
+    'Ciclo de siembra': (harvest.cycleId ?? '') as '' | number,
+
     Cultivo: harvest.crop ?? '',
-    Stock: harvest.stockIds[0] ?? '',
-    'Viajes camión directos': harvest.directTruckTripIds[0] ?? '',
+    Stock: (harvest.stockIds?.[0] ?? '') as '' | number,
+    'Viajes camión directos': (harvest.directTruckTripIds?.[0] ?? '') as
+      | ''
+      | number,
+
     Notas: harvest.notes ?? '',
   };
 };
@@ -320,9 +337,8 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
     message: '',
     severity: 'success',
   });
-  const [dialogInitialValues, setDialogInitialValues] = React.useState(
-    getDefaultHarvestFormValues
-  );
+  const [dialogInitialValues, setDialogInitialValues] =
+    React.useState<HarvestFormValues>(getDefaultHarvestFormValues);
   const [fieldOptions, setFieldOptions] = React.useState<Option[]>([]);
   const [fieldOptionsLoading, setFieldOptionsLoading] = React.useState(false);
   const [fieldOptionsError, setFieldOptionsError] = React.useState<
@@ -336,6 +352,8 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
   const [dependenciesError, setDependenciesError] = React.useState<
     string | null
   >(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
+  const [deleteLoading, setDeleteLoading] = React.useState(false);
 
   const showToast = React.useCallback(
     (message: string, severity: 'success' | 'error' | 'info') => {
@@ -491,15 +509,18 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
 
       const harvestInitialValues = buildHarvestInitialValues(harvest);
 
-      const harvestFieldId = (harvest as HarvestDto & {
-        fieldId?: number | null;
-      }).fieldId;
+      const harvestFieldId = (
+        harvest as HarvestDto & {
+          fieldId?: number | null;
+        }
+      ).fieldId;
 
       let matchedField: Option | null = null;
 
       if (harvestFieldId) {
         matchedField =
-          availableFields.find((option) => option.id === harvestFieldId) ?? null;
+          availableFields.find((option) => option.id === harvestFieldId) ??
+          null;
       }
 
       if (!matchedField) {
@@ -515,14 +536,17 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
 
       if (matchedField) {
         harvestInitialValues.Campo = matchedField.id;
+      } else {
+        harvestInitialValues.Campo = '';
       }
 
-      setDialogInitialValues(harvestInitialValues);
       setSelectedField(matchedField);
 
       if (matchedField && !dependenciesCache[matchedField.id]) {
         await fetchFieldDependencies(matchedField);
       }
+
+      setDialogInitialValues(harvestInitialValues);
 
       setDialogOpen(true);
     },
@@ -545,6 +569,8 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
     setSelectedField(null);
     setDependenciesError(null);
     setDialogInitialValues(getDefaultHarvestFormValues());
+    setDeleteConfirmOpen(false);
+    setDeleteLoading(false);
   }, []);
 
   const handleCreateStockShortcut = React.useCallback(() => {
@@ -561,7 +587,7 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
         title: 'Información básica',
         description: 'Fecha y cantidad total cosechada',
         icon: <CalendarTodayIcon />,
-        fields: ['Fecha', 'KG Cosechados'],
+        fields: ['Fecha_fecha', 'Fecha_hora', 'KG Cosechados'],
       },
       {
         title: 'Ubicación y origen',
@@ -622,9 +648,15 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
 
     return [
       {
-        key: 'Fecha',
-        label: 'Fecha y hora',
-        type: 'datetime',
+        key: 'Fecha_fecha',
+        label: 'Fecha',
+        type: 'date',
+        required: true,
+      },
+      {
+        key: 'Fecha_hora',
+        label: 'Hora',
+        type: 'time',
         required: true,
       },
       {
@@ -920,14 +952,65 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
     setSnackbarState((prev) => ({ ...prev, open: false }));
   };
 
+  const openDeleteConfirm = React.useCallback(() => {
+    if (!activeHarvest) return;
+    setDeleteConfirmOpen(true);
+  }, [activeHarvest]);
+
+  const handleCloseDeleteConfirm = React.useCallback(() => {
+    if (deleteLoading) return;
+    setDeleteConfirmOpen(false);
+  }, [deleteLoading]);
+
+  const handleDeleteConfirmed = React.useCallback(async () => {
+    if (!activeHarvest) {
+      showToast('No se encontró la cosecha a borrar', 'error');
+      return;
+    }
+
+    try {
+      setDeleteLoading(true);
+      const response = await fetch(`/api/harvests/${activeHarvest.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        let message = 'No se pudo borrar la cosecha';
+        if (errorBody) {
+          try {
+            const parsed = JSON.parse(errorBody);
+            message = parsed?.error || errorBody;
+          } catch {
+            message = errorBody;
+          }
+        }
+        throw new Error(message);
+      }
+
+      showToast('Cosecha borrada correctamente', 'success');
+      setDeleteConfirmOpen(false);
+      handleDialogClose();
+      router.refresh();
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Ocurrió un error al borrar la cosecha';
+      showToast(message, 'error');
+    } finally {
+      setDeleteLoading(false);
+    }
+  }, [activeHarvest, handleDialogClose, router, showToast]);
+
   const editHarvestIdentifier =
     activeHarvest?.harvestId || (activeHarvest ? `#${activeHarvest.id}` : null);
   const dialogTitle =
     dialogMode === 'create'
       ? 'Registrar nueva cosecha'
       : editHarvestIdentifier
-        ? `Editar cosecha ${editHarvestIdentifier}`
-        : 'Editar cosecha';
+      ? `Editar cosecha ${editHarvestIdentifier}`
+      : 'Editar cosecha';
   const dialogSubmitHandler =
     dialogMode === 'create' ? handleCreateSubmit : handleEditSubmit;
 
@@ -1687,7 +1770,60 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
         sections={harvestFormSections}
         initialValues={dialogInitialValues}
         onFieldChange={handleDialogFieldChange}
+        extraActions={
+          dialogMode === 'edit' ? (
+            <Button
+              color="error"
+              variant="outlined"
+              onClick={openDeleteConfirm}
+              startIcon={<DeleteOutlineIcon />}
+              sx={{
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 600,
+                px: 2.5,
+              }}
+            >
+              Borrar cosecha
+            </Button>
+          ) : undefined
+        }
       />
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={handleCloseDeleteConfirm}
+        disableEscapeKeyDown={deleteLoading}
+      >
+        <DialogTitle>Borrar cosecha</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1">
+            ¿Seguro que querés borrar esta cosecha? Esta acción es irreversible.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={handleCloseDeleteConfirm}
+            disabled={deleteLoading}
+            sx={{ textTransform: 'none' }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={handleDeleteConfirmed}
+            disabled={deleteLoading}
+            startIcon={
+              deleteLoading ? (
+                <CircularProgress color="inherit" size={18} />
+              ) : null
+            }
+            sx={{ textTransform: 'none' }}
+          >
+            {deleteLoading ? 'Borrando...' : 'Borrar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
       <Snackbar
         open={snackbarState.open}
         autoHideDuration={5000}
