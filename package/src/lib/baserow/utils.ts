@@ -6,6 +6,11 @@ export type BaserowOption = {
   color?: string | null;
 };
 
+export type IdLabelOption = {
+  id: number;
+  label: string;
+};
+
 // --- Baserow table field metadata ---
 
 export type BaserowTableField = {
@@ -15,6 +20,53 @@ export type BaserowTableField = {
   select_options?: BaserowOption[];
   single_select_default?: number | null;
 };
+
+export function mapSelectOptions(
+  options?: BaserowOption[]
+): IdLabelOption[] {
+  if (!Array.isArray(options)) return [];
+
+  return options.map((option) => {
+    const raw =
+      typeof option.value === 'string'
+        ? option.value
+        : String(option.value ?? '');
+
+    return {
+      id: option.id,
+      label: raw.trim(),
+    };
+  });
+}
+
+export function extractSingleSelectId(value: unknown): number | null {
+  if (typeof value === 'number' && !Number.isNaN(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+
+  if (value && typeof value === 'object' && 'id' in value) {
+    const rawId = (value as { id: unknown }).id;
+    if (typeof rawId === 'number' && !Number.isNaN(rawId)) {
+      return rawId;
+    }
+    if (typeof rawId === 'string' && rawId.trim() !== '') {
+      const parsed = Number(rawId);
+      return Number.isNaN(parsed) ? null : parsed;
+    }
+  }
+
+  if (Array.isArray(value) && value.length) {
+    const [first] = value;
+    return extractSingleSelectId(first);
+  }
+
+  return null;
+}
 
 export function toNumber(value: unknown): number {
   if (typeof value === 'number') return value;

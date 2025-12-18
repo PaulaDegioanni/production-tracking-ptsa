@@ -835,11 +835,38 @@ const chunkFields = (
                         }
 
                         if (isOriginFirstRow) {
-                          const areaMap: Record<string, string> = {
-                            Campo: 'campo',
-                            'Ciclo de siembra': 'ciclo',
-                            Cultivo: 'cultivo',
-                          };
+                          const isTruckOriginRow = row.some(
+                            (field) => field.key === 'Campo origen'
+                          );
+                          const areaMap: Record<string, string> = isTruckOriginRow
+                            ? {
+                                'Campo origen': 'campo',
+                                'Tipo origen': 'tipo',
+                                Origen: 'origen',
+                              }
+                            : {
+                                Campo: 'campo',
+                                'Ciclo de siembra': 'ciclo',
+                                Cultivo: 'cultivo',
+                              };
+                          const gridTemplateColumns = isTruckOriginRow
+                            ? {
+                                xs: 'repeat(2, minmax(0, 1fr))',
+                                md: '1.2fr 0.8fr 1.9fr',
+                              }
+                            : {
+                                xs: 'repeat(2, minmax(0, 1fr))',
+                                md: '1.1fr 1.8fr 0.9fr',
+                              };
+                          const gridTemplateAreas = isTruckOriginRow
+                            ? {
+                                xs: '"campo campo" "tipo origen"',
+                                md: '"campo tipo origen"',
+                              }
+                            : {
+                                xs: '"campo campo" "ciclo cultivo"',
+                                md: '"campo ciclo cultivo"',
+                              };
                           return (
                             <Box
                               key={
@@ -849,14 +876,8 @@ const chunkFields = (
                               sx={{
                                 display: 'grid',
                                 gap: 2,
-                                gridTemplateColumns: {
-                                  xs: 'repeat(2, minmax(0, 1fr))',
-                                  md: '1.1fr 1.8fr 0.9fr',
-                                },
-                                gridTemplateAreas: {
-                                  xs: '"campo campo" "ciclo cultivo"',
-                                  md: '"campo ciclo cultivo"',
-                                },
+                                gridTemplateColumns,
+                                gridTemplateAreas,
                               }}
                             >
                               {row.map((field) => (

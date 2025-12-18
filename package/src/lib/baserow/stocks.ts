@@ -4,6 +4,7 @@ import {
   extractLinkRowIds,
   extractLinkRowLabels,
   extractLinkRowLabelsTrimmed,
+  extractSingleSelectId,
   normalizeField,
   toNumber,
 } from './utils';
@@ -63,55 +64,6 @@ export interface StockDto {
   fieldId: number | null;
   crop: string;
 }
-
-const extractSingleSelectId = (value: unknown): number | null => {
-  if (typeof value === 'number' && !Number.isNaN(value)) {
-    return value;
-  }
-
-  if (typeof value === 'string' && value.trim() !== '') {
-    const parsed = Number(value);
-    return Number.isNaN(parsed) ? null : parsed;
-  }
-
-  if (value && typeof value === 'object' && 'id' in value) {
-    const rawId = (value as { id: unknown }).id;
-    if (typeof rawId === 'number' && !Number.isNaN(rawId)) {
-      return rawId;
-    }
-    if (typeof rawId === 'string' && rawId.trim() !== '') {
-      const parsed = Number(rawId);
-      return Number.isNaN(parsed) ? null : parsed;
-    }
-  }
-
-  if (Array.isArray(value) && value.length) {
-    const [first] = value;
-    if (typeof first === 'number' && !Number.isNaN(first)) {
-      return first;
-    }
-    if (typeof first === 'string' && first.trim() !== '') {
-      const parsed = Number(first);
-      if (!Number.isNaN(parsed)) {
-        return parsed;
-      }
-    }
-    if (first && typeof first === 'object' && 'id' in first) {
-      const rawId = (first as { id: unknown }).id;
-      if (typeof rawId === 'number' && !Number.isNaN(rawId)) {
-        return rawId;
-      }
-      if (typeof rawId === 'string' && rawId.trim() !== '') {
-        const parsed = Number(rawId);
-        if (!Number.isNaN(parsed)) {
-          return parsed;
-        }
-      }
-    }
-  }
-
-  return null;
-};
 
 function mapStockRawToDto(row: StockRaw): StockDto {
   const cycleIds = extractLinkRowIds(row['Ciclo de siembra']);

@@ -3,9 +3,11 @@ import { getTableRows } from './client';
 import { getCycleRowIdByLabel } from './cycles';
 import {
   extractLinkRowIds,
+  extractLinkRowLabels,
   toNumber,
   toStringOrEmpty,
   normalizeField,
+  extractSingleSelectId,
 } from './utils';
 
 export const TRUCK_TRIPS_TABLE_ID = Number(
@@ -62,14 +64,18 @@ export interface TruckTripDto {
   date: string | null; // Fecha de salida
   period: string | null;
   truckPlate: string; // Camión
+  truckId: number | null;
   ctg: number;
   destinationType: string; // Tipo destino (Puerto, Acopio, etc.)
+  destinationTypeId: number | null;
   destinationDetail: string;
   provider: string;
+  providerIds: number[];
 
   totalKgsOrigin: number; // Kg carga origen
   totalKgsDestination: number; // Kg carga destino
   status: string; // Estado (Entregado, Pendiente, etc.)
+  statusId: number | null;
 
   harvestOriginIds: number[]; // Cosecha Origen (opcional)
   stockOriginIds: number[]; // Stock Origen (opcional)
@@ -87,6 +93,10 @@ export interface TruckTripDto {
 function mapTruckTripRawToDto(row: TruckTripRaw): TruckTripDto {
   const harvestOriginIds = extractLinkRowIds(row['Cosecha Origen (opcional)']);
   const stockOriginIds = extractLinkRowIds(row['Stock Origen (opcional)']);
+  const truckIds = extractLinkRowIds(row['Camión']);
+  const truckId = truckIds[0] ?? null;
+  const providerIds = extractLinkRowIds(row['Proveedor']);
+  const providerLabels = extractLinkRowLabels(row['Proveedor']);
 
   let originType: TripOriginType = 'unknown';
   if (harvestOriginIds.length) originType = 'harvest';
@@ -100,14 +110,18 @@ function mapTruckTripRawToDto(row: TruckTripRaw): TruckTripDto {
     date: row['Fecha de salida'] ?? null,
     period: normalizeField(row['Periodo']) || null,
     truckPlate: normalizeField(row['Camión']),
+    truckId,
     ctg: toNumber(row['CTG']),
     destinationType: normalizeField(row['Tipo destino']),
+    destinationTypeId: extractSingleSelectId(row['Tipo destino']),
     destinationDetail: toStringOrEmpty(row['Detalle Destino (opcional)']),
-    provider: normalizeField(row['Proveedor']),
+    provider: providerLabels[0] || normalizeField(row['Proveedor']),
+    providerIds,
 
     totalKgsOrigin: toNumber(row['Kg carga origen']),
     totalKgsDestination: toNumber(row['Kg carga destino']),
     status: normalizeField(row.Estado),
+    statusId: extractSingleSelectId(row.Estado),
 
     harvestOriginIds,
     stockOriginIds,
