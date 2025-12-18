@@ -103,6 +103,8 @@ export type SimpleEntityDialogFormProps = {
     values: Record<string, any>
   ) => void;
   extraActions?: React.ReactNode;
+  externalValues?: Record<string, any> | null;
+  externalValuesKey?: string | number | null;
 };
 
 const cloneInitialValues = (initials?: Record<string, any>) => {
@@ -131,6 +133,8 @@ const SimpleEntityDialogForm = ({
   sections,
   onFieldChange,
   extraActions,
+  externalValues,
+  externalValuesKey,
 }: SimpleEntityDialogFormProps) => {
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
@@ -147,6 +151,7 @@ const SimpleEntityDialogForm = ({
   const [formError, setFormError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [touched, setTouched] = React.useState<Record<string, boolean>>({});
+  const lastExternalValuesKey = React.useRef<string | number | null>(null);
 
   const resetForm = React.useCallback(() => {
     setValues(resolvedInitialValues);
@@ -160,6 +165,27 @@ const SimpleEntityDialogForm = ({
       resetForm();
     }
   }, [open, resetForm]);
+
+  React.useEffect(() => {
+    if (
+      !externalValues ||
+      externalValuesKey === undefined ||
+      externalValuesKey === null
+    ) {
+      return;
+    }
+    if (externalValuesKey === lastExternalValuesKey.current) return;
+    lastExternalValuesKey.current = externalValuesKey;
+    setValues((prev) => ({ ...prev, ...externalValues }));
+    setErrors((prev) => {
+      if (!Object.keys(externalValues).length) return prev;
+      const next = { ...prev };
+      Object.keys(externalValues).forEach((key) => {
+        delete next[key];
+      });
+      return next;
+    });
+  }, [externalValues, externalValuesKey]);
 
   const handleCancel = React.useCallback(() => {
     resetForm();

@@ -40,6 +40,9 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import PageContainer from '@/app/(DashboardLayout)/components/container/PageContainer';
 import DashboardCard from '@/app/(DashboardLayout)/components/shared/DashboardCard';
 import CropChip from '@/app/(DashboardLayout)/components/shared/CropChip';
+import StockDialog, {
+  type StockFormValues,
+} from '@/app/(DashboardLayout)/components/stock/StockDialog';
 import SimpleEntityDialogForm, {
   SimpleEntityDialogFieldConfig,
   SimpleEntityDialogSection,
@@ -49,6 +52,8 @@ import { combineDateAndTimeToIso } from '@/lib/forms/datetime';
 
 type CosechasPageClientProps = {
   initialHarvests: HarvestDto[];
+  stockUnitTypeOptions: Option[];
+  stockStatusOptions: Option[];
 };
 
 /* --------- Helpers --------- */
@@ -63,8 +68,8 @@ type HarvestFormValues = {
   'Ciclo de siembra': '' | number;
 
   Cultivo: string; // readonly
-  Stock: '' | number;
-  'Viajes camión directos': '' | number;
+  Stock: Array<string | number>;
+  'Viajes camión directos': Array<string | number>;
 
   Notas: string;
 };
@@ -105,8 +110,8 @@ const getDefaultHarvestFormValues = (): HarvestFormValues => {
     Lotes: [],
     'Ciclo de siembra': '',
     Cultivo: '',
-    Stock: '',
-    'Viajes camión directos': '',
+    Stock: [],
+    'Viajes camión directos': [],
     Notas: '',
   };
 };
@@ -191,18 +196,30 @@ const normalizeHarvestFormToBaserowPayload = (
   }
   payload['Ciclo de siembra'] = [cycleId];
 
-  const stockValue = formValues.Stock;
-  const stockId = Number(stockValue);
-  if (stockValue && stockId && !Number.isNaN(stockId)) {
-    payload.Stock = [stockId];
+  const stockValues = Array.isArray(formValues.Stock)
+    ? formValues.Stock
+    : formValues.Stock
+    ? [formValues.Stock]
+    : [];
+  const stockIds = stockValues
+    .map((value) => Number(value))
+    .filter((value) => !Number.isNaN(value) && value > 0);
+  if (stockIds.length) {
+    payload.Stock = stockIds;
   } else if (includeEmptyOptional) {
     payload.Stock = [];
   }
 
-  const tripValue = formValues['Viajes camión directos'];
-  const tripId = Number(tripValue);
-  if (tripValue && tripId && !Number.isNaN(tripId)) {
-    payload['Viajes camión directos'] = [tripId];
+  const tripValues = Array.isArray(formValues['Viajes camión directos'])
+    ? formValues['Viajes camión directos']
+    : formValues['Viajes camión directos']
+    ? [formValues['Viajes camión directos']]
+    : [];
+  const tripIds = tripValues
+    .map((value) => Number(value))
+    .filter((value) => !Number.isNaN(value) && value > 0);
+  if (tripIds.length) {
+    payload['Viajes camión directos'] = tripIds;
   } else if (includeEmptyOptional) {
     payload['Viajes camión directos'] = [];
   }
@@ -237,20 +254,19 @@ const normalizeHarvestDtoToBaserowPayload = (harvest: HarvestDto) => {
 
   payload['Ciclo de siembra'] = cycleId ? [cycleId] : [];
 
-  const stockId =
-    Array.isArray(harvest.stockIds) && harvest.stockIds.length
-      ? harvest.stockIds[0]
-      : null;
-  payload.Stock =
-    typeof stockId === 'number' && !Number.isNaN(stockId) ? [stockId] : [];
+  payload.Stock = Array.isArray(harvest.stockIds)
+    ? harvest.stockIds.filter(
+        (id): id is number => typeof id === 'number' && !Number.isNaN(id)
+      )
+    : [];
 
-  const tripId =
-    Array.isArray(harvest.directTruckTripIds) &&
-    harvest.directTruckTripIds.length
-      ? harvest.directTruckTripIds[0]
-      : null;
-  payload['Viajes camión directos'] =
-    typeof tripId === 'number' && !Number.isNaN(tripId) ? [tripId] : [];
+  payload['Viajes camión directos'] = Array.isArray(
+    harvest.directTruckTripIds
+  )
+    ? harvest.directTruckTripIds.filter(
+        (id): id is number => typeof id === 'number' && !Number.isNaN(id)
+      )
+    : [];
 
   const notesValue =
     typeof harvest.notes === 'string' ? harvest.notes.trim() : '';
@@ -281,10 +297,10 @@ const buildHarvestInitialValues = (harvest: HarvestDto): HarvestFormValues => {
     'Ciclo de siembra': (harvest.cycleId ?? '') as '' | number,
 
     Cultivo: harvest.crop ?? '',
-    Stock: (harvest.stockIds?.[0] ?? '') as '' | number,
-    'Viajes camión directos': (harvest.directTruckTripIds?.[0] ?? '') as
-      | ''
-      | number,
+    Stock: (harvest.stockIds ?? []) as Array<string | number>,
+    'Viajes camión directos': (harvest.directTruckTripIds ?? []) as Array<
+      string | number
+    >,
 
     Notas: harvest.notes ?? '',
   };
@@ -313,9 +329,36 @@ const emptyDependencies: FieldDependencies = {
   truckTrips: [],
 };
 
+const buildInlineStockDefaultValues = (
+  unitTypeOptions: Option[],
+  statusOptions: Option[],
+  params: { campoId: number | ''; cycleId: number | ''; cultivo?: string }
+): StockFormValues => {
+  const todayString = new Date().toISOString().slice(0, 10);
+  return {
+    'Tipo unidad': unitTypeOptions[0]?.id ?? '',
+    Campo: params.campoId,
+    'Ciclo de siembra': params.cycleId ?? '',
+    Cultivo: params.cultivo ?? '',
+    'Fecha de creación': todayString,
+    Estado: statusOptions[0]?.id ?? '',
+    Notas: '',
+    ID: '',
+    'Kgs actuales': '—',
+    'Total kgs ingresados': '—',
+    'Total kgs egresados': '—',
+    'Cosechas asociadas': [],
+    'Viajes de camión desde stock': [],
+  };
+};
+
 /* --------- Component --------- */
 
-const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
+const CosechasPageClient = ({
+  initialHarvests,
+  stockUnitTypeOptions,
+  stockStatusOptions,
+}: CosechasPageClientProps) => {
   const router = useRouter();
   const [periodFilter, setPeriodFilter] = React.useState<string>('all');
   const [fieldFilter, setFieldFilter] = React.useState<string>('all');
@@ -339,6 +382,14 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
   });
   const [dialogInitialValues, setDialogInitialValues] =
     React.useState<HarvestFormValues>(getDefaultHarvestFormValues);
+  const [dialogCurrentValues, setDialogCurrentValues] =
+    React.useState<HarvestFormValues>(getDefaultHarvestFormValues);
+  const [dialogValuesPatch, setDialogValuesPatch] = React.useState<{
+    data: Partial<HarvestFormValues>;
+    key: number;
+  } | null>(null);
+  const dialogPatchKeyRef = React.useRef(0);
+  const inlineStockContextRef = React.useRef<{ field: Option; cycleId: number } | null>(null);
   const [fieldOptions, setFieldOptions] = React.useState<Option[]>([]);
   const [fieldOptionsLoading, setFieldOptionsLoading] = React.useState(false);
   const [fieldOptionsError, setFieldOptionsError] = React.useState<
@@ -354,6 +405,14 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
   >(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
   const [deleteLoading, setDeleteLoading] = React.useState(false);
+  const [stockDialogOpen, setStockDialogOpen] = React.useState(false);
+  const [stockDialogInitialValues, setStockDialogInitialValues] =
+    React.useState<StockFormValues>(() =>
+      buildInlineStockDefaultValues(stockUnitTypeOptions, stockStatusOptions, {
+        campoId: '',
+        cycleId: '',
+      })
+    );
 
   const showToast = React.useCallback(
     (message: string, severity: 'success' | 'error' | 'info') => {
@@ -361,6 +420,17 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
         open: true,
         message,
         severity,
+      });
+    },
+    []
+  );
+
+  const applyDialogValuePatch = React.useCallback(
+    (data: Partial<HarvestFormValues>) => {
+      dialogPatchKeyRef.current += 1;
+      setDialogValuesPatch({
+        data,
+        key: dialogPatchKeyRef.current,
       });
     },
     []
@@ -405,9 +475,9 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
   }, [showToast]);
 
   const fetchFieldDependencies = React.useCallback(
-    async (field: Option) => {
+    async (field: Option, options?: { force?: boolean }) => {
       if (!field) return;
-      if (dependenciesCache[field.id]) return;
+      if (!options?.force && dependenciesCache[field.id]) return;
 
       try {
         setDependenciesLoading(true);
@@ -466,7 +536,10 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
   }, [dialogOpen, fieldOptions.length, fieldOptionsLoading, fetchFieldOptions]);
 
   const handleDialogFieldChange = React.useCallback(
-    (key: string, rawValue: any) => {
+    (key: string, rawValue: any, values?: Record<string, any>) => {
+      if (values) {
+        setDialogCurrentValues(values as HarvestFormValues);
+      }
       if (key !== 'Campo') return;
 
       if (rawValue === '' || rawValue === null || rawValue === undefined) {
@@ -547,6 +620,10 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
       }
 
       setDialogInitialValues(harvestInitialValues);
+      setDialogCurrentValues(harvestInitialValues);
+      setDialogValuesPatch(null);
+      setStockDialogOpen(false);
+      inlineStockContextRef.current = null;
 
       setDialogOpen(true);
     },
@@ -556,9 +633,14 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
   const handleOpenCreateDialog = React.useCallback(() => {
     setDialogMode('create');
     setActiveHarvest(null);
-    setDialogInitialValues(getDefaultHarvestFormValues());
+    const defaults = getDefaultHarvestFormValues();
+    setDialogInitialValues(defaults);
+    setDialogCurrentValues(defaults);
+    setDialogValuesPatch(null);
     setSelectedField(null);
     setDependenciesError(null);
+    setStockDialogOpen(false);
+    inlineStockContextRef.current = null;
     setDialogOpen(true);
   }, []);
 
@@ -568,18 +650,102 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
     setActiveHarvest(null);
     setSelectedField(null);
     setDependenciesError(null);
-    setDialogInitialValues(getDefaultHarvestFormValues());
+    const defaults = getDefaultHarvestFormValues();
+    setDialogInitialValues(defaults);
+    setDialogCurrentValues(defaults);
+    setDialogValuesPatch(null);
     setDeleteConfirmOpen(false);
     setDeleteLoading(false);
+    setStockDialogOpen(false);
+    inlineStockContextRef.current = null;
   }, []);
 
-  const handleCreateStockShortcut = React.useCallback(() => {
-    showToast('Crear stock desde aquí estará disponible pronto.', 'info');
-  }, [showToast]);
+  const selectedCycleValue = dialogCurrentValues['Ciclo de siembra'];
+  const selectedCycleId =
+    typeof selectedCycleValue === 'number'
+      ? selectedCycleValue
+      : Number(selectedCycleValue);
+  const canCreateInlineStock =
+    Boolean(selectedField?.id) &&
+    Boolean(selectedCycleId) &&
+    !Number.isNaN(selectedCycleId);
 
-  const handleAddTruckTripShortcut = React.useCallback(() => {
-    showToast('Agregar viaje directo estará disponible pronto.', 'info');
-  }, [showToast]);
+  const handleOpenInlineStockDialog = React.useCallback(() => {
+    if (!selectedField) return;
+    const rawCycle = dialogCurrentValues['Ciclo de siembra'];
+    const cycleId =
+      typeof rawCycle === 'number' ? rawCycle : Number(rawCycle || '');
+    if (!cycleId || Number.isNaN(cycleId)) return;
+    const cycleMatch = currentDependencies.cycles.find(
+      (cycle) => cycle.id === cycleId
+    );
+    inlineStockContextRef.current = { field: selectedField, cycleId };
+    const initialValues = buildInlineStockDefaultValues(
+      stockUnitTypeOptions,
+      stockStatusOptions,
+      {
+        campoId: selectedField.id,
+        cycleId,
+        cultivo: cycleMatch?.crop ?? dialogCurrentValues.Cultivo ?? '',
+      }
+    );
+    setStockDialogInitialValues(initialValues);
+    setStockDialogOpen(true);
+  }, [
+    currentDependencies.cycles,
+    dialogCurrentValues,
+    selectedField,
+    stockStatusOptions,
+    stockUnitTypeOptions,
+  ]);
+
+  const handleStockDialogClose = React.useCallback(() => {
+    inlineStockContextRef.current = null;
+    setStockDialogOpen(false);
+  }, []);
+
+  const handleStockDialogSuccess = React.useCallback(
+    async ({ stockId }: { mode: 'create'; stockId?: number }) => {
+      setStockDialogOpen(false);
+      const context = inlineStockContextRef.current;
+      inlineStockContextRef.current = null;
+      if (!stockId || !context) return;
+      const { field } = context;
+      const normalizedStockId = Number(stockId);
+      if (!normalizedStockId || Number.isNaN(normalizedStockId)) return;
+
+      setDependenciesCache((prev) => {
+        const next = { ...prev };
+        delete next[field.id];
+        return next;
+      });
+
+      await fetchFieldDependencies(field, { force: true });
+
+      setDialogCurrentValues((prev) => {
+        if (!selectedField || selectedField.id !== field.id) {
+          return prev;
+        }
+        const prevStocks = Array.isArray(prev.Stock) ? prev.Stock : [];
+        const alreadyExists = prevStocks.some(
+          (value) => Number(value) === normalizedStockId
+        );
+        if (alreadyExists) return prev;
+        const updatedStocks = [...prevStocks, normalizedStockId];
+        applyDialogValuePatch({ Stock: updatedStocks });
+        return {
+          ...prev,
+          Stock: updatedStocks,
+        } as HarvestFormValues;
+      });
+    },
+    [
+      applyDialogValuePatch,
+      fetchFieldDependencies,
+      selectedField,
+      setDependenciesCache,
+    ]
+  );
 
   const harvestFormSections = React.useMemo<SimpleEntityDialogSection[]>(
     () => [
@@ -646,6 +812,27 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
 
     const dependentDisabled = !selectedField || dependenciesLoading;
 
+    const inlineStockDisabled = !canCreateInlineStock || dependenciesLoading;
+    const stockHelperMessage = dependentHelperText
+      ? dependentHelperText
+      : 'Opcional: asociá esta cosecha a uno o más stocks existentes';
+    const stockHelperContent = (
+      <Stack spacing={0.5} alignItems="flex-start">
+        <Typography variant="caption" color="text.secondary">
+          {stockHelperMessage}
+        </Typography>
+        <Button
+          variant="text"
+          size="small"
+          disabled={inlineStockDisabled}
+          onClick={handleOpenInlineStockDialog}
+          sx={{ px: 0, textTransform: 'none' }}
+        >
+          + Nuevo stock
+        </Button>
+      </Stack>
+    );
+
     return [
       {
         key: 'Fecha_fecha',
@@ -678,8 +865,8 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
           Lotes: [],
           'Ciclo de siembra': '',
           Cultivo: '',
-          Stock: '',
-          'Viajes camión directos': '',
+          Stock: [],
+          'Viajes camión directos': [],
         }),
       },
       {
@@ -729,13 +916,11 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
             <span>Stock</span>
           </Box>
         ),
-        type: 'select',
+        type: 'multi-select',
         options: stockOptions,
         loading: dependenciesLoading,
         disabled: dependentDisabled,
-        helperText: dependentHelperText
-          ? dependentHelperText
-          : 'Opcional: asocia esta cosecha a un stock existente',
+        helperText: stockHelperContent,
       },
       {
         key: 'Viajes camión directos',
@@ -751,13 +936,13 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
             <span>Viajes de camión</span>
           </Box>
         ),
-        type: 'select',
+        type: 'multi-select',
         options: truckOptions,
         loading: dependenciesLoading,
         disabled: dependentDisabled,
         helperText: dependentHelperText
           ? dependentHelperText
-          : 'Opcional: viaje directo desde campo',
+          : 'Opcional: asociá viajes directos desde campo',
       },
       {
         key: 'Notas',
@@ -776,8 +961,8 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
     fieldOptions,
     fieldOptionsError,
     fieldOptionsLoading,
-    handleAddTruckTripShortcut,
-    handleCreateStockShortcut,
+    handleOpenInlineStockDialog,
+    canCreateInlineStock,
     selectedField,
   ]);
 
@@ -1761,21 +1946,23 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
           </Stack>
         </DashboardCard>
       </Stack>
-      <SimpleEntityDialogForm
-        open={dialogOpen}
-        title={dialogTitle}
-        onClose={handleDialogClose}
-        onSubmit={dialogSubmitHandler}
-        fields={harvestFormFields}
-        sections={harvestFormSections}
-        initialValues={dialogInitialValues}
-        onFieldChange={handleDialogFieldChange}
-        extraActions={
-          dialogMode === 'edit' ? (
-            <Button
-              color="error"
-              variant="outlined"
-              onClick={openDeleteConfirm}
+        <SimpleEntityDialogForm
+          open={dialogOpen}
+          title={dialogTitle}
+          onClose={handleDialogClose}
+          onSubmit={dialogSubmitHandler}
+          fields={harvestFormFields}
+          sections={harvestFormSections}
+          initialValues={dialogInitialValues}
+          onFieldChange={handleDialogFieldChange}
+          externalValues={dialogValuesPatch?.data ?? null}
+          externalValuesKey={dialogValuesPatch?.key ?? null}
+          extraActions={
+            dialogMode === 'edit' ? (
+              <Button
+                color="error"
+                variant="outlined"
+                onClick={openDeleteConfirm}
               startIcon={<DeleteOutlineIcon />}
               sx={{
                 borderRadius: 2,
@@ -1786,9 +1973,19 @@ const CosechasPageClient = ({ initialHarvests }: CosechasPageClientProps) => {
             >
               Borrar cosecha
             </Button>
-          ) : undefined
-        }
-      />
+            ) : undefined
+          }
+        />
+        <StockDialog
+          open={stockDialogOpen}
+          mode="create"
+          activeStock={null}
+          initialValues={stockDialogInitialValues}
+          unitTypeOptions={stockUnitTypeOptions}
+          statusOptions={stockStatusOptions}
+          onClose={handleStockDialogClose}
+          onSuccess={handleStockDialogSuccess}
+        />
       <Dialog
         open={deleteConfirmOpen}
         onClose={handleCloseDeleteConfirm}
