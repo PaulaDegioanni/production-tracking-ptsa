@@ -43,6 +43,10 @@ import CropChip from '@/app/(DashboardLayout)/components/shared/CropChip';
 import StockDialog, {
   type StockFormValues,
 } from '@/app/(DashboardLayout)/components/stock/StockDialog';
+import TruckTripDialog, {
+  type TruckTripFormValues,
+  getDefaultTruckTripFormValues,
+} from '@/app/(DashboardLayout)/components/truckTrips/TruckTripDialog';
 import SimpleEntityDialogForm, {
   SimpleEntityDialogFieldConfig,
   SimpleEntityDialogSection,
@@ -390,6 +394,10 @@ const CosechasPageClient = ({
   } | null>(null);
   const dialogPatchKeyRef = React.useRef(0);
   const inlineStockContextRef = React.useRef<{ field: Option; cycleId: number } | null>(null);
+  const inlineTripContextRef = React.useRef<{
+    fieldId: number;
+    fieldLabel?: string;
+  } | null>(null);
   const [fieldOptions, setFieldOptions] = React.useState<Option[]>([]);
   const [fieldOptionsLoading, setFieldOptionsLoading] = React.useState(false);
   const [fieldOptionsError, setFieldOptionsError] = React.useState<
@@ -413,6 +421,9 @@ const CosechasPageClient = ({
         cycleId: '',
       })
     );
+  const [tripDialogOpen, setTripDialogOpen] = React.useState(false);
+  const [tripDialogInitialValues, setTripDialogInitialValues] =
+    React.useState<TruckTripFormValues | null>(null);
 
   const showToast = React.useCallback(
     (message: string, severity: 'success' | 'error' | 'info') => {
@@ -640,7 +651,10 @@ const CosechasPageClient = ({
     setSelectedField(null);
     setDependenciesError(null);
     setStockDialogOpen(false);
+    setTripDialogOpen(false);
+    setTripDialogInitialValues(null);
     inlineStockContextRef.current = null;
+    inlineTripContextRef.current = null;
     setDialogOpen(true);
   }, []);
 
@@ -658,6 +672,9 @@ const CosechasPageClient = ({
     setDeleteLoading(false);
     setStockDialogOpen(false);
     inlineStockContextRef.current = null;
+    setTripDialogOpen(false);
+    setTripDialogInitialValues(null);
+    inlineTripContextRef.current = null;
   }, []);
 
   const selectedCycleValue = dialogCurrentValues['Ciclo de siembra'];
@@ -665,8 +682,26 @@ const CosechasPageClient = ({
     typeof selectedCycleValue === 'number'
       ? selectedCycleValue
       : Number(selectedCycleValue);
+  const campoValue = dialogCurrentValues.Campo;
+  const campoIdForActions =
+    typeof campoValue === 'number'
+      ? campoValue
+      : Number(campoValue ? `${campoValue}` : '');
+
+  const campoOptionForActions = React.useMemo(() => {
+    if (selectedField) return selectedField;
+    if (!campoIdForActions || Number.isNaN(campoIdForActions)) return null;
+    return (
+      fieldOptions.find((option) => option.id === campoIdForActions) ?? null
+    );
+  }, [campoIdForActions, fieldOptions, selectedField]);
   const canCreateInlineStock =
     Boolean(selectedField?.id) &&
+    Boolean(selectedCycleId) &&
+    !Number.isNaN(selectedCycleId);
+  const canCreateInlineTruckTrip =
+    Boolean(campoIdForActions) &&
+    !Number.isNaN(campoIdForActions) &&
     Boolean(selectedCycleId) &&
     !Number.isNaN(selectedCycleId);
 
@@ -745,6 +780,104 @@ const CosechasPageClient = ({
       selectedField,
       setDependenciesCache,
     ]
+  );
+
+  const handleOpenInlineTruckTripDialog = React.useCallback(() => {
+    if (!campoIdForActions || Number.isNaN(campoIdForActions)) return;
+    const cycleId = selectedCycleId;
+    if (!cycleId || Number.isNaN(cycleId)) return;
+    const defaults = getDefaultTruckTripFormValues();
+    const cycleMatch = currentDependencies.cycles.find(
+      (cycle) => cycle.id === cycleId
+    );
+    const initialValues: TruckTripFormValues = {
+      ...defaults,
+      'Campo origen': campoIdForActions,
+      'Tipo origen': 'harvest',
+      Origen:
+        dialogMode === 'edit' && activeHarvest?.id ? activeHarvest.id : '',
+      'Ciclo de siembra':
+        activeHarvest?.cycleLabel ?? cycleMatch?.label ?? '',
+      'Kg carga origen': dialogCurrentValues['KG Cosechados'] ?? '',
+    };
+    inlineTripContextRef.current = {
+      fieldId: campoIdForActions,
+      fieldLabel:
+        campoOptionForActions?.label ||
+        selectedField?.label ||
+        `Campo #${campoIdForActions}`,
+    };
+    setTripDialogInitialValues(initialValues);
+    setTripDialogOpen(true);
+  }, [
+    activeHarvest,
+    campoIdForActions,
+    campoOptionForActions,
+    currentDependencies.cycles,
+    dialogCurrentValues,
+    dialogMode,
+    selectedCycleId,
+    selectedField,
+  ]);
+
+  const handleTripDialogClose = React.useCallback(() => {
+    inlineTripContextRef.current = null;
+    setTripDialogOpen(false);
+    setTripDialogInitialValues(null);
+  }, []);
+
+  const handleTripDialogSuccess = React.useCallback(
+    async ({ tripId }: { mode: 'create'; tripId?: number }) => {
+      setTripDialogOpen(false);
+      const context = inlineTripContextRef.current;
+      inlineTripContextRef.current = null;
+      if (!tripId || !context) return;
+      const normalizedTripId = Number(tripId);
+      if (!normalizedTripId || Number.isNaN(normalizedTripId)) return;
+
+      setDependenciesCache((prev) => {
+        const next = { ...prev };
+        delete next[context.fieldId];
+        return next;
+      });
+
+      const contextField: Option = {
+        id: context.fieldId,
+        label:
+          context.fieldLabel ||
+          selectedField?.label ||
+          `Campo #${context.fieldId}`,
+      };
+
+      await fetchFieldDependencies(contextField, { force: true });
+
+      setDialogCurrentValues((prev) => {
+        const prevCampoRaw = prev.Campo;
+        const prevCampoId =
+          typeof prevCampoRaw === 'number'
+            ? prevCampoRaw
+            : Number(prevCampoRaw ? `${prevCampoRaw}` : '');
+        if (!prevCampoId || Number.isNaN(prevCampoId)) {
+          return prev;
+        }
+        if (prevCampoId !== context.fieldId) {
+          return prev;
+        }
+        const prevTrips = Array.isArray(prev['Viajes camión directos'])
+          ? prev['Viajes camión directos']
+          : [];
+        if (prevTrips.some((value) => Number(value) === normalizedTripId)) {
+          return prev;
+        }
+        const updatedTrips = [...prevTrips, normalizedTripId];
+        applyDialogValuePatch({ 'Viajes camión directos': updatedTrips });
+        return {
+          ...prev,
+          'Viajes camión directos': updatedTrips,
+        } as HarvestFormValues;
+      });
+    },
+    [applyDialogValuePatch, fetchFieldDependencies, setDependenciesCache]
   );
 
   const harvestFormSections = React.useMemo<SimpleEntityDialogSection[]>(
@@ -829,6 +962,25 @@ const CosechasPageClient = ({
           sx={{ px: 0, textTransform: 'none' }}
         >
           + Nuevo stock
+        </Button>
+      </Stack>
+    );
+    const truckHelperMessage = dependentHelperText
+      ? dependentHelperText
+      : 'Opcional: asociá viajes directos desde campo';
+    const truckHelperContent = (
+      <Stack spacing={0.5} alignItems="flex-start">
+        <Typography variant="caption" color="text.secondary">
+          {truckHelperMessage}
+        </Typography>
+        <Button
+          variant="text"
+          size="small"
+          disabled={!canCreateInlineTruckTrip || dependenciesLoading}
+          onClick={handleOpenInlineTruckTripDialog}
+          sx={{ px: 0, textTransform: 'none' }}
+        >
+          + Nuevo viaje de camión
         </Button>
       </Stack>
     );
@@ -940,9 +1092,7 @@ const CosechasPageClient = ({
         options: truckOptions,
         loading: dependenciesLoading,
         disabled: dependentDisabled,
-        helperText: dependentHelperText
-          ? dependentHelperText
-          : 'Opcional: asociá viajes directos desde campo',
+        helperText: truckHelperContent,
       },
       {
         key: 'Notas',
@@ -961,8 +1111,10 @@ const CosechasPageClient = ({
     fieldOptions,
     fieldOptionsError,
     fieldOptionsLoading,
+    handleOpenInlineTruckTripDialog,
     handleOpenInlineStockDialog,
     canCreateInlineStock,
+    canCreateInlineTruckTrip,
     selectedField,
   ]);
 
@@ -1985,6 +2137,14 @@ const CosechasPageClient = ({
           statusOptions={stockStatusOptions}
           onClose={handleStockDialogClose}
           onSuccess={handleStockDialogSuccess}
+        />
+        <TruckTripDialog
+          open={tripDialogOpen}
+          mode="create"
+          activeTrip={null}
+          initialValues={tripDialogInitialValues ?? undefined}
+          onClose={handleTripDialogClose}
+          onSuccess={handleTripDialogSuccess}
         />
       <Dialog
         open={deleteConfirmOpen}
