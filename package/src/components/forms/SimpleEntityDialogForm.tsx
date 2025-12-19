@@ -821,11 +821,37 @@ const chunkFields = (
                           sectionIndex === 1 && rowIndex === 0;
 
                         if (isFirstSectionFirstRow) {
-                          const areaMap: Record<string, string> = {
-                            Fecha_fecha: 'fecha',
-                            Fecha_hora: 'hora',
-                            'KG Cosechados': 'kgs',
-                          };
+                          const isCampoLotesRow =
+                            row.some((field) => field.key === 'Campo') &&
+                            row.some((field) => field.key === 'Lotes');
+                          const areaMap: Record<string, string> = isCampoLotesRow
+                            ? {
+                                Campo: 'campo',
+                                Lotes: 'lotes',
+                              }
+                            : {
+                                Fecha_fecha: 'fecha',
+                                Fecha_hora: 'hora',
+                                'KG Cosechados': 'kgs',
+                              };
+                          const gridTemplateColumns = isCampoLotesRow
+                            ? {
+                                xs: 'minmax(0, 1fr)',
+                                md: '1fr 2fr',
+                              }
+                            : {
+                                xs: 'repeat(2, minmax(0, 1fr))',
+                                md: 'repeat(3, minmax(0, 1fr))',
+                              };
+                          const gridTemplateAreas = isCampoLotesRow
+                            ? {
+                                xs: '"campo" "lotes"',
+                                md: '"campo lotes"',
+                              }
+                            : {
+                                xs: '"fecha hora" "kgs kgs"',
+                                md: '"fecha hora kgs"',
+                              };
                           return (
                             <Box
                               key={
@@ -835,14 +861,8 @@ const chunkFields = (
                               sx={{
                                 display: 'grid',
                                 gap: 2,
-                                gridTemplateColumns: {
-                                  xs: 'repeat(2, minmax(0, 1fr))',
-                                  md: 'repeat(3, minmax(0, 1fr))',
-                                },
-                                gridTemplateAreas: {
-                                  xs: '"fecha hora" "kgs kgs"',
-                                  md: '"fecha hora kgs"',
-                                },
+                                gridTemplateColumns,
+                                gridTemplateAreas,
                               }}
                             >
                               {row.map((field) => (

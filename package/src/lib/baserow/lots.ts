@@ -86,3 +86,21 @@ export async function getLotsByIdsDto(lotIds: number[]): Promise<LotDto[]> {
   const idSet = new Set(lotIds);
   return allLots.filter((lot) => idSet.has(lot.id));
 }
+
+export type LotOption = { id: number; label: string };
+
+export async function getLotsByFieldId(
+  fieldId: number
+): Promise<LotOption[]> {
+  if (!fieldId || Number.isNaN(fieldId)) {
+    return [];
+  }
+  const lots = await getLotsDto();
+  return lots
+    .filter((lot) => lot.fieldId === fieldId)
+    .map((lot) => ({
+      id: lot.id,
+      label: lot.code || `Lote #${lot.id}`,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}

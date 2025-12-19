@@ -1,5 +1,6 @@
 // src/lib/baserow/ciclos.ts
-import { getTableRows, getTableRowById } from './client';
+import { getTableRows, getTableRowById, getTableFields } from './client';
+import { createTableRow } from './rowsCrud';
 import { toNumber, normalizeField, extractLinkRowIds } from './utils';
 
 export const CYCLES_TABLE_ID = Number(
@@ -27,11 +28,13 @@ export type CycleRaw = {
     value: string;
     color: string;
   } | null;
-  Lotes?: {
-    id: number;
-    value: string;
-    order: string;
-  } | null;
+  Lotes?:
+    | Array<{
+        id: number;
+        value: string;
+        order: string;
+      }>
+    | null;
   'Superficie (has)'?: number;
   'Rendimiento esperado (qq/ha)'?: number;
   'Rendimiento obtenido (qq/ha)'?: number;
@@ -47,6 +50,7 @@ export type CycleRaw = {
   'Inicio cosecha'?: string;
   'Fin cosecha'?: string;
   'Duración Cosecha'?: number;
+  'Duración cultivo (días)'?: number | null;
 };
 
 // --- DTO: normalized shape used in the UI ---
@@ -79,8 +83,22 @@ export interface CycleDto {
   harvestStartDate?: string | null;
   harvestEndDate?: string | null;
   harvestDurationDays?: number | null;
+  cropDurationDays?: number | null;
   lotIds: number[];
 }
+
+// Baserow duration fields store values as seconds (float). UI works in days.
+const SECONDS_PER_DAY = 86400;
+
+export const daysToDurationSeconds = (days: number): number => {
+  if (!Number.isFinite(days)) return 0;
+  return Math.round(days * SECONDS_PER_DAY);
+};
+
+export const durationSecondsToDays = (seconds: number): number => {
+  if (!Number.isFinite(seconds)) return 0;
+  return Math.round(seconds / SECONDS_PER_DAY);
+};
 
 // --- Internal helpers to map raw -> dto ---
 function normalizeStatus(option?: CycleRaw['Estado']): CycleStatus {
@@ -126,9 +144,25 @@ function mapCycleRow(row: CycleRaw): CycleDto {
     harvestDurationDays: row['Duración Cosecha']
       ? Number(row['Duración Cosecha'])
       : null,
+    cropDurationDays:
+      typeof row['Duración cultivo (días)'] === 'number'
+        ? durationSecondsToDays(row['Duración cultivo (días)'])
+        : null,
     lotIds: extractLinkRowIds(row.Lotes as any),
   };
 }
+
+export type CycleCreateValues = {
+  lotIds: number[];
+  fallowStartDate?: string | null;
+  sowingDate?: string | null;
+  cropOptionId: number | null;
+  statusOptionId: number | null;
+  seed?: string;
+  expectedYield?: number | null;
+  notes?: string;
+  cropDurationDays?: number | null;
+};
 
 // --- Public functions ---
 /// Raw
@@ -164,4 +198,109 @@ export async function getCycleRowIdByLabel(
   });
 
   return match ? match.id : null;
+}
+
+export async function createCycle(
+  values: CycleCreateValues
+): Promise<CycleDto> {
+  const normalizedLotIds = Array.isArray(values.lotIds)
+    ? values.lotIds
+        .map((id) => Number(id))
+        .filter((id) => Number.isFinite(id) && id > 0)
+    : [];
+
+  if (!normalizedLotIds.length) {
+    throw new Error('Debés seleccionar al menos un lote');
+  }
+
+  const payload: Record<string, any> = {
+    Lotes: normalizedLotIds,
+    'Fecha inicio barbecho': values.fallowStartDate || null,
+    'Fecha de siembra': values.sowingDate || null,
+    Cultivo: values.cropOptionId ?? null,
+    Estado: values.statusOptionId ?? null,
+    Semilla: values.seed?.trim() ?? '',
+    Notas: values.notes?.trim() ?? '',
+  };
+
+  if (
+    values.cropDurationDays !== undefined &&
+    values.cropDurationDays !== null &&
+    Number.isFinite(values.cropDurationDays)
+  ) {
+    payload['Duración cultivo (días)'] = daysToDurationSeconds(
+      Number(values.cropDurationDays)
+    );
+  } else {
+    payload['Duración cultivo (días)'] = null;
+  }
+
+  if (
+    values.expectedYield !== undefined &&
+    values.expectedYield !== null &&
+    Number.isFinite(values.expectedYield)
+  ) {
+    payload['Rendimiento esperado (qq/ha)'] = Number(values.expectedYield);
+  } else {
+    payload['Rendimiento esperado (qq/ha)'] = null;
+  }
+
+  const row = await createTableRow<CycleRaw>(CYCLES_TABLE_ID, payload);
+  return mapCycleRow(row);
+}
+
+type SelectOption = { id: number; value: string };
+
+const normalizeOptionValue = (value?: string | null) =>
+  (value ?? '').trim().toLowerCase();
+
+export async function getCycleSingleSelectOptions(): Promise<{
+  cropOptions: SelectOption[];
+  statusOptions: SelectOption[];
+  cropDefaultId: number | null;
+  statusDefaultId: number | null;
+}> {
+  const fields = await getTableFields(CYCLES_TABLE_ID);
+
+  const cropField = fields.find((field) => field.name === 'Cultivo');
+  const statusField = fields.find((field) => field.name === 'Estado');
+
+  const cropOptions: SelectOption[] = Array.isArray(
+    cropField?.select_options
+  )
+    ? cropField.select_options!.map((option) => ({
+        id: option.id,
+        value: option.value,
+      }))
+    : [];
+
+  const statusOptions: SelectOption[] = Array.isArray(
+    statusField?.select_options
+  )
+    ? statusField.select_options!.map((option) => ({
+        id: option.id,
+        value: option.value,
+      }))
+    : [];
+
+  const cropDefaultId =
+    cropField?.single_select_default ??
+    cropOptions.find(
+      (option) => normalizeOptionValue(option.value) === 'soja'
+    )?.id ??
+    null;
+
+  const statusDefaultId =
+    statusOptions.find(
+      (option) => normalizeOptionValue(option.value) === 'planificado'
+    )?.id ??
+    statusField?.single_select_default ??
+    null;
+
+  return {
+    cropOptions,
+    statusOptions,
+    cropDefaultId: cropDefaultId ?? null,
+    statusDefaultId: statusDefaultId ?? null,
+  };
 }
