@@ -23,22 +23,78 @@ import {
   Snackbar,
   Alert,
   alpha,
+  Fade,
+  Collapse,
 } from "@mui/material";
-import PageContainer from "@/app/(DashboardLayout)/components/container/PageContainer";
-import DashboardCard from "@/app/(DashboardLayout)/components/shared/DashboardCard";
-import StatusChip, {
-  StatusChipOption,
-} from "@/app/(DashboardLayout)/components/shared/StatusChip";
-import type { CycleDetailDto } from "@/lib/baserow/cycleDetail";
+import {
+  IconFreezeRowColumn,
+  IconSeedling,
+  IconTruck,
+  IconTractor,
+  IconMoneybag,
+} from "@tabler/icons-react";
+import type { PaletteColor } from "@mui/material/styles";
+import type { SnackbarCloseReason } from "@mui/material/Snackbar";
 import GrassIcon from "@mui/icons-material/Grass";
 import AgricultureIcon from "@mui/icons-material/Agriculture";
 import EventAvailableIcon from "@mui/icons-material/EventAvailable";
 import DateRangeIcon from "@mui/icons-material/DateRange";
 import EditIcon from "@mui/icons-material/Edit";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import InventoryIcon from "@mui/icons-material/Inventory";
+import PageContainer from "@/app/(DashboardLayout)/components/container/PageContainer";
+import StatusChip, {
+  type PaletteKey,
+  type StatusChipOption,
+} from "@/app/(DashboardLayout)/components/shared/StatusChip";
+import type { CycleDetailDto } from "@/lib/baserow/cycleDetail";
 import type { CycleStatus } from "@/lib/baserow/cycles";
 
 type CycleDetailPageClientProps = {
   initialDetail: CycleDetailDto;
+};
+
+const updateCycleStatus = async (
+  cycleId: string,
+  status: CycleStatus,
+): Promise<void> => {
+  const response = await fetch(`/api/cycles/${cycleId}/status`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ status }),
+  });
+
+  if (!response.ok) {
+    let message = "No se pudo actualizar el estado del ciclo";
+    try {
+      const data = await response.json();
+      if (typeof data?.error === "string") {
+        message = data.error;
+      }
+    } catch {
+      // ignore parse errors
+    }
+    throw new Error(message);
+  }
+};
+
+const getStockStatusLabel = (status: unknown): string => {
+  if (!status) return "—";
+  if (typeof status === "string") return status;
+
+  if (
+    typeof status === "object" &&
+    status !== null &&
+    "value" in status &&
+    (status as { value?: unknown }).value
+  ) {
+    return String((status as { value?: unknown }).value);
+  }
+
+  return String(status);
 };
 
 const CycleDetailPageClient = ({
@@ -46,15 +102,13 @@ const CycleDetailPageClient = ({
 }: CycleDetailPageClientProps) => {
   const { cycle, lots, harvests, stockUnits, truckTrips } = initialDetail;
 
-  // ------- helpers -------
-
   const formatDate = (value?: string | null) => {
     if (!value) return "Sin fecha";
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
     return date.toLocaleDateString("es-ES", {
       day: "2-digit",
-      month: "2-digit",
+      month: "short",
       year: "numeric",
     });
   };
@@ -85,36 +139,21 @@ const CycleDetailPageClient = ({
     { value: "Vacío", color: "default" },
   ];
 
-  const getStockStatusLabel = (status: any): string => {
-    if (!status) return "—";
-    if (typeof status === "string") return status;
-
-    if (
-      typeof status === "object" &&
-      "value" in status &&
-      (status as any).value
-    ) {
-      return String((status as any).value);
-    }
-
-    return String(status);
-  };
-
   const lotsById = React.useMemo(() => {
     const map = new Map<number, string>();
-    lots.forEach((lot) => {
-      map.set(lot.id, lot.code);
-    });
+    lots.forEach((lot) => map.set(lot.id, lot.code));
     return map;
   }, [lots]);
 
-  const computeHarvestTimeRange = React.useMemo(() => {
+  type HarvestTimeRange = {
+    start: string | null;
+    end: string | null;
+    days: number | null;
+  };
+
+  const computeHarvestTimeRange = React.useMemo<HarvestTimeRange>(() => {
     if (!harvests.length) {
-      return {
-        start: null as string | null,
-        end: null as string | null,
-        days: null as number | null,
-      };
+      return { start: null, end: null, days: null };
     }
     const dates = harvests
       .map((h) => (h.date ? new Date(h.date) : null))
@@ -145,59 +184,6 @@ const CycleDetailPageClient = ({
   const [statusSaving, setStatusSaving] = React.useState(false);
   const [statusError, setStatusError] = React.useState<string | null>(null);
   const [statusSnackbarOpen, setStatusSnackbarOpen] = React.useState(false);
-  const cyclePeriodValue = React.useMemo(() => {
-    if (cycle.period) return cycle.period;
-
-    const yearStart =
-      (cycle as any).yearStart ??
-      (cycle as any).startYear ??
-      (cycle as any).year_from ??
-      null;
-    const yearEnd =
-      (cycle as any).yearEnd ??
-      (cycle as any).endYear ??
-      (cycle as any).year_to ??
-      null;
-
-    if (yearStart && yearEnd) {
-      return `${yearStart}/${yearEnd}`;
-    }
-    if (yearStart) return String(yearStart);
-    if (yearEnd) return String(yearEnd);
-
-    return "—";
-  }, [cycle]);
-  const fieldNameDisplay =
-    typeof cycle.field === "string" && cycle.field.trim().length
-      ? cycle.field
-      : "Campo —";
-  const rowFieldTitle =
-    typeof (cycle as any).fieldName === "string" &&
-    (cycle as any).fieldName.trim().length
-      ? (cycle as any).fieldName
-      : fieldNameDisplay;
-
-  React.useEffect(() => {
-    setStatus(cycle.status);
-    setStatusDraft(cycle.status);
-  }, [cycle.status]);
-
-  const updateCycleStatus = React.useCallback(
-    async (cycleId: string, newStatus: CycleStatus) => {
-      const response = await fetch(`/api/cycles/${cycleId}/status`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (!response.ok) {
-        throw new Error("No se pudo actualizar el estado del ciclo.");
-      }
-    },
-    [],
-  );
 
   const handleToggleStatusEdit = () => {
     setStatusError(null);
@@ -220,1667 +206,1315 @@ const CycleDetailPageClient = ({
       setIsEditingStatus(false);
       setStatusSnackbarOpen(true);
     } catch (error) {
-      setStatusError(
+      const message =
         error instanceof Error
           ? error.message
-          : "Error inesperado al actualizar el estado.",
-      );
+          : "Ocurrió un error al actualizar el estado";
+      setStatusError(message);
     } finally {
       setStatusSaving(false);
     }
   };
 
   const handleSnackbarClose = (
-    _event?: React.SyntheticEvent | Event,
-    reason?: string,
+    _event: React.SyntheticEvent | Event,
+    reason?: SnackbarCloseReason,
   ) => {
     if (reason === "clickaway") return;
     setStatusSnackbarOpen(false);
   };
 
-  // ------- UI -------
+  type StatCardProps = {
+    icon: React.ReactNode;
+    label: string;
+    value: string | number;
+    unit?: string;
+    color?: PaletteKey;
+    gradient?: boolean;
+  };
+
+  const StatCard = ({
+    icon,
+    label,
+    value,
+    unit,
+    color = "primary",
+  }: StatCardProps) => (
+    <Paper
+      elevation={0}
+      sx={(theme) => {
+        const paletteColor = theme.palette[color] as PaletteColor;
+        return {
+          p: 3,
+          borderRadius: 3,
+          background: ` ${alpha(paletteColor.main, 0.08)}`,
+          border: `1px solid ${alpha(paletteColor.main, 0.12)}`,
+          position: "relative",
+          overflow: "hidden",
+          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          "&:hover": {
+            transform: "translateY(-4px)",
+            boxShadow: `0 12px 28px ${alpha(paletteColor.main, 0.15)}`,
+            borderColor: alpha(paletteColor.main, 0.3),
+          },
+        };
+      }}
+    >
+      <Stack spacing={2}>
+        <Box
+          sx={(theme) => {
+            const paletteColor = theme.palette[color] as PaletteColor;
+            return {
+              width: 48,
+              height: 48,
+              borderRadius: 2,
+              bgcolor: alpha(paletteColor.main, 0.12),
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: paletteColor.main,
+            };
+          }}
+        >
+          {icon}
+        </Box>
+        <Box>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+              fontWeight: 600,
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+              fontSize: "0.7rem",
+            }}
+          >
+            {label}
+          </Typography>
+          <Stack direction="row" alignItems="baseline" spacing={0.5} mt={0.5}>
+            <Typography
+              variant="h3"
+              sx={(theme) => {
+                const paletteColor = theme.palette[color] as PaletteColor;
+                return {
+                  fontWeight: 800,
+                  color: paletteColor.main,
+                  lineHeight: 1.2,
+                };
+              }}
+            >
+              {value}
+            </Typography>
+            {unit && (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                fontWeight={600}
+              >
+                {unit}
+              </Typography>
+            )}
+          </Stack>
+        </Box>
+      </Stack>
+    </Paper>
+  );
+
+  type TimelinePhaseProps = {
+    icon: React.ReactNode;
+    title: string;
+    date: string;
+    color: PaletteKey;
+    isLast?: boolean;
+  };
+
+  const TimelinePhase = ({
+    icon,
+    title,
+    date,
+    color,
+    isLast = false,
+  }: TimelinePhaseProps) => (
+    <Box sx={{ position: "relative", flex: 1 }}>
+      <Stack alignItems="center" spacing={1.5}>
+        <Box
+          sx={(theme) => {
+            const paletteColor = theme.palette[color] as PaletteColor;
+            return {
+              width: 72,
+              height: 72,
+              borderRadius: "50%",
+              background: `linear-gradient(135deg, ${paletteColor.main} 0%, ${paletteColor.dark} 100%)`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "white",
+              position: "relative",
+              zIndex: 2,
+              boxShadow: `0 8px 24px ${alpha(paletteColor.main, 0.35)}`,
+              transition: "all 0.3s ease",
+              "&:hover": {
+                transform: "scale(1.1)",
+                boxShadow: `0 12px 32px ${alpha(paletteColor.main, 0.45)}`,
+              },
+            };
+          }}
+        >
+          {icon}
+        </Box>
+        <Box textAlign="center">
+          <Typography
+            variant="caption"
+            sx={(theme) => {
+              const paletteColor = theme.palette[color] as PaletteColor;
+              return {
+                color: paletteColor.main,
+                fontWeight: 800,
+                textTransform: "uppercase",
+                fontSize: "0.7rem",
+                letterSpacing: "0.5px",
+              };
+            }}
+          >
+            {title}
+          </Typography>
+          <Typography
+            variant="body2"
+            fontWeight={700}
+            color="text.primary"
+            mt={0.5}
+          >
+            {date}
+          </Typography>
+        </Box>
+      </Stack>
+    </Box>
+  );
 
   return (
     <PageContainer
       title={`Ciclo ${cycle.cycleId}`}
-      description="Detalle completo del ciclo de siembra"
+      description={`Detalle del ciclo ${cycle.cycleId}`}
     >
-      <Stack spacing={4}>
-        {/* A. Hero Header - More compact and integrated */}
-        <Box>
-          <Typography
-            variant="h3"
-            component="h1"
-            sx={{
-              color: "primary.main",
-              fontWeight: 800,
-              mb: 1,
-              fontSize: { xs: "2rem", md: "2.5rem" },
-            }}
-          >
-            {cycle.cycleId}
-          </Typography>
-        </Box>
-        {/* Consolidated layout */}
-        <Stack spacing={4}>
-          {/* Row 1 */}
+      <Box sx={{ minHeight: "100vh", bgcolor: "background.default", pb: 8 }}>
+        {/* Hero Header */}
+        <Box
+          sx={(theme) => ({
+            background: `linear-gradient(135deg, ${alpha(
+              theme.palette.primary.main,
+              0.05,
+            )} 0%, ${alpha(theme.palette.primary.light, 0.02)} 100%)`,
+            borderBottom: `1px solid ${theme.palette.divider}`,
+            py: { xs: 4, md: 6 },
+            px: { xs: 2, md: 4 },
+          })}
+        >
           <Stack
-            direction={{ xs: "column", md: "row" }}
-            spacing={3}
-            alignItems="stretch"
+            direction={{ xs: "column", sm: "row" }}
+            justifyContent="space-between"
+            alignItems={{ xs: "flex-start", sm: "center" }}
+            spacing={2}
+            maxWidth="1400px"
+            mx="auto"
           >
-            <Box
-              sx={(theme) => ({
-                p: 3,
-                borderRadius: 2,
-                height: "100%",
-                flex: { xs: "1 1 auto", md: "0 0 25%" },
-                width: "100%",
-              })}
-            >
-              <Stack spacing={2}>
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  alignItems="center"
-                  justifyContent="space-between"
+            <Box>
+              <Typography
+                variant="h3"
+                sx={{
+                  fontWeight: 900,
+                  background: (theme) =>
+                    `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  mb: 1,
+                }}
+              >
+                {cycle.cycleId}
+              </Typography>
+              <Stack
+                direction="row"
+                spacing={1.5}
+                alignItems="center"
+                flexWrap="wrap"
+                mt={3}
+              >
+                <Chip
+                  label={`Periodo ${cycle.period}`}
+                  sx={{
+                    bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
+                    color: "primary.dark",
+                    fontWeight: 700,
+                    borderRadius: "8px",
+                  }}
+                />
+                <Typography
+                  variant="subtitle1"
+                  color="text.secondary"
+                  fontWeight={600}
                 >
-                  <StatusChip
-                    status={status}
-                    options={CYCLE_STATUS_OPTIONS}
-                    sx={{
-                      height: 40,
-                      fontWeight: 700,
-                      "& .MuiChip-label": {
-                        px: 2,
-                        fontSize: "0.95rem",
-                        fontWeight: 700,
-                      },
-                    }}
-                  />
-                  <IconButton
-                    size="small"
-                    aria-label="Editar estado"
-                    onClick={handleToggleStatusEdit}
-                    disabled={statusSaving}
-                  >
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                </Stack>
-
-                {isEditingStatus && (
-                  <Stack spacing={1.5}>
-                    <TextField
-                      select
-                      label="Estado del ciclo"
-                      size="small"
-                      fullWidth
-                      value={statusDraft}
-                      onChange={(event) =>
-                        setStatusDraft(event.target.value as CycleStatus)
-                      }
-                      disabled={statusSaving}
-                    >
-                      {CYCLE_STATUS_OPTIONS.map((option) => (
-                        <MenuItem key={option.value} value={option.value}>
-                          {option.label}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                    <Stack direction="row" spacing={1}>
-                      <Button
-                        size="small"
-                        variant="contained"
-                        onClick={handleSaveStatus}
-                        disabled={statusSaving}
-                      >
-                        {statusSaving ? "Guardando..." : "Guardar"}
-                      </Button>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={handleCancelStatusEdit}
-                        disabled={statusSaving}
-                      >
-                        Cancelar
-                      </Button>
-                    </Stack>
-                    {statusError && (
-                      <Alert
-                        severity="error"
-                        variant="outlined"
-                        onClose={() => setStatusError(null)}
-                      >
-                        {statusError}
-                      </Alert>
-                    )}
-                  </Stack>
-                )}
+                  {cycle.field}
+                </Typography>
               </Stack>
-              <Chip
-                label={`Periodo ${cyclePeriodValue}`}
-                variant="outlined"
-                sx={(theme) => ({
-                  alignSelf: "flex-start",
-                  mt: 1,
-                  borderRadius: 1.5,
-                  fontWeight: 600,
-                  bgcolor: theme.palette.background.paper,
-                })}
-              />
             </Box>
-            {/* Timeline - Visual horizontal timeline */}
-            <Paper
-              elevation={0}
-              sx={(theme) => ({
-                p: { xs: 3, md: 4 },
-                borderRadius: 2,
-                border: `1px solid ${theme.palette.divider}`,
-                height: "100%",
-                flex: 1,
-              })}
-            >
-              {/* Desktop Timeline */}
-              <Box sx={{ display: { xs: "none", md: "block" } }}>
-                <Box sx={{ position: "relative", px: 2 }}>
-                  {/* Timeline line */}
-                  <Box
-                    sx={(theme) => ({
-                      position: "absolute",
-                      top: "32px",
-                      left: "5%",
-                      right: "5%",
-                      height: "2px",
-                      background: `linear-gradient(
-  to right,
-  ${alpha(theme.palette.grey[400], 0.1)},
-  ${alpha(theme.palette.grey[400], 0.95)},
-  ${alpha(theme.palette.grey[400], 1)},
-  ${alpha(theme.palette.grey[400], 0.2)}
-)`,
-                      borderRadius: "8px",
-                      zIndex: 0,
-                    })}
-                  />
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <StatusChip
+                status={status}
+                options={CYCLE_STATUS_OPTIONS}
+                sx={{
+                  height: 40,
+                  px: 2,
+                  fontSize: "0.875rem",
+                }}
+              />
+              <IconButton
+                size="medium"
+                onClick={handleToggleStatusEdit}
+                disabled={statusSaving}
+                sx={{
+                  bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
+                  "&:hover": {
+                    bgcolor: (theme) => alpha(theme.palette.primary.main, 0.15),
+                  },
+                }}
+              >
+                <EditIcon fontSize="small" />
+              </IconButton>
+            </Stack>
+          </Stack>
 
-                  {(() => {
-                    const hasHarvestRange =
-                      Boolean(computeHarvestTimeRange?.start) &&
-                      Boolean(computeHarvestTimeRange?.end);
-
-                    const harvestDateLabel = hasHarvestRange
-                      ? `${formatDate(
-                          computeHarvestTimeRange.start,
-                        )} – ${formatDate(computeHarvestTimeRange.end)}`
-                      : cycle.estimatedHarvestDate
-                        ? formatDate(cycle.estimatedHarvestDate)
-                        : "—";
-
-                    const harvestTitle = hasHarvestRange
-                      ? "Cosecha"
-                      : "Cosecha (Est.)";
-
-                    const phases = [
-                      {
-                        key: "fallow",
-                        title: "Barbecho",
-                        date: cycle.fallowStartDate
-                          ? formatDate(cycle.fallowStartDate)
-                          : "—",
-                        color: "primary.main",
-                        labelColor: "primary",
-                        icon: <GrassIcon />,
-                      },
-                      {
-                        key: "sowing",
-                        title: "Siembra",
-                        date: cycle.sowingDate
-                          ? formatDate(cycle.sowingDate)
-                          : "—",
-                        color: "primary.main",
-                        labelColor: "primary",
-                        icon: <AgricultureIcon />,
-                      },
-                      {
-                        key: "harvest",
-                        title: harvestTitle,
-                        date: harvestDateLabel,
-                        color: hasHarvestRange
-                          ? "success.main"
-                          : "warning.main",
-                        labelColor: hasHarvestRange
-                          ? "success.dark"
-                          : "warning.dark",
-                        icon: hasHarvestRange ? (
-                          <EventAvailableIcon />
-                        ) : (
-                          <DateRangeIcon />
-                        ),
-                      },
-                    ];
-
-                    return (
-                      <Stack
-                        direction="row"
-                        justifyContent="space-between"
-                        alignItems="flex-start"
-                        sx={{ position: "relative", zIndex: 1 }}
-                      >
-                        {phases.map((p) => (
-                          <Stack
-                            key={p.key}
-                            alignItems="center"
-                            spacing={1}
-                            sx={{ width: "33.333%" }}
-                          >
-                            <Box
-                              sx={(theme) => ({
-                                width: 64,
-                                height: 64,
-                                borderRadius: "50%",
-                                bgcolor: p.color,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                color: "white",
-                                position: "relative",
-                                zIndex: 1,
-                                boxShadow: `0 4px 12px ${alpha(
-                                  theme.palette[
-                                    typeof p.color === "string" &&
-                                    p.color.includes("warning")
-                                      ? "warning"
-                                      : typeof p.color === "string" &&
-                                          p.color.includes("success")
-                                        ? "success"
-                                        : "primary"
-                                  ].main,
-                                  0.3,
-                                )}`,
-                              })}
-                            >
-                              {/* icono */}
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  "& svg": { fontSize: 30 },
-                                }}
-                              >
-                                {p.icon}
-                              </Box>
-                            </Box>
-
-                            <Typography
-                              variant="caption"
-                              color={p.labelColor}
-                              fontWeight={700}
-                              textAlign="center"
-                              textTransform="uppercase"
-                            >
-                              {p.title}
-                            </Typography>
-
-                            <Typography
-                              variant="body2"
-                              fontWeight={600}
-                              textAlign="center"
-                            >
-                              {p.date}
-                            </Typography>
-                          </Stack>
-                        ))}
-                      </Stack>
-                    );
-                  })()}
-                </Box>
-              </Box>
-
-              {/* Mobile Timeline */}
-              <Box sx={{ display: { xs: "block", md: "none" } }}>
-                <Stack spacing={3}>
-                  {[
-                    {
-                      num: 1,
-                      label: "Barbecho",
-                      date: cycle.fallowStartDate,
-                      color: "primary",
-                    },
-                    {
-                      num: 2,
-                      label: "Siembra",
-                      date: cycle.sowingDate,
-                      color: "primary",
-                    },
-                    {
-                      num: 3,
-                      label: "Cosecha Est.",
-                      date: cycle.estimatedHarvestDate,
-                      color: "warning",
-                    },
-                    {
-                      num: 4,
-                      label: "Inicio",
-                      date: computeHarvestTimeRange.start,
-                      color: "success",
-                    },
-                    {
-                      num: 5,
-                      label: "Fin",
-                      date: computeHarvestTimeRange.end,
-                      color: "success",
-                    },
-                  ].map((item, idx) => (
-                    <Stack
-                      key={idx}
-                      direction="row"
-                      spacing={2}
-                      alignItems="center"
+          <Collapse in={isEditingStatus}>
+            <Box maxWidth="1400px" mx="auto" mt={3}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 3,
+                  borderRadius: 3,
+                  border: (theme) => `1px solid ${theme.palette.divider}`,
+                }}
+              >
+                <Stack spacing={2}>
+                  <TextField
+                    select
+                    label="Estado del ciclo"
+                    size="small"
+                    fullWidth
+                    value={statusDraft}
+                    onChange={(e) =>
+                      setStatusDraft(e.target.value as CycleStatus)
+                    }
+                    disabled={statusSaving}
+                    sx={{ maxWidth: 300 }}
+                  >
+                    {CYCLE_STATUS_OPTIONS.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                  <Stack direction="row" spacing={1.5}>
+                    <Button
+                      variant="contained"
+                      onClick={handleSaveStatus}
+                      disabled={statusSaving}
+                      sx={{ borderRadius: 2 }}
                     >
-                      <Box
-                        sx={(theme) => ({
-                          width: "48px",
-                          height: "48px",
-                          borderRadius: "50%",
-                          bgcolor: theme.palette[item.color].main,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "white",
-                          fontWeight: 700,
-                          fontSize: "1.25rem",
-                          flexShrink: 0,
-                        })}
-                      >
-                        {item.num}
-                      </Box>
-                      <Box sx={{ flex: 1 }}>
-                        <Typography
-                          variant="caption"
-                          color={`${item.color}.dark`}
-                          fontWeight={700}
-                          textTransform="uppercase"
-                        >
-                          {item.label}
-                        </Typography>
-                        <Typography variant="body1" fontWeight={600}>
-                          {formatDate(item.date)}
-                        </Typography>
-                      </Box>
-                    </Stack>
-                  ))}
-
-                  {computeHarvestTimeRange.days && (
-                    <Box
-                      sx={(theme) => ({
-                        p: 2,
-                        bgcolor: alpha(theme.palette.success.main, 0.1),
-                        borderRadius: 2,
-                        textAlign: "center",
-                      })}
+                      {statusSaving ? "Guardando..." : "Guardar"}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      onClick={handleCancelStatusEdit}
+                      disabled={statusSaving}
+                      sx={{ borderRadius: 2 }}
                     >
-                      <Typography
-                        variant="caption"
-                        color="success.dark"
-                        fontWeight={700}
-                        textTransform="uppercase"
-                      >
-                        Duración
-                      </Typography>
-                      <Typography
-                        variant="h6"
-                        fontWeight={800}
-                        color="success.main"
-                      >
-                        {computeHarvestTimeRange.days} días
-                      </Typography>
-                    </Box>
+                      Cancelar
+                    </Button>
+                  </Stack>
+                  {statusError && (
+                    <Alert
+                      severity="error"
+                      onClose={() => setStatusError(null)}
+                    >
+                      {statusError}
+                    </Alert>
                   )}
                 </Stack>
-              </Box>
-            </Paper>
-          </Stack>
-          <Typography
-            variant="h4"
-            fontWeight={800}
-            color="primary.main"
-            sx={{ mt: 2 }}
-          >
-            Campo: {rowFieldTitle}
-          </Typography>
-
-          <Stack
-            direction={{ xs: "column", md: "row" }}
-            spacing={5}
-            alignItems="stretch"
-          >
-            <Box
-              sx={(theme) => ({
-                borderRadius: 2,
-                height: "100%",
-                flex: { xs: "1 1 auto", md: "0 0 25%" },
-                width: "100%",
-              })}
-            >
-              <Stack spacing={2} alignItems="center" marginTop={"10px"}>
-                <Paper
-                  elevation={0}
-                  sx={(theme) => ({
-                    width: "70%",
-                    p: 2.5,
-                    borderRadius: 2,
-                    border: `1px solid ${theme.palette.divider}`,
-                    transition: "all 0.2s ease",
-                    "&:hover": {
-                      borderColor: theme.palette.primary.main,
-                      boxShadow: `0 4px 12px ${alpha(
-                        theme.palette.primary.main,
-                        0.1,
-                      )}`,
-                    },
-                  })}
-                >
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    fontWeight={600}
-                    textTransform="uppercase"
-                    letterSpacing="0.5px"
-                  >
-                    Superficie
-                  </Typography>
-                  <Typography
-                    variant="h4"
-                    mt={1}
-                    fontWeight={800}
-                    color="primary"
-                  >
-                    {cycle.areaHa.toLocaleString("es-ES")}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    hectáreas
-                  </Typography>
-                </Paper>
-
-                <Paper
-                  elevation={0}
-                  sx={(theme) => ({
-                    width: "70%",
-                    p: 2.5,
-                    borderRadius: 2,
-                    border: `1px solid ${theme.palette.divider}`,
-                    transition: "all 0.2s ease",
-                    "&:hover": {
-                      borderColor: theme.palette.info.main,
-                      boxShadow: `0 4px 12px ${alpha(
-                        theme.palette.info.main,
-                        0.1,
-                      )}`,
-                    },
-                  })}
-                >
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    fontWeight={600}
-                    textTransform="uppercase"
-                    letterSpacing="0.5px"
-                  >
-                    Rendimiento
-                  </Typography>
-                  <Stack
-                    direction="row"
-                    spacing={0.5}
-                    alignItems="baseline"
-                    mt={1}
-                  >
-                    <Typography variant="h4" fontWeight={800} color="info.main">
-                      {cycle.actualYield.toFixed(1)}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      / {cycle.expectedYield.toFixed(1)}
-                    </Typography>
-                  </Stack>
-                  <Typography variant="caption" color="text.secondary">
-                    quintales/ha
-                  </Typography>
-                </Paper>
-              </Stack>
+              </Paper>
             </Box>
-            <Stack spacing={3} sx={{ flex: 1 }}>
-              <DashboardCard>
+          </Collapse>
+        </Box>
+
+        <Box maxWidth="1400px" mx="auto" px={{ xs: 2, md: 4 }} mt={4}>
+          <Stack spacing={6}>
+            {/* Timeline Section */}
+            <Fade in timeout={600}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: { xs: 3, md: 5 },
+                  borderRadius: 4,
+                  border: (theme) => `1px solid ${theme.palette.divider}`,
+                  background: (theme) => theme.palette.background.paper,
+                }}
+              >
+                {/* Desktop Timeline */}
+                <Box sx={{ display: { xs: "none", md: "block" } }}>
+                  <Box sx={{ position: "relative", px: 4 }}>
+                    <Box
+                      sx={(theme) => ({
+                        position: "absolute",
+                        top: "36px",
+                        left: "10%",
+                        right: "10%",
+                        height: "3px",
+                        background: `linear-gradient(to right, ${alpha(
+                          theme.palette.primary.main,
+                          0.2,
+                        )}, ${theme.palette.primary.main}, ${alpha(
+                          theme.palette.success.main,
+                          0.8,
+                        )})`,
+                        borderRadius: "8px",
+                        zIndex: 0,
+                      })}
+                    />
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      sx={{ position: "relative", zIndex: 1 }}
+                    >
+                      <TimelinePhase
+                        icon={<GrassIcon sx={{ fontSize: 32 }} />}
+                        title="Barbecho"
+                        date={formatDate(cycle.fallowStartDate)}
+                        color="primary"
+                      />
+                      <TimelinePhase
+                        icon={<IconSeedling />}
+                        title="Siembra"
+                        date={formatDate(cycle.sowingDate)}
+                        color="primary"
+                      />
+                      <TimelinePhase
+                        icon={
+                          computeHarvestTimeRange.start ? (
+                            <EventAvailableIcon sx={{ fontSize: 32 }} />
+                          ) : (
+                            <DateRangeIcon sx={{ fontSize: 32 }} />
+                          )
+                        }
+                        title={
+                          computeHarvestTimeRange.start
+                            ? "Cosecha"
+                            : "Cosecha Est."
+                        }
+                        date={
+                          computeHarvestTimeRange.start
+                            ? `${formatDate(computeHarvestTimeRange.start)} – ${formatDate(
+                                computeHarvestTimeRange.end,
+                              )}`
+                            : formatDate(cycle.estimatedHarvestDate)
+                        }
+                        color={
+                          computeHarvestTimeRange.start ? "success" : "warning"
+                        }
+                        isLast
+                      />
+                    </Stack>
+                  </Box>
+                </Box>
+
+                {/* Mobile Timeline */}
+                <Box sx={{ display: { xs: "block", md: "none" } }}>
+                  <Stack spacing={3}>
+                    {[
+                      {
+                        icon: <GrassIcon />,
+                        label: "Barbecho",
+                        date: cycle.fallowStartDate,
+                        color: "primary" as PaletteKey,
+                      },
+                      {
+                        icon: <AgricultureIcon />,
+                        label: "Siembra",
+                        date: cycle.sowingDate,
+                        color: "primary" as PaletteKey,
+                      },
+                      {
+                        icon: <DateRangeIcon />,
+                        label: "Cosecha Est.",
+                        date: cycle.estimatedHarvestDate,
+                        color: "warning" as PaletteKey,
+                      },
+                    ].map((item, idx) => (
+                      <Stack
+                        key={idx}
+                        direction="row"
+                        spacing={2}
+                        alignItems="center"
+                      >
+                        <Box
+                          sx={(theme) => {
+                            const paletteColor = theme.palette[
+                              item.color
+                            ] as PaletteColor;
+                            return {
+                              width: 56,
+                              height: 56,
+                              borderRadius: "50%",
+                              background: `linear-gradient(135deg, ${paletteColor.main} 0%, ${paletteColor.dark} 100%)`,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: "white",
+                              flexShrink: 0,
+                              boxShadow: `0 4px 12px ${alpha(paletteColor.main, 0.3)}`,
+                            };
+                          }}
+                        >
+                          {item.icon}
+                        </Box>
+                        <Box>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              color: `${item.color}.dark`,
+                              fontWeight: 800,
+                              textTransform: "uppercase",
+                              fontSize: "0.7rem",
+                            }}
+                          >
+                            {item.label}
+                          </Typography>
+                          <Typography variant="body1" fontWeight={700}>
+                            {formatDate(item.date)}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    ))}
+                  </Stack>
+                </Box>
+              </Paper>
+            </Fade>
+
+            {/* Stats Overview */}
+            <Box>
+              <Typography
+                variant="h5"
+                fontWeight={800}
+                mb={3}
+                color="text.primary"
+              >
+                Resumen General
+              </Typography>
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: {
+                    xs: "1fr",
+                    sm: "repeat(3, 1fr)",
+                    md: "repeat(5, 1fr)",
+                  },
+                  gap: 3,
+                }}
+              >
+                <StatCard
+                  icon={<IconFreezeRowColumn />}
+                  label="Superficie"
+                  value={cycle.areaHa.toLocaleString("es-ES")}
+                  unit="ha"
+                  color="primary"
+                  gradient
+                />
+                <StatCard
+                  icon={<IconTractor />}
+                  label="Rendimiento"
+                  value={`${cycle.actualYield.toFixed(1)} / ${cycle.expectedYield.toFixed(1)}`}
+                  unit="qq/ha"
+                  color="info"
+                  gradient
+                />
+                <StatCard
+                  icon={<CheckCircleIcon sx={{ fontSize: 28 }} />}
+                  label="Cosechado"
+                  value={cycle.totalKgs.toLocaleString("es-ES")}
+                  unit="kg"
+                  color="success"
+                  gradient
+                />
+                <StatCard
+                  icon={<IconMoneybag />}
+                  label="En Stock"
+                  value={cycle.stockKgs.toLocaleString("es-ES")}
+                  unit="kg"
+                  color="warning"
+                  gradient
+                />
+                <StatCard
+                  icon={<IconTruck />}
+                  label="En camión"
+                  value={cycle.truckKgs}
+                  unit="kg"
+                  color="secondary"
+                  gradient
+                />
+              </Box>
+            </Box>
+
+            {/* Lots Section */}
+            <Box>
+              <Stack direction="row" alignItems="center" spacing={2} mb={3}>
+                <IconFreezeRowColumn fontSize="40px" color="#3A3184" />
                 <Typography
-                  variant="body1"
-                  color="text.body"
-                  fontWeight={700}
-                  mb={2}
+                  variant="h5"
+                  fontWeight={800}
+                  mb={3}
+                  color="text.primary"
                 >
                   Lotes ({lots.length})
                 </Typography>
-                {lots.length === 0 ? (
-                  <Box
-                    sx={(theme) => ({
-                      py: 4,
-                      textAlign: "center",
-                      borderRadius: 2,
-                      bgcolor: alpha(theme.palette.grey[500], 0.04),
-                    })}
-                  >
-                    <Typography variant="body1" color="text.secondary">
-                      Este ciclo no tiene lotes asociados.
-                    </Typography>
-                  </Box>
-                ) : (
-                  <>
-                    {/* Desktop table */}
-                    <Box sx={{ display: { xs: "none", md: "block" } }}>
-                      <TableContainer
-                        component={Paper}
-                        variant="outlined"
-                        sx={{
-                          borderRadius: 2.5,
-                          overflow: "hidden",
-                        }}
-                      >
-                        <Table size="small">
-                          <TableHead
-                            sx={(theme) => ({
-                              background: `${alpha(
-                                theme.palette.primary.main,
-                                0.08,
-                              )}`,
-                              "& .MuiTableCell-root": {
-                                fontWeight: 700,
-                                color: theme.palette.primary.main,
-                                borderBottom: `2px solid ${theme.palette.primary.main}`,
-                                py: 1.5,
-                                fontSize: "0.8rem",
-                                textTransform: "uppercase",
-                                letterSpacing: "0.5px",
-                              },
-                            })}
-                          >
-                            <TableRow>
-                              <TableCell>Lote</TableCell>
+              </Stack>
 
-                              <TableCell align="right">
-                                Superficie (ha)
-                              </TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {lots.map((lot, index) => (
-                              <TableRow
-                                key={lot.id}
-                                sx={(theme) => ({
-                                  bgcolor:
-                                    index % 2 === 0
-                                      ? "transparent"
-                                      : alpha(theme.palette.grey[100], 0.4),
-                                  "&:hover": {
-                                    bgcolor: alpha(
-                                      theme.palette.primary.main,
-                                      0.04,
-                                    ),
-                                  },
-                                })}
-                              >
-                                <TableCell>
-                                  <Typography variant="body1" fontWeight={700}>
-                                    {lot.code}
-                                  </Typography>
-                                </TableCell>
-
-                                <TableCell align="right">
-                                  <Typography variant="body1" fontWeight={600}>
-                                    {lot.areaHa.toLocaleString("es-ES")}
-                                  </Typography>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                    </Box>
-
-                    {/* Mobile cards */}
-                    <Box sx={{ display: { xs: "block", md: "none" } }}>
-                      <Stack spacing={2}>
-                        {lots.map((lot) => (
-                          <Card
-                            key={lot.id}
-                            sx={(theme) => ({
-                              borderRadius: 2.5,
-                              border: `2px solid ${theme.palette.divider}`,
-                              boxShadow: `0 2px 8px ${alpha(
-                                theme.palette.grey[500],
-                                0.08,
-                              )}`,
-                              transition: "all 0.3s ease",
-                              "&:hover": {
-                                transform: "translateY(-2px)",
-                                boxShadow: `0 4px 16px ${alpha(
-                                  theme.palette.primary.main,
-                                  0.12,
-                                )}`,
-                                borderColor: theme.palette.primary.main,
-                              },
-                            })}
-                          >
-                            <CardContent sx={{ p: 2.5 }}>
-                              <Stack spacing={1.5}>
-                                <Stack
-                                  direction="row"
-                                  justifyContent="space-between"
-                                  alignItems="center"
-                                >
-                                  <Typography
-                                    variant="subtitle1"
-                                    fontWeight={700}
-                                    color="primary"
-                                  >
-                                    {lot.code}
-                                  </Typography>
-                                </Stack>
-
-                                <Typography variant="h6" fontWeight={700}>
-                                  {lot.areaHa.toLocaleString("es-ES")} ha
-                                </Typography>
-                              </Stack>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </Stack>
-                    </Box>
-                  </>
-                )}
-              </DashboardCard>
-            </Stack>
-          </Stack>
-
-          <Typography
-            variant="h4"
-            fontWeight={800}
-            color="primary.main"
-            sx={{ mt: 2 }}
-          >
-            Eventos
-          </Typography>
-          <Stack
-            direction={{ xs: "column", md: "row" }}
-            spacing={5}
-            alignItems="stretch"
-            mt={"20px"}
-          >
-            <Stack
-              spacing={3}
-              mt={"20px"}
-              sx={{
-                flex: { xs: "1 1 auto", md: "0 0 25%" },
-                width: "100%",
-              }}
-            >
-              <Box
-                sx={(theme) => ({
-                  borderRadius: 2,
-                  height: "100%",
-                  width: "100%",
-                })}
+              <Paper
+                elevation={0}
+                sx={{
+                  borderRadius: 3,
+                  overflow: "hidden",
+                  border: (theme) => `1px solid ${theme.palette.divider}`,
+                }}
               >
-                <Stack spacing={2} alignItems="center" marginTop={"10px"}>
-                  <Paper
-                    elevation={0}
-                    sx={(theme) => ({
-                      width: "70%",
-                      p: 2.5,
-                      borderRadius: 2,
-                      border: `1px solid ${theme.palette.divider}`,
-                      transition: "all 0.2s ease",
-                      "&:hover": {
-                        borderColor: theme.palette.success.main,
-                        boxShadow: `0 4px 12px ${alpha(
-                          theme.palette.success.main,
-                          0.1,
-                        )}`,
-                      },
-                    })}
-                  >
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      fontWeight={600}
-                      textTransform="uppercase"
-                      letterSpacing="0.5px"
-                    >
-                      Cosechado
-                    </Typography>
-                    <Typography
-                      variant="h4"
-                      mt={1}
-                      fontWeight={800}
-                      color="success.main"
-                    >
-                      {cycle.totalKgs.toLocaleString("es-ES")}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      kilogramos
-                    </Typography>
-                  </Paper>
-
-                  {Boolean(computeHarvestTimeRange?.days) && (
-                    <Paper
-                      elevation={0}
+                {/* Desktop Table */}
+                <Box sx={{ display: { xs: "none", md: "block" } }}>
+                  <Table>
+                    <TableHead
                       sx={(theme) => ({
-                        width: "70%",
-                        p: 2.5,
-                        borderRadius: 2,
-                        border: `1px solid ${theme.palette.divider}`,
-                        transition: "all 0.2s ease",
-                        "&:hover": {
-                          borderColor: theme.palette.success.main,
-                          boxShadow: `0 4px 12px ${alpha(
-                            theme.palette.success.main,
-                            0.1,
-                          )}`,
-                        },
+                        bgcolor: alpha(theme.palette.primary.main, 0.04),
                       })}
                     >
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        fontWeight={600}
-                        textTransform="uppercase"
-                        letterSpacing="0.5px"
+                      <TableRow>
+                        <TableCell
+                          sx={{
+                            fontWeight: 700,
+                            color: "primary.main",
+                            borderBottom: "2px solid",
+                            borderColor: "primary.main",
+                          }}
+                        >
+                          Lote
+                        </TableCell>
+                        <TableCell
+                          align="right"
+                          sx={{
+                            fontWeight: 700,
+                            color: "primary.main",
+                            borderBottom: "2px solid",
+                            borderColor: "primary.main",
+                          }}
+                        >
+                          Superficie (ha)
+                        </TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {lots.map((lot, index) => (
+                        <TableRow
+                          key={lot.id}
+                          sx={{
+                            "&:hover": {
+                              bgcolor: (theme) =>
+                                alpha(theme.palette.primary.main, 0.02),
+                            },
+                          }}
+                        >
+                          <TableCell>
+                            <Typography variant="body1" fontWeight={700}>
+                              {lot.code}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography variant="body1" fontWeight={600}>
+                              {lot.areaHa.toLocaleString("es-ES")}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </Box>
+
+                {/* Mobile Cards */}
+                <Box sx={{ display: { xs: "block", md: "none" }, p: 2 }}>
+                  <Stack spacing={2}>
+                    {lots.map((lot) => (
+                      <Card
+                        key={lot.id}
+                        sx={{
+                          borderRadius: 2,
+                          border: (theme) =>
+                            `1px solid ${theme.palette.divider}`,
+                        }}
                       >
-                        Duración cosecha
-                      </Typography>
-                      <Typography
-                        variant="h4"
-                        mt={1}
-                        fontWeight={800}
-                        color="success.main"
-                      >
-                        {computeHarvestTimeRange.days}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        días
-                      </Typography>
-                    </Paper>
-                  )}
-                </Stack>
-              </Box>
-            </Stack>
-            <Stack spacing={3} sx={{ flex: 1 }}>
-              <DashboardCard>
-                <Typography
-                  variant="body1"
-                  fontWeight={700}
-                  mb={2.5}
-                  color="text.body"
-                >
+                        <CardContent>
+                          <Stack
+                            direction="row"
+                            justifyContent="space-between"
+                            alignItems="center"
+                          >
+                            <Typography
+                              variant="subtitle1"
+                              fontWeight={700}
+                              color="primary"
+                            >
+                              {lot.code}
+                            </Typography>
+                            <Typography variant="h6" fontWeight={700}>
+                              {lot.areaHa.toLocaleString("es-ES")} ha
+                            </Typography>
+                          </Stack>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </Stack>
+                </Box>
+              </Paper>
+            </Box>
+
+            {/* Harvests Section */}
+            <Box>
+              <Stack direction="row" alignItems="center" spacing={2} mb={3}>
+                <CheckCircleIcon sx={{ color: "success.main", fontSize: 32 }} />
+                <Typography variant="h5" fontWeight={800} color="text.primary">
                   Cosechas ({harvests.length})
                 </Typography>
-                {harvests.length === 0 ? (
-                  <Box
-                    sx={(theme) => ({
-                      py: 4,
-                      textAlign: "center",
-                      borderRadius: 2,
-                      bgcolor: alpha(theme.palette.grey[500], 0.04),
-                    })}
-                  >
-                    <Typography variant="body1" color="text.secondary">
-                      No hay cosechas registradas para este ciclo.
-                    </Typography>
-                  </Box>
-                ) : (
-                  <>
-                    {/* Desktop table */}
-                    <Box sx={{ display: { xs: "none", md: "block" } }}>
-                      <TableContainer
-                        component={Paper}
-                        variant="outlined"
-                        sx={{
-                          borderRadius: 2.5,
-                          overflow: "hidden",
-                        }}
-                      >
-                        <Table size="small">
-                          <TableHead
-                            sx={(theme) => ({
-                              background: `linear-gradient(135deg, ${alpha(
-                                theme.palette.success.main,
-                                0.1,
-                              )} 0%, ${alpha(
-                                theme.palette.success.light,
-                                0.1,
-                              )} 100%)`,
-                              "& .MuiTableCell-root": {
-                                fontWeight: 700,
-                                color: theme.palette.success.dark,
-                                borderBottom: `2px solid ${theme.palette.success.main}`,
-                                py: 1.5,
-                                fontSize: "0.8rem",
-                                textTransform: "uppercase",
-                                letterSpacing: "0.5px",
-                              },
-                            })}
-                          >
-                            <TableRow>
-                              <TableCell>Fecha</TableCell>
-                              <TableCell>Lotes</TableCell>
-                              <TableCell align="right">
-                                Kgs cosechados
-                              </TableCell>
-                              <TableCell align="right">
-                                Kgs camión directo
-                              </TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {harvests.map((h, index) => {
-                              const lotNames = h.lotsIds
-                                .map((id) => lotsById.get(id))
-                                .filter(Boolean)
-                                .join(", ");
-                              return (
-                                <TableRow
-                                  key={h.id}
-                                  sx={(theme) => ({
-                                    bgcolor:
-                                      index % 2 === 0
-                                        ? "transparent"
-                                        : alpha(theme.palette.grey[100], 0.4),
-                                    "&:hover": {
-                                      bgcolor: alpha(
-                                        theme.palette.success.main,
-                                        0.04,
-                                      ),
-                                    },
-                                  })}
-                                >
-                                  <TableCell>
-                                    <Typography
-                                      variant="body1"
-                                      fontWeight={700}
-                                    >
-                                      {formatDate(h.date)}
-                                    </Typography>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Typography variant="body1">
-                                      {lotNames || "—"}
-                                    </Typography>
-                                  </TableCell>
-                                  <TableCell align="right">
-                                    <Typography
-                                      variant="body1"
-                                      fontWeight={700}
-                                    >
-                                      {h.harvestedKgs.toLocaleString("es-ES")}
-                                    </Typography>
-                                  </TableCell>
-                                  <TableCell align="right">
-                                    <Typography
-                                      variant="body1"
-                                      fontWeight={600}
-                                    >
-                                      {h.directTruckKgs.toLocaleString("es-ES")}
-                                    </Typography>
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                    </Box>
-
-                    {/* Mobile cards */}
-                    <Box sx={{ display: { xs: "block", md: "none" } }}>
-                      <Stack spacing={2}>
-                        {harvests.map((h) => {
-                          const lotNames = h.lotsIds
-                            .map((id) => lotsById.get(id))
-                            .filter(Boolean)
-                            .join(", ");
-                          return (
-                            <Card
-                              key={h.id}
-                              sx={(theme) => ({
-                                borderRadius: 2.5,
-                                border: `2px solid ${alpha(
-                                  theme.palette.success.main,
-                                  0.7,
-                                )}`,
-                                boxShadow: `0 2px 8px ${alpha(
-                                  theme.palette.success.main,
-                                  0.1,
-                                )}`,
-                                transition: "all 0.3s ease",
-                                "&:hover": {
-                                  transform: "translateY(-2px)",
-                                  boxShadow: `0 4px 16px ${alpha(
-                                    theme.palette.success.main,
-                                    0.2,
-                                  )}`,
-                                  borderColor: theme.palette.success.main,
-                                },
-                              })}
-                            >
-                              <CardContent sx={{ p: 2.5 }}>
-                                <Stack spacing={1.5}>
-                                  <Typography
-                                    variant="subtitle1"
-                                    fontWeight={700}
-                                    color="success.dark"
-                                  >
-                                    {formatDate(h.date)}
-                                  </Typography>
-                                  <Divider />
-                                  <Box>
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                      fontWeight={700}
-                                    >
-                                      Lotes
-                                    </Typography>
-                                    <Typography variant="body2" mt={0.5}>
-                                      {lotNames || "—"}
-                                    </Typography>
-                                  </Box>
-                                  <Box>
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                      fontWeight={700}
-                                    >
-                                      Kgs cosechados
-                                    </Typography>
-                                    <Typography
-                                      variant="h6"
-                                      mt={0.5}
-                                      fontWeight={800}
-                                      color="success.dark"
-                                    >
-                                      {h.harvestedKgs.toLocaleString("es-ES")}{" "}
-                                      kg
-                                    </Typography>
-                                  </Box>
-                                  <Box>
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                      fontWeight={700}
-                                    >
-                                      Camión directo
-                                    </Typography>
-                                    <Typography
-                                      variant="body2"
-                                      mt={0.5}
-                                      fontWeight={600}
-                                    >
-                                      {h.directTruckKgs.toLocaleString("es-ES")}{" "}
-                                      kg
-                                    </Typography>
-                                  </Box>
-                                  {h.notes && (
-                                    <Box>
-                                      <Typography
-                                        variant="caption"
-                                        color="text.secondary"
-                                        fontWeight={700}
-                                      >
-                                        Notas
-                                      </Typography>
-                                      <Typography variant="body2" mt={0.5}>
-                                        {h.notes}
-                                      </Typography>
-                                    </Box>
-                                  )}
-                                </Stack>
-                              </CardContent>
-                            </Card>
-                          );
-                        })}
-                      </Stack>
-                    </Box>
-                  </>
-                )}
-              </DashboardCard>
-            </Stack>
-          </Stack>
-
-          <Typography
-            variant="h4"
-            fontWeight={800}
-            color="primary.main"
-            sx={{ mt: 2 }}
-          >
-            Distribución
-          </Typography>
-          <Stack
-            direction={{ xs: "column", md: "row" }}
-            spacing={5}
-            alignItems="stretch"
-          >
-            <Box
-              sx={(theme) => ({
-                borderRadius: 2,
-                height: "100%",
-                flex: { xs: "1 1 auto", md: "0 0 25%" },
-                width: "100%",
-              })}
-            >
-              <Stack spacing={2} alignItems="center" marginTop={"10px"}>
-                <Paper
-                  elevation={0}
-                  sx={(theme) => ({
-                    width: "70%",
-                    p: 2.5,
-                    borderRadius: 2,
-                    border: `1px solid ${theme.palette.divider}`,
-                    transition: "all 0.2s ease",
-                    "&:hover": {
-                      borderColor: theme.palette.warning.main,
-                      boxShadow: `0 4px 12px ${alpha(
-                        theme.palette.warning.main,
-                        0.1,
-                      )}`,
-                    },
-                  })}
-                >
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    fontWeight={600}
-                    textTransform="uppercase"
-                    letterSpacing="0.5px"
-                  >
-                    En stock
-                  </Typography>
-                  <Typography
-                    variant="h4"
-                    mt={1}
-                    fontWeight={800}
-                    color="warning.main"
-                  >
-                    {cycle.stockKgs.toLocaleString("es-ES")}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    kilogramos
-                  </Typography>
-                </Paper>
-
-                <Paper
-                  elevation={0}
-                  sx={(theme) => ({
-                    width: "70%",
-                    p: 2.5,
-                    borderRadius: 2,
-                    border: `1px solid ${theme.palette.divider}`,
-                    transition: "all 0.2s ease",
-                    "&:hover": {
-                      borderColor: theme.palette.secondary.main,
-                      boxShadow: `0 4px 12px ${alpha(
-                        theme.palette.secondary.main,
-                        0.1,
-                      )}`,
-                    },
-                  })}
-                >
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    fontWeight={600}
-                    textTransform="uppercase"
-                    letterSpacing="0.5px"
-                  >
-                    En camión
-                  </Typography>
-                  <Typography
-                    variant="h4"
-                    mt={1}
-                    fontWeight={800}
-                    color="secondary.main"
-                  >
-                    {cycle.truckKgs.toLocaleString("es-ES")}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {truckTrips.length} viajes
-                  </Typography>
-                </Paper>
               </Stack>
-            </Box>
-            <Stack spacing={3} sx={{ flex: 1 }}>
-              <DashboardCard>
-                <Typography
-                  variant="body1"
-                  fontWeight={700}
-                  mb={2}
-                  color="text.body"
-                >
-                  Stock ({stockUnits.length})
-                </Typography>
-                {stockUnits.length === 0 ? (
-                  <Box
-                    sx={(theme) => ({
-                      py: 4,
-                      textAlign: "center",
-                      borderRadius: 2,
-                      bgcolor: alpha(theme.palette.grey[500], 0.04),
-                    })}
-                  >
-                    <Typography variant="body1" color="text.secondary">
-                      No hay unidades de stock asociadas a este ciclo.
-                    </Typography>
-                  </Box>
-                ) : (
-                  <>
-                    {/* Desktop table */}
-                    <Box sx={{ display: { xs: "none", md: "block" } }}>
-                      <TableContainer
-                        component={Paper}
-                        variant="outlined"
-                        sx={{
-                          borderRadius: 2.5,
-                          overflow: "hidden",
-                        }}
-                      >
-                        <Table size="small">
-                          <TableHead
-                            sx={(theme) => ({
-                              background: `${alpha(
-                                theme.palette.warning.main,
-                                0.1,
-                              )}`,
-                              "& .MuiTableCell-root": {
-                                fontWeight: 700,
-                                color: theme.palette.warning.dark,
-                                borderBottom: `2px solid ${theme.palette.warning.main}`,
-                                py: 1.5,
-                                fontSize: "0.8rem",
-                                textTransform: "uppercase",
-                                letterSpacing: "0.5px",
-                              },
-                            })}
+              <Paper
+                elevation={0}
+                sx={{
+                  borderRadius: 3,
+                  overflow: "hidden",
+                  border: (theme) =>
+                    `1px solid ${alpha(theme.palette.success.main, 0.3)}`,
+                }}
+              >
+                {/* Desktop Table */}
+                <Box sx={{ display: { xs: "none", md: "block" } }}>
+                  <Table>
+                    <TableHead
+                      sx={(theme) => ({
+                        bgcolor: alpha(theme.palette.success.main, 0.08),
+                      })}
+                    >
+                      <TableRow>
+                        {[
+                          "Fecha",
+                          "Lotes",
+                          "Kgs cosechados",
+                          "Kgs camión directo",
+                        ].map((header) => (
+                          <TableCell
+                            key={header}
+                            align={header.includes("Kgs") ? "right" : "left"}
+                            sx={{
+                              fontWeight: 700,
+                              color: "success.dark",
+                              borderBottom: "2px solid",
+                              borderColor: "success.main",
+                            }}
                           >
-                            <TableRow>
-                              <TableCell>Bolsón / Unidad</TableCell>
-                              <TableCell>Estado</TableCell>
-                              <TableCell align="right">
-                                Kgs ingresados
-                              </TableCell>
-                              <TableCell align="right">Kgs egresados</TableCell>
-                              <TableCell align="right">Saldo actual</TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {stockUnits.map((s, index) => (
-                              <TableRow
-                                key={s.id}
-                                sx={(theme) => ({
-                                  bgcolor:
-                                    index % 2 === 0
-                                      ? "transparent"
-                                      : alpha(theme.palette.grey[100], 0.4),
-                                  "&:hover": {
-                                    bgcolor: alpha(
-                                      theme.palette.warning.main,
-                                      0.04,
-                                    ),
-                                  },
-                                })}
-                              >
-                                <TableCell>
-                                  <Typography variant="body1" fontWeight={700}>
-                                    {s.name}
-                                  </Typography>
-                                </TableCell>
-                                <TableCell>
-                                  {/*TODO: usar la funcion del backend */}
-                                  <StatusChip
-                                    status={getStockStatusLabel(s.status)}
-                                    options={STOCK_STATUS_OPTIONS}
-                                  />
-                                </TableCell>
-                                <TableCell align="right">
-                                  <Typography variant="body1" fontWeight={600}>
-                                    {s.totalInKgs.toLocaleString("es-ES")}
-                                  </Typography>
-                                </TableCell>
-                                <TableCell align="right">
-                                  <Typography variant="body1" fontWeight={600}>
-                                    {s.totalOutFromHarvestKgs.toLocaleString(
-                                      "es-ES",
-                                    )}
-                                  </Typography>
-                                </TableCell>
-                                <TableCell align="right">
-                                  <Typography
-                                    variant="body1"
-                                    fontWeight={800}
-                                    color="warning.dark"
-                                  >
-                                    {s.currentKgs.toLocaleString("es-ES")}
-                                  </Typography>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                    </Box>
-
-                    {/* Mobile cards */}
-                    <Box sx={{ display: { xs: "block", md: "none" } }}>
-                      <Stack spacing={2}>
-                        {stockUnits.map((s) => (
-                          <Card
-                            key={s.id}
-                            sx={(theme) => ({
-                              borderRadius: 2.5,
-                              border: `2px solid ${alpha(
-                                theme.palette.warning.main,
-                                0.7,
-                              )}`,
-                              boxShadow: `0 2px 8px ${alpha(
-                                theme.palette.warning.main,
-                                0.1,
-                              )}`,
-                              transition: "all 0.3s ease",
+                            {header}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {harvests.map((h) => {
+                        const lotNames = h.lotsIds
+                          .map((id) => lotsById.get(id))
+                          .filter(Boolean)
+                          .join(", ");
+                        return (
+                          <TableRow
+                            key={h.id}
+                            sx={{
                               "&:hover": {
-                                transform: "translateY(-2px)",
-                                boxShadow: `0 4px 16px ${alpha(
-                                  theme.palette.warning.main,
-                                  0.2,
-                                )}`,
-                                borderColor: theme.palette.warning.main,
+                                bgcolor: (theme) =>
+                                  alpha(theme.palette.success.main, 0.02),
                               },
-                            })}
+                            }}
                           >
-                            <CardContent sx={{ p: 2.5 }}>
-                              <Stack spacing={1.5}>
-                                <Stack
-                                  direction="row"
-                                  justifyContent="space-between"
-                                  alignItems="center"
-                                >
-                                  <Typography
-                                    variant="subtitle1"
-                                    fontWeight={700}
-                                    color="warning.dark"
-                                  >
-                                    {s.name}
-                                  </Typography>
-                                  <StatusChip
-                                    status={getStockStatusLabel(s.status)}
-                                    options={STOCK_STATUS_OPTIONS}
-                                  />
-                                </Stack>
+                            <TableCell>
+                              <Typography variant="body1" fontWeight={700}>
+                                {formatDate(h.date)}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body1">
+                                {lotNames || "—"}
+                              </Typography>
+                            </TableCell>
+                            <TableCell align="right">
+                              <Typography variant="body1" fontWeight={700}>
+                                {h.harvestedKgs.toLocaleString("es-ES")}
+                              </Typography>
+                            </TableCell>
+                            <TableCell align="right">
+                              <Typography variant="body1" fontWeight={600}>
+                                {h.directTruckKgs.toLocaleString("es-ES")}
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </Box>
 
-                                <Divider />
+                {/* Mobile Cards */}
+                <Box sx={{ display: { xs: "block", md: "none" }, p: 2 }}>
+                  <Stack spacing={2}>
+                    {harvests.map((h) => {
+                      const lotNames = h.lotsIds
+                        .map((id) => lotsById.get(id))
+                        .filter(Boolean)
+                        .join(", ");
+                      return (
+                        <Card
+                          key={h.id}
+                          sx={{
+                            borderRadius: 2,
+                            border: (theme) =>
+                              `2px solid ${alpha(theme.palette.success.main, 0.3)}`,
+                          }}
+                        >
+                          <CardContent>
+                            <Stack spacing={1.5}>
+                              <Typography
+                                variant="subtitle1"
+                                fontWeight={700}
+                                color="success.dark"
+                              >
+                                {formatDate(h.date)}
+                              </Typography>
+                              <Divider />
+                              <Box>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  fontWeight={700}
+                                >
+                                  Lotes
+                                </Typography>
+                                <Typography variant="body2" mt={0.5}>
+                                  {lotNames || "—"}
+                                </Typography>
+                              </Box>
+                              <Box>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  fontWeight={700}
+                                >
+                                  Kgs cosechados
+                                </Typography>
+                                <Typography
+                                  variant="h6"
+                                  mt={0.5}
+                                  fontWeight={800}
+                                  color="success.dark"
+                                >
+                                  {h.harvestedKgs.toLocaleString("es-ES")} kg
+                                </Typography>
+                              </Box>
+                              <Box>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  fontWeight={700}
+                                >
+                                  Camión directo
+                                </Typography>
+                                <Typography
+                                  variant="body2"
+                                  mt={0.5}
+                                  fontWeight={600}
+                                >
+                                  {h.directTruckKgs.toLocaleString("es-ES")} kg
+                                </Typography>
+                              </Box>
+                              {h.notes && (
                                 <Box
                                   sx={{
-                                    display: "grid",
-                                    gridTemplateColumns:
-                                      "repeat(2, minmax(0, 1fr))",
-                                    gap: 1.5,
-                                  }}
-                                >
-                                  <Box>
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                      fontWeight={700}
-                                    >
-                                      Ingresados
-                                    </Typography>
-                                    <Typography
-                                      variant="body2"
-                                      fontWeight={700}
-                                      mt={0.5}
-                                    >
-                                      {s.totalInKgs.toLocaleString("es-ES")} kg
-                                    </Typography>
-                                  </Box>
-                                  <Box>
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                      fontWeight={700}
-                                    >
-                                      Egresados
-                                    </Typography>
-                                    <Typography
-                                      variant="body2"
-                                      fontWeight={700}
-                                      mt={0.5}
-                                    >
-                                      {s.totalOutFromHarvestKgs.toLocaleString(
-                                        "es-ES",
-                                      )}{" "}
-                                      kg
-                                    </Typography>
-                                  </Box>
-                                </Box>
-                                <Box
-                                  sx={(theme) => ({
                                     p: 1.5,
                                     borderRadius: 1.5,
-                                    bgcolor: alpha(
-                                      theme.palette.warning.main,
-                                      0.15,
-                                    ),
-                                  })}
+                                    bgcolor: (theme) =>
+                                      alpha(theme.palette.info.main, 0.08),
+                                  }}
                                 >
                                   <Typography
                                     variant="caption"
-                                    color="warning.dark"
+                                    color="info.dark"
                                     fontWeight={700}
                                   >
-                                    Saldo actual
+                                    Notas
                                   </Typography>
-                                  <Typography
-                                    variant="h6"
-                                    fontWeight={800}
-                                    color="warning.dark"
-                                    mt={0.5}
-                                  >
-                                    {s.currentKgs.toLocaleString("es-ES")} kg
+                                  <Typography variant="body2" mt={0.5}>
+                                    {h.notes}
                                   </Typography>
                                 </Box>
-                              </Stack>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </Stack>
-                    </Box>
-                  </>
-                )}
-              </DashboardCard>
-
-              <DashboardCard>
-                <Typography
-                  variant="body1"
-                  fontWeight={700}
-                  mb={2}
-                  color="text.body"
-                >
-                  Viajes de camión ({truckTrips.length})
-                </Typography>
-                {truckTrips.length === 0 ? (
-                  <Box
-                    sx={(theme) => ({
-                      py: 4,
-                      textAlign: "center",
-                      borderRadius: 2,
-                      bgcolor: alpha(theme.palette.grey[500], 0.04),
+                              )}
+                            </Stack>
+                          </CardContent>
+                        </Card>
+                      );
                     })}
-                  >
-                    <Typography variant="body1" color="text.secondary">
-                      No hay viajes de camión registrados para este ciclo.
-                    </Typography>
-                  </Box>
-                ) : (
-                  <>
-                    {/* Desktop table */}
-                    <Box sx={{ display: { xs: "none", md: "block" } }}>
-                      <TableContainer
-                        component={Paper}
-                        variant="outlined"
+                  </Stack>
+                </Box>
+              </Paper>
+            </Box>
+
+            {/* Stock Units Section */}
+            <Box>
+              <Stack direction="row" alignItems="center" spacing={2} mb={3}>
+                <IconMoneybag fontSize="40px" color="#F0C05A" />
+                <Typography variant="h5" fontWeight={800} color="text.primary">
+                  Stock ({stockUnits.length})
+                </Typography>
+              </Stack>
+              <Paper
+                elevation={0}
+                sx={{
+                  borderRadius: 3,
+                  overflow: "hidden",
+                  border: (theme) =>
+                    `1px solid ${alpha(theme.palette.warning.main, 0.3)}`,
+                }}
+              >
+                {/* Desktop Table */}
+                <Box sx={{ display: { xs: "none", md: "block" } }}>
+                  <Table>
+                    <TableHead
+                      sx={(theme) => ({
+                        bgcolor: alpha(theme.palette.warning.main, 0.08),
+                      })}
+                    >
+                      <TableRow>
+                        {[
+                          "Bolsón / Unidad",
+                          "Estado",
+                          "Kgs ingresados",
+                          "Kgs egresados",
+                          "Saldo actual",
+                        ].map((header) => (
+                          <TableCell
+                            key={header}
+                            align={
+                              header.includes("Kgs") || header.includes("Saldo")
+                                ? "right"
+                                : "left"
+                            }
+                            sx={{
+                              fontWeight: 700,
+                              color: "warning.dark",
+                              borderBottom: "2px solid",
+                              borderColor: "warning.main",
+                            }}
+                          >
+                            {header}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {stockUnits.map((s) => (
+                        <TableRow
+                          key={s.id}
+                          sx={{
+                            "&:hover": {
+                              bgcolor: (theme) =>
+                                alpha(theme.palette.warning.main, 0.02),
+                            },
+                          }}
+                        >
+                          <TableCell>
+                            <Typography variant="body1" fontWeight={700}>
+                              {s.name}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <StatusChip
+                              status={getStockStatusLabel(s.status)}
+                              options={STOCK_STATUS_OPTIONS}
+                            />
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography variant="body1" fontWeight={600}>
+                              {s.totalInKgs.toLocaleString("es-ES")}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography variant="body1" fontWeight={600}>
+                              {s.totalOutFromHarvestKgs.toLocaleString("es-ES")}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography
+                              variant="body1"
+                              fontWeight={800}
+                              color="warning.dark"
+                            >
+                              {s.currentKgs.toLocaleString("es-ES")}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </Box>
+
+                {/* Mobile Cards */}
+                <Box sx={{ display: { xs: "block", md: "none" }, p: 2 }}>
+                  <Stack spacing={2}>
+                    {stockUnits.map((s) => (
+                      <Card
+                        key={s.id}
                         sx={{
-                          borderRadius: 2.5,
-                          overflow: "hidden",
+                          borderRadius: 2,
+                          border: (theme) =>
+                            `2px solid ${alpha(theme.palette.warning.main, 0.3)}`,
                         }}
                       >
-                        <Table size="small">
-                          <TableHead
-                            sx={(theme) => ({
-                              background: `linear-gradient(135deg, ${alpha(
-                                theme.palette.secondary.main,
-                                0.08,
-                              )} 0%, ${alpha(
-                                theme.palette.secondary.light,
-                                0.08,
-                              )} 100%)`,
-                              "& .MuiTableCell-root": {
-                                fontWeight: 700,
-                                color: theme.palette.secondary.dark,
-                                borderBottom: `2px solid ${theme.palette.secondary.main}`,
-                                py: 1.5,
-                                fontSize: "0.8rem",
-                                textTransform: "uppercase",
-                                letterSpacing: "0.5px",
-                              },
-                            })}
-                          >
-                            <TableRow>
-                              <TableCell>Fecha</TableCell>
-                              <TableCell>Camión</TableCell>
-                              <TableCell>Estado</TableCell>
-                              <TableCell>Origen</TableCell>
-                              <TableCell>Destino</TableCell>
-                              <TableCell align="right">Kgs cargados</TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {truckTrips.map((t, index) => {
-                              const fromStock =
-                                (t.stockOriginIds ?? []).length > 0;
-                              const fromHarvest =
-                                (t.harvestOriginIds ?? []).length > 0;
-                              const originLabel = fromStock
-                                ? "Desde stock"
-                                : fromHarvest
-                                  ? "Desde cosecha"
-                                  : "—";
-
-                              return (
-                                <TableRow
-                                  key={t.id}
-                                  sx={(theme) => ({
-                                    bgcolor:
-                                      index % 2 === 0
-                                        ? "transparent"
-                                        : alpha(theme.palette.grey[100], 0.4),
-                                    "&:hover": {
-                                      bgcolor: alpha(
-                                        theme.palette.secondary.main,
-                                        0.04,
-                                      ),
-                                    },
-                                  })}
-                                >
-                                  <TableCell>
-                                    <Typography
-                                      variant="body1"
-                                      fontWeight={700}
-                                    >
-                                      {formatDate(t.date)}
-                                    </Typography>
-                                  </TableCell>
-                                  <TableCell>
-                                    <StatusChip
-                                      status={t.status}
-                                      options={TRIP_STATUS_OPTIONS}
-                                    />
-                                  </TableCell>
-                                  <TableCell>
-                                    <Typography variant="body1">
-                                      {t.truckPlate || "—"}
-                                    </Typography>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Chip
-                                      size="small"
-                                      label={originLabel}
-                                      variant="outlined"
-                                      sx={{
-                                        fontWeight: 600,
-                                        fontSize: "0.7rem",
-                                      }}
-                                    />
-                                  </TableCell>
-                                  <TableCell>
-                                    <Typography variant="body1">
-                                      {t.destinationDetail ||
-                                        t.destinationType ||
-                                        "—"}
-                                    </Typography>
-                                  </TableCell>
-                                  <TableCell align="right">
-                                    <Typography
-                                      variant="body1"
-                                      fontWeight={800}
-                                      color="secondary.dark"
-                                    >
-                                      {t.totalKgsDestination.toLocaleString(
-                                        "es-ES",
-                                      )}
-                                    </Typography>
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                    </Box>
-
-                    {/* Mobile cards */}
-                    <Box sx={{ display: { xs: "block", md: "none" } }}>
-                      <Stack spacing={2}>
-                        {truckTrips.map((t) => {
-                          const fromStock = (t.stockOriginIds ?? []).length > 0;
-                          const fromHarvest =
-                            (t.harvestOriginIds ?? []).length > 0;
-                          const originLabel = fromStock
-                            ? "Desde stock"
-                            : fromHarvest
-                              ? "Desde cosecha"
-                              : "—";
-
-                          return (
-                            <Card
-                              key={t.id}
-                              sx={(theme) => ({
-                                borderRadius: 2.5,
-                                border: `2px solid ${alpha(
-                                  theme.palette.secondary.main,
-                                  0.2,
-                                )}`,
-                                boxShadow: `0 2px 8px ${alpha(
-                                  theme.palette.secondary.main,
-                                  0.1,
-                                )}`,
-                                transition: "all 0.3s ease",
-                                "&:hover": {
-                                  transform: "translateY(-2px)",
-                                  boxShadow: `0 4px 16px ${alpha(
-                                    theme.palette.secondary.main,
-                                    0.2,
-                                  )}`,
-                                  borderColor: theme.palette.secondary.main,
-                                },
-                              })}
+                        <CardContent>
+                          <Stack spacing={1.5}>
+                            <Stack
+                              direction="row"
+                              justifyContent="space-between"
+                              alignItems="center"
                             >
-                              <CardContent sx={{ p: 2.5 }}>
-                                <Stack spacing={1.5}>
-                                  <Stack
-                                    direction="row"
-                                    justifyContent="space-between"
-                                    alignItems="center"
-                                  >
-                                    <Typography
-                                      variant="subtitle1"
-                                      fontWeight={700}
-                                      color="secondary.dark"
-                                    >
-                                      {formatDate(t.date)}
-                                    </Typography>
-                                    <StatusChip
-                                      status={t.status}
-                                      options={TRIP_STATUS_OPTIONS}
-                                    />
-                                  </Stack>
-                                  <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                    fontWeight={600}
-                                  >
-                                    {t.truckPlate || "Camión sin identificar"}
-                                  </Typography>
-                                  <Divider />
-                                  <Box>
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                      fontWeight={700}
-                                    >
-                                      Origen
-                                    </Typography>
-                                    <Typography variant="body2" mt={0.5}>
-                                      {originLabel}
-                                    </Typography>
-                                  </Box>
-                                  <Box>
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                      fontWeight={700}
-                                    >
-                                      Destino
-                                    </Typography>
-                                    <Typography variant="body2" mt={0.5}>
-                                      {t.destinationType ||
-                                        t.destinationDetail ||
-                                        "—"}
-                                    </Typography>
-                                  </Box>
-                                  <Box
-                                    sx={(theme) => ({
-                                      p: 1.5,
-                                      borderRadius: 1.5,
-                                      bgcolor: alpha(
-                                        theme.palette.secondary.main,
-                                        0.15,
-                                      ),
-                                    })}
-                                  >
-                                    <Typography
-                                      variant="caption"
-                                      color="secondary.dark"
-                                      fontWeight={700}
-                                    >
-                                      Carga
-                                    </Typography>
-                                    <Typography
-                                      variant="h6"
-                                      fontWeight={800}
-                                      color="secondary.dark"
-                                      mt={0.5}
-                                    >
-                                      {t.totalKgsDestination.toLocaleString(
-                                        "es-ES",
-                                      )}{" "}
-                                      kg
-                                    </Typography>
-                                  </Box>
-                                </Stack>
-                              </CardContent>
-                            </Card>
-                          );
-                        })}
-                      </Stack>
-                    </Box>
-                  </>
-                )}
-              </DashboardCard>
-            </Stack>
+                              <Typography
+                                variant="subtitle1"
+                                fontWeight={700}
+                                color="warning.dark"
+                              >
+                                {s.name}
+                              </Typography>
+                              <StatusChip
+                                status={getStockStatusLabel(s.status)}
+                                options={STOCK_STATUS_OPTIONS}
+                              />
+                            </Stack>
+                            <Divider />
+                            <Box
+                              sx={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(2, 1fr)",
+                                gap: 1.5,
+                              }}
+                            >
+                              <Box>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  fontWeight={700}
+                                >
+                                  Ingresados
+                                </Typography>
+                                <Typography
+                                  variant="body2"
+                                  fontWeight={700}
+                                  mt={0.5}
+                                >
+                                  {s.totalInKgs.toLocaleString("es-ES")} kg
+                                </Typography>
+                              </Box>
+                              <Box>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  fontWeight={700}
+                                >
+                                  Egresados
+                                </Typography>
+                                <Typography
+                                  variant="body2"
+                                  fontWeight={700}
+                                  mt={0.5}
+                                >
+                                  {s.totalOutFromHarvestKgs.toLocaleString(
+                                    "es-ES",
+                                  )}{" "}
+                                  kg
+                                </Typography>
+                              </Box>
+                            </Box>
+                            <Box
+                              sx={{
+                                p: 1.5,
+                                borderRadius: 1.5,
+                                bgcolor: (theme) =>
+                                  alpha(theme.palette.warning.main, 0.15),
+                              }}
+                            >
+                              <Typography
+                                variant="caption"
+                                color="warning.dark"
+                                fontWeight={700}
+                              >
+                                Saldo actual
+                              </Typography>
+                              <Typography
+                                variant="h6"
+                                fontWeight={800}
+                                color="warning.dark"
+                                mt={0.5}
+                              >
+                                {s.currentKgs.toLocaleString("es-ES")} kg
+                              </Typography>
+                            </Box>
+                          </Stack>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </Stack>
+                </Box>
+              </Paper>
+            </Box>
+
+            {/* Truck Trips Section */}
+            <Box>
+              <Stack direction="row" alignItems="center" spacing={2} mb={3}>
+                <LocalShippingIcon
+                  sx={{ color: "secondary.main", fontSize: 32 }}
+                />
+                <Typography variant="h5" fontWeight={800} color="text.primary">
+                  Viajes de camión ({truckTrips.length})
+                </Typography>
+              </Stack>
+              <Paper
+                elevation={0}
+                sx={{
+                  borderRadius: 3,
+                  overflow: "hidden",
+                  border: (theme) =>
+                    `1px solid ${alpha(theme.palette.secondary.main, 0.3)}`,
+                }}
+              >
+                {/* Desktop Table */}
+                <Box sx={{ display: { xs: "none", md: "block" } }}>
+                  <Table>
+                    <TableHead
+                      sx={(theme) => ({
+                        bgcolor: alpha(theme.palette.secondary.main, 0.08),
+                      })}
+                    >
+                      <TableRow>
+                        {[
+                          "Fecha",
+                          "Estado",
+                          "Camión",
+                          "Origen",
+                          "Destino",
+                          "Kgs cargados",
+                        ].map((header) => (
+                          <TableCell
+                            key={header}
+                            align={header.includes("Kgs") ? "right" : "left"}
+                            sx={{
+                              fontWeight: 700,
+                              color: "secondary.dark",
+                              borderBottom: "2px solid",
+                              borderColor: "secondary.main",
+                            }}
+                          >
+                            {header}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {truckTrips.map((t) => {
+                        const fromStock = (t.stockOriginIds ?? []).length > 0;
+                        const fromHarvest =
+                          (t.harvestOriginIds ?? []).length > 0;
+                        const originLabel = fromStock
+                          ? "Desde stock"
+                          : fromHarvest
+                            ? "Desde cosecha"
+                            : "—";
+
+                        return (
+                          <TableRow
+                            key={t.id}
+                            sx={{
+                              "&:hover": {
+                                bgcolor: (theme) =>
+                                  alpha(theme.palette.secondary.main, 0.02),
+                              },
+                            }}
+                          >
+                            <TableCell>
+                              <Typography variant="body1" fontWeight={700}>
+                                {formatDate(t.date)}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <StatusChip
+                                status={t.status}
+                                options={TRIP_STATUS_OPTIONS}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body1">
+                                {t.truckPlate || "—"}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                size="small"
+                                label={originLabel}
+                                variant="outlined"
+                                sx={{
+                                  fontWeight: 600,
+                                  fontSize: "0.7rem",
+                                  borderRadius: "8px",
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body1">
+                                {t.destinationDetail ||
+                                  t.destinationType ||
+                                  "—"}
+                              </Typography>
+                            </TableCell>
+                            <TableCell align="right">
+                              <Typography
+                                variant="body1"
+                                fontWeight={800}
+                                color="secondary.dark"
+                              >
+                                {t.totalKgsDestination.toLocaleString("es-ES")}
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </Box>
+
+                {/* Mobile Cards */}
+                <Box sx={{ display: { xs: "block", md: "none" }, p: 2 }}>
+                  <Stack spacing={2}>
+                    {truckTrips.map((t) => {
+                      const fromStock = (t.stockOriginIds ?? []).length > 0;
+                      const fromHarvest = (t.harvestOriginIds ?? []).length > 0;
+                      const originLabel = fromStock
+                        ? "Desde stock"
+                        : fromHarvest
+                          ? "Desde cosecha"
+                          : "—";
+
+                      return (
+                        <Card
+                          key={t.id}
+                          sx={{
+                            borderRadius: 2,
+                            border: (theme) =>
+                              `2px solid ${alpha(theme.palette.secondary.main, 0.3)}`,
+                          }}
+                        >
+                          <CardContent>
+                            <Stack spacing={1.5}>
+                              <Stack
+                                direction="row"
+                                justifyContent="space-between"
+                                alignItems="center"
+                              >
+                                <Typography
+                                  variant="subtitle1"
+                                  fontWeight={700}
+                                  color="secondary.dark"
+                                >
+                                  {formatDate(t.date)}
+                                </Typography>
+                                <StatusChip
+                                  status={t.status}
+                                  options={TRIP_STATUS_OPTIONS}
+                                />
+                              </Stack>
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                fontWeight={600}
+                              >
+                                {t.truckPlate || "Camión sin identificar"}
+                              </Typography>
+                              <Divider />
+                              <Box>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  fontWeight={700}
+                                >
+                                  Origen
+                                </Typography>
+                                <Typography variant="body2" mt={0.5}>
+                                  {originLabel}
+                                </Typography>
+                              </Box>
+                              <Box>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  fontWeight={700}
+                                >
+                                  Destino
+                                </Typography>
+                                <Typography variant="body2" mt={0.5}>
+                                  {t.destinationType ||
+                                    t.destinationDetail ||
+                                    "—"}
+                                </Typography>
+                              </Box>
+                              <Box
+                                sx={{
+                                  p: 1.5,
+                                  borderRadius: 1.5,
+                                  bgcolor: (theme) =>
+                                    alpha(theme.palette.secondary.main, 0.15),
+                                }}
+                              >
+                                <Typography
+                                  variant="caption"
+                                  color="secondary.dark"
+                                  fontWeight={700}
+                                >
+                                  Carga
+                                </Typography>
+                                <Typography
+                                  variant="h6"
+                                  fontWeight={800}
+                                  color="secondary.dark"
+                                  mt={0.5}
+                                >
+                                  {t.totalKgsDestination.toLocaleString(
+                                    "es-ES",
+                                  )}{" "}
+                                  kg
+                                </Typography>
+                              </Box>
+                            </Stack>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </Stack>
+                </Box>
+              </Paper>
+            </Box>
           </Stack>
-        </Stack>
-      </Stack>
+        </Box>
+      </Box>
+
       <Snackbar
         open={statusSnackbarOpen}
         autoHideDuration={4000}
@@ -1888,12 +1522,12 @@ const CycleDetailPageClient = ({
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
         <Alert
-          onClose={handleSnackbarClose}
+          onClose={(event) => handleSnackbarClose(event)}
           severity="success"
           variant="filled"
           sx={{ width: "100%" }}
         >
-          Estado del ciclo actualizado.
+          Estado del ciclo actualizado correctamente
         </Alert>
       </Snackbar>
     </PageContainer>
