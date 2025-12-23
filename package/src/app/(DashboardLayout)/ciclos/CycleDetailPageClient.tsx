@@ -56,7 +56,7 @@ type CycleDetailPageClientProps = {
 };
 
 const updateCycleStatus = async (
-  cycleId: string,
+  cycleId: number,
   status: CycleStatus,
 ): Promise<void> => {
   const response = await fetch(`/api/cycles/${cycleId}/status`, {
@@ -201,7 +201,7 @@ const CycleDetailPageClient = ({
     setStatusSaving(true);
     setStatusError(null);
     try {
-      await updateCycleStatus(cycle.cycleId, statusDraft);
+      await updateCycleStatus(cycle.id, statusDraft);
       setStatus(statusDraft);
       setIsEditingStatus(false);
       setStatusSnackbarOpen(true);
@@ -483,13 +483,22 @@ const CycleDetailPageClient = ({
           </Stack>
 
           <Collapse in={isEditingStatus}>
-            <Box maxWidth="1400px" mx="auto" mt={3}>
+            <Box
+              maxWidth="1400px"
+              mx="auto"
+              mt={3}
+              sx={{
+                display: "flex",
+                justifyContent: { xs: "stretch", md: "flex-end" },
+              }}
+            >
               <Paper
                 elevation={0}
                 sx={{
                   p: 3,
                   borderRadius: 3,
                   border: (theme) => `1px solid ${theme.palette.divider}`,
+                  width: { xs: "100%", md: 420 },
                 }}
               >
                 <Stack spacing={2}>
