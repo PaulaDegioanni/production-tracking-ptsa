@@ -185,6 +185,55 @@ const CycleDetailPageClient = ({
   const [statusError, setStatusError] = React.useState<string | null>(null);
   const [statusSnackbarOpen, setStatusSnackbarOpen] = React.useState(false);
 
+  const harvestTimelineDate = computeHarvestTimeRange.start
+    ? `${formatDate(computeHarvestTimeRange.start)} – ${formatDate(
+        computeHarvestTimeRange.end,
+      )}`
+    : formatDate(cycle.estimatedHarvestDate);
+
+  const harvestDurationLabel =
+    computeHarvestTimeRange.start && computeHarvestTimeRange.days
+      ? `${computeHarvestTimeRange.days} días`
+      : undefined;
+
+  const mobileTimelineItems: Array<{
+    icon: React.ReactNode;
+    label: string;
+    dateLabel: string;
+    color: PaletteKey;
+    durationLabel?: string;
+  }> = [
+    {
+      icon: <GrassIcon />,
+      label: "Barbecho",
+      dateLabel: formatDate(cycle.fallowStartDate),
+      color: "primary",
+    },
+    {
+      icon: <AgricultureIcon />,
+      label: "Siembra",
+      dateLabel: formatDate(cycle.sowingDate),
+      color: "primary",
+    },
+  ];
+
+  mobileTimelineItems.push(
+    computeHarvestTimeRange.start
+      ? {
+          icon: <EventAvailableIcon />,
+          label: "Cosecha",
+          dateLabel: harvestTimelineDate,
+          color: "success",
+          durationLabel: harvestDurationLabel,
+        }
+      : {
+          icon: <DateRangeIcon />,
+          label: "Cosecha Est.",
+          dateLabel: harvestTimelineDate,
+          color: "warning",
+        },
+  );
+
   const handleToggleStatusEdit = () => {
     setStatusError(null);
     setStatusDraft(status);
@@ -239,6 +288,7 @@ const CycleDetailPageClient = ({
     value,
     unit,
     color = "primary",
+    gradient = false,
   }: StatCardProps) => (
     <Paper
       elevation={0}
@@ -247,7 +297,12 @@ const CycleDetailPageClient = ({
         return {
           p: 3,
           borderRadius: 3,
-          background: ` ${alpha(paletteColor.main, 0.08)}`,
+          background: gradient
+            ? `linear-gradient(135deg, ${alpha(
+                paletteColor.main,
+                0.08,
+              )} 0%, ${alpha(paletteColor.light, 0.03)} 100%)`
+            : theme.palette.background.paper,
           border: `1px solid ${alpha(paletteColor.main, 0.12)}`,
           position: "relative",
           overflow: "hidden",
@@ -330,6 +385,7 @@ const CycleDetailPageClient = ({
     date: string;
     color: PaletteKey;
     isLast?: boolean;
+    durationLabel?: string;
   };
 
   const TimelinePhase = ({
@@ -338,6 +394,7 @@ const CycleDetailPageClient = ({
     date,
     color,
     isLast = false,
+    durationLabel,
   }: TimelinePhaseProps) => (
     <Box sx={{ position: "relative", flex: 1 }}>
       <Stack alignItems="center" spacing={1.5}>
@@ -390,6 +447,17 @@ const CycleDetailPageClient = ({
           >
             {date}
           </Typography>
+          {durationLabel && (
+            <Chip
+              label={durationLabel}
+              sx={(theme) => ({
+                mt: "1rem",
+                fontWeight: 600,
+                borderRadius: "8px",
+                paddingX: "80px",
+              })}
+            />
+          )}
         </Box>
       </Stack>
     </Box>
@@ -465,8 +533,10 @@ const CycleDetailPageClient = ({
                 status={status}
                 options={CYCLE_STATUS_OPTIONS}
                 sx={{
-                  height: 40,
+                  height: 35,
+                  borderRadius: "0.8rem",
                   px: 2,
+                  py: 0,
                   fontSize: "0.875rem",
                 }}
               />
@@ -620,16 +690,11 @@ const CycleDetailPageClient = ({
                             ? "Cosecha"
                             : "Cosecha Est."
                         }
-                        date={
-                          computeHarvestTimeRange.start
-                            ? `${formatDate(computeHarvestTimeRange.start)} – ${formatDate(
-                                computeHarvestTimeRange.end,
-                              )}`
-                            : formatDate(cycle.estimatedHarvestDate)
-                        }
+                        date={harvestTimelineDate}
                         color={
                           computeHarvestTimeRange.start ? "success" : "warning"
                         }
+                        durationLabel={harvestDurationLabel}
                         isLast
                       />
                     </Stack>
@@ -639,28 +704,9 @@ const CycleDetailPageClient = ({
                 {/* Mobile Timeline */}
                 <Box sx={{ display: { xs: "block", md: "none" } }}>
                   <Stack spacing={3}>
-                    {[
-                      {
-                        icon: <GrassIcon />,
-                        label: "Barbecho",
-                        date: cycle.fallowStartDate,
-                        color: "primary" as PaletteKey,
-                      },
-                      {
-                        icon: <AgricultureIcon />,
-                        label: "Siembra",
-                        date: cycle.sowingDate,
-                        color: "primary" as PaletteKey,
-                      },
-                      {
-                        icon: <DateRangeIcon />,
-                        label: "Cosecha Est.",
-                        date: cycle.estimatedHarvestDate,
-                        color: "warning" as PaletteKey,
-                      },
-                    ].map((item, idx) => (
+                    {mobileTimelineItems.map((item, idx) => (
                       <Stack
-                        key={idx}
+                        key={`${item.label}-${idx}`}
                         direction="row"
                         spacing={2}
                         alignItems="center"
@@ -699,8 +745,19 @@ const CycleDetailPageClient = ({
                             {item.label}
                           </Typography>
                           <Typography variant="body1" fontWeight={700}>
-                            {formatDate(item.date)}
+                            {item.dateLabel}
                           </Typography>
+                          {item.durationLabel && (
+                            <Chip
+                              size="small"
+                              label={item.durationLabel}
+                              sx={{
+                                mt: 0.5,
+                                fontWeight: 600,
+                                borderRadius: "8px",
+                              }}
+                            />
+                          )}
                         </Box>
                       </Stack>
                     ))}
