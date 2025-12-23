@@ -260,7 +260,11 @@ const CycleDetailPageClient = ({
         };
       }}
     >
-      <Stack spacing={2}>
+      <Stack
+        spacing={2}
+        direction={{ xs: "row", md: "column" }}
+        alignItems={{ xs: "center", md: "self-start" }}
+      >
         <Box
           sx={(theme) => {
             const paletteColor = theme.palette[color] as PaletteColor;
@@ -720,8 +724,8 @@ const CycleDetailPageClient = ({
                   display: "grid",
                   gridTemplateColumns: {
                     xs: "1fr",
-                    sm: "repeat(3, 1fr)",
-                    md: "repeat(5, 1fr)",
+                    md: "repeat(3, 1fr)",
+                    lg: "repeat(5, 1fr)",
                   },
                   gap: 3,
                 }}
@@ -1001,7 +1005,7 @@ const CycleDetailPageClient = ({
                                 fontWeight={700}
                                 color="success.dark"
                               >
-                                {formatDate(h.date)}
+                                {h.harvestId}
                               </Typography>
                               <Divider />
                               <Box>
@@ -1016,60 +1020,47 @@ const CycleDetailPageClient = ({
                                   {lotNames || "—"}
                                 </Typography>
                               </Box>
-                              <Box>
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                  fontWeight={700}
-                                >
-                                  Kgs cosechados
-                                </Typography>
-                                <Typography
-                                  variant="h6"
-                                  mt={0.5}
-                                  fontWeight={800}
-                                  color="success.dark"
-                                >
-                                  {h.harvestedKgs.toLocaleString("es-ES")} kg
-                                </Typography>
-                              </Box>
-                              <Box>
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                  fontWeight={700}
-                                >
-                                  Camión directo
-                                </Typography>
-                                <Typography
-                                  variant="body2"
-                                  mt={0.5}
-                                  fontWeight={600}
-                                >
-                                  {h.directTruckKgs.toLocaleString("es-ES")} kg
-                                </Typography>
-                              </Box>
-                              {h.notes && (
-                                <Box
-                                  sx={{
-                                    p: 1.5,
-                                    borderRadius: 1.5,
-                                    bgcolor: (theme) =>
-                                      alpha(theme.palette.info.main, 0.08),
-                                  }}
-                                >
+                              <Stack
+                                direction="row"
+                                justifyContent="space-between"
+                                alignItems="center"
+                                paddingRight="20px"
+                              >
+                                <Box>
                                   <Typography
                                     variant="caption"
-                                    color="info.dark"
+                                    color="text.secondary"
                                     fontWeight={700}
                                   >
-                                    Notas
+                                    Kgs cosechados
                                   </Typography>
-                                  <Typography variant="body2" mt={0.5}>
-                                    {h.notes}
+                                  <Typography
+                                    variant="h6"
+                                    mt={0.5}
+                                    fontWeight={800}
+                                    color="success.dark"
+                                  >
+                                    {h.harvestedKgs.toLocaleString("es-ES")} kg
                                   </Typography>
                                 </Box>
-                              )}
+                                <Box>
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    fontWeight={700}
+                                  >
+                                    Camión directo
+                                  </Typography>
+                                  <Typography
+                                    variant="h6"
+                                    mt={0.5}
+                                    fontWeight={600}
+                                  >
+                                    {h.directTruckKgs.toLocaleString("es-ES")}{" "}
+                                    kg
+                                  </Typography>
+                                </Box>
+                              </Stack>
                             </Stack>
                           </CardContent>
                         </Card>
@@ -1211,12 +1202,12 @@ const CycleDetailPageClient = ({
                               />
                             </Stack>
                             <Divider />
-                            <Box
-                              sx={{
-                                display: "grid",
-                                gridTemplateColumns: "repeat(2, 1fr)",
-                                gap: 1.5,
-                              }}
+                            <Stack
+                              direction="row"
+                              justifyContent="space-between"
+                              alignItems="center"
+                              paddingRight="50px"
+                              paddingBottom="20px"
                             >
                               <Box>
                                 <Typography
@@ -1253,31 +1244,24 @@ const CycleDetailPageClient = ({
                                   kg
                                 </Typography>
                               </Box>
-                            </Box>
-                            <Box
-                              sx={{
-                                p: 1.5,
-                                borderRadius: 1.5,
-                                bgcolor: (theme) =>
-                                  alpha(theme.palette.warning.main, 0.15),
-                              }}
+                            </Stack>
+
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              fontWeight={700}
                             >
-                              <Typography
-                                variant="caption"
-                                color="warning.dark"
-                                fontWeight={700}
-                              >
-                                Saldo actual
-                              </Typography>
-                              <Typography
-                                variant="h6"
-                                fontWeight={800}
-                                color="warning.dark"
-                                mt={0.5}
-                              >
-                                {s.currentKgs.toLocaleString("es-ES")} kg
-                              </Typography>
-                            </Box>
+                              Saldo actual
+                            </Typography>
+                            <Typography
+                              variant="h6"
+                              marginTop="0px"
+                              lineHeight="0.7rem"
+                              fontWeight={800}
+                              color="warning.dark"
+                            >
+                              {s.currentKgs.toLocaleString("es-ES")} kg
+                            </Typography>
                           </Stack>
                         </CardContent>
                       </Card>
@@ -1443,74 +1427,70 @@ const CycleDetailPageClient = ({
                                   fontWeight={700}
                                   color="secondary.dark"
                                 >
-                                  {formatDate(t.date)}
+                                  {t.tripId}
                                 </Typography>
                                 <StatusChip
                                   status={t.status}
                                   options={TRIP_STATUS_OPTIONS}
                                 />
                               </Stack>
-                              <Typography
-                                variant="body2"
-                                color="text.secondary"
-                                fontWeight={600}
-                              >
-                                {t.truckPlate || "Camión sin identificar"}
-                              </Typography>
+                              <Chip
+                                variant="outlined"
+                                size="small"
+                                label={t.truckPlate || "Camión sin identificar"}
+                                sx={{ alignSelf: "flex-start" }}
+                              ></Chip>
                               <Divider />
-                              <Box>
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                  fontWeight={700}
-                                >
-                                  Origen
-                                </Typography>
-                                <Typography variant="body2" mt={0.5}>
-                                  {originLabel}
-                                </Typography>
-                              </Box>
-                              <Box>
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                  fontWeight={700}
-                                >
-                                  Destino
-                                </Typography>
-                                <Typography variant="body2" mt={0.5}>
-                                  {t.destinationType ||
-                                    t.destinationDetail ||
-                                    "—"}
-                                </Typography>
-                              </Box>
-                              <Box
-                                sx={{
-                                  p: 1.5,
-                                  borderRadius: 1.5,
-                                  bgcolor: (theme) =>
-                                    alpha(theme.palette.secondary.main, 0.15),
-                                }}
+                              <Stack
+                                direction="row"
+                                justifyContent="space-between"
+                                paddingRight="50px"
+                                paddingBottom="20px"
                               >
-                                <Typography
-                                  variant="caption"
-                                  color="secondary.dark"
-                                  fontWeight={700}
-                                >
-                                  Carga
-                                </Typography>
-                                <Typography
-                                  variant="h6"
-                                  fontWeight={800}
-                                  color="secondary.dark"
-                                  mt={0.5}
-                                >
-                                  {t.totalKgsDestination.toLocaleString(
-                                    "es-ES",
-                                  )}{" "}
-                                  kg
-                                </Typography>
-                              </Box>
+                                <Box>
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    fontWeight={700}
+                                  >
+                                    Origen
+                                  </Typography>
+                                  <Typography variant="body2" mt={0.5}>
+                                    {originLabel}
+                                  </Typography>
+                                </Box>
+                                <Box>
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    fontWeight={700}
+                                  >
+                                    Destino
+                                  </Typography>
+                                  <Typography variant="body2" mt={0.5}>
+                                    {t.destinationType ||
+                                      t.destinationDetail ||
+                                      "—"}
+                                  </Typography>
+                                </Box>
+                              </Stack>
+
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                fontWeight={700}
+                              >
+                                Carga
+                              </Typography>
+                              <Typography
+                                variant="h6"
+                                fontWeight={800}
+                                color="secondary.dark"
+                                lineHeight="0.8rem"
+                              >
+                                {t.totalKgsDestination.toLocaleString("es-ES")}{" "}
+                                kg
+                              </Typography>
                             </Stack>
                           </CardContent>
                         </Card>
