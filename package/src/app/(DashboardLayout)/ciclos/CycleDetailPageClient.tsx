@@ -171,6 +171,11 @@ const CycleDetailPageClient = ({
     typeof cycle.field === "string" && cycle.field.trim().length
       ? cycle.field
       : "Campo —";
+  const rowFieldTitle =
+    typeof (cycle as any).fieldName === "string" &&
+    (cycle as any).fieldName.trim().length
+      ? (cycle as any).fieldName
+      : fieldNameDisplay;
 
   React.useEffect(() => {
     setStatus(cycle.status);
@@ -268,9 +273,9 @@ const CycleDetailPageClient = ({
               sx={(theme) => ({
                 p: 3,
                 borderRadius: 2,
-                border: `1px solid ${theme.palette.divider}`,
                 height: "100%",
                 flex: { xs: "1 1 auto", md: "0 0 25%" },
+                width: "100%",
               })}
             >
               <Stack spacing={2}>
@@ -278,92 +283,92 @@ const CycleDetailPageClient = ({
                   direction="row"
                   spacing={1}
                   alignItems="center"
-                    justifyContent="space-between"
-                  >
-                    <StatusChip
-                      status={status}
-                      options={CYCLE_STATUS_OPTIONS}
-                      sx={{
-                        height: 40,
+                  justifyContent="space-between"
+                >
+                  <StatusChip
+                    status={status}
+                    options={CYCLE_STATUS_OPTIONS}
+                    sx={{
+                      height: 40,
+                      fontWeight: 700,
+                      "& .MuiChip-label": {
+                        px: 2,
+                        fontSize: "0.95rem",
                         fontWeight: 700,
-                        "& .MuiChip-label": {
-                          px: 2,
-                          fontSize: "0.95rem",
-                          fontWeight: 700,
-                        },
-                      }}
-                    />
-                    <IconButton
+                      },
+                    }}
+                  />
+                  <IconButton
+                    size="small"
+                    aria-label="Editar estado"
+                    onClick={handleToggleStatusEdit}
+                    disabled={statusSaving}
+                  >
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                </Stack>
+
+                {isEditingStatus && (
+                  <Stack spacing={1.5}>
+                    <TextField
+                      select
+                      label="Estado del ciclo"
                       size="small"
-                      aria-label="Editar estado"
-                      onClick={handleToggleStatusEdit}
+                      fullWidth
+                      value={statusDraft}
+                      onChange={(event) =>
+                        setStatusDraft(event.target.value as CycleStatus)
+                      }
                       disabled={statusSaving}
                     >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                  </Stack>
-
-                  {isEditingStatus && (
-                    <Stack spacing={1.5}>
-                      <TextField
-                        select
-                        label="Estado del ciclo"
+                      {CYCLE_STATUS_OPTIONS.map((option) => (
+                        <MenuItem key={option.value} value={option.value}>
+                          {option.label}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                    <Stack direction="row" spacing={1}>
+                      <Button
                         size="small"
-                        fullWidth
-                        value={statusDraft}
-                        onChange={(event) =>
-                          setStatusDraft(event.target.value as CycleStatus)
-                        }
+                        variant="contained"
+                        onClick={handleSaveStatus}
                         disabled={statusSaving}
                       >
-                        {CYCLE_STATUS_OPTIONS.map((option) => (
-                          <MenuItem key={option.value} value={option.value}>
-                            {option.label}
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                      <Stack direction="row" spacing={1}>
-                        <Button
-                          size="small"
-                          variant="contained"
-                          onClick={handleSaveStatus}
-                          disabled={statusSaving}
-                        >
-                          {statusSaving ? "Guardando..." : "Guardar"}
-                        </Button>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={handleCancelStatusEdit}
-                          disabled={statusSaving}
-                        >
-                          Cancelar
-                        </Button>
-                      </Stack>
-                      {statusError && (
-                        <Alert
-                          severity="error"
-                          variant="outlined"
-                          onClose={() => setStatusError(null)}
-                        >
-                          {statusError}
-                        </Alert>
-                      )}
+                        {statusSaving ? "Guardando..." : "Guardar"}
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={handleCancelStatusEdit}
+                        disabled={statusSaving}
+                      >
+                        Cancelar
+                      </Button>
                     </Stack>
-                  )}
-                </Stack>
-                <Chip
-                  label={`Periodo ${cyclePeriodValue}`}
-                  variant="outlined"
-                  sx={(theme) => ({
-                    alignSelf: "flex-start",
-                    mt: 1,
-                    borderRadius: 1.5,
-                    fontWeight: 600,
-                    bgcolor: theme.palette.background.paper,
-                  })}
-                />
-              </Box>
+                    {statusError && (
+                      <Alert
+                        severity="error"
+                        variant="outlined"
+                        onClose={() => setStatusError(null)}
+                      >
+                        {statusError}
+                      </Alert>
+                    )}
+                  </Stack>
+                )}
+              </Stack>
+              <Chip
+                label={`Periodo ${cyclePeriodValue}`}
+                variant="outlined"
+                sx={(theme) => ({
+                  alignSelf: "flex-start",
+                  mt: 1,
+                  borderRadius: 1.5,
+                  fontWeight: 600,
+                  bgcolor: theme.palette.background.paper,
+                })}
+              />
+            </Box>
             {/* Timeline - Visual horizontal timeline */}
             <Paper
               elevation={0}
@@ -375,376 +380,378 @@ const CycleDetailPageClient = ({
                 flex: 1,
               })}
             >
-                {/* Desktop Timeline */}
-                <Box sx={{ display: { xs: "none", md: "block" } }}>
-                  <Box sx={{ position: "relative", px: 2 }}>
-                    {/* Timeline line */}
-                    <Box
-                      sx={(theme) => ({
-                        position: "absolute",
-                        top: "32px",
-                        left: "5%",
-                        right: "5%",
-                        height: "2px",
-                        background: `linear-gradient(
+              {/* Desktop Timeline */}
+              <Box sx={{ display: { xs: "none", md: "block" } }}>
+                <Box sx={{ position: "relative", px: 2 }}>
+                  {/* Timeline line */}
+                  <Box
+                    sx={(theme) => ({
+                      position: "absolute",
+                      top: "32px",
+                      left: "5%",
+                      right: "5%",
+                      height: "2px",
+                      background: `linear-gradient(
   to right,
   ${alpha(theme.palette.grey[400], 0.1)},
   ${alpha(theme.palette.grey[400], 0.95)},
   ${alpha(theme.palette.grey[400], 1)},
   ${alpha(theme.palette.grey[400], 0.2)}
 )`,
-                        borderRadius: "8px",
-                        zIndex: 0,
-                      })}
-                    />
+                      borderRadius: "8px",
+                      zIndex: 0,
+                    })}
+                  />
 
-                    {(() => {
-                      const hasHarvestRange =
-                        Boolean(computeHarvestTimeRange?.start) &&
-                        Boolean(computeHarvestTimeRange?.end);
+                  {(() => {
+                    const hasHarvestRange =
+                      Boolean(computeHarvestTimeRange?.start) &&
+                      Boolean(computeHarvestTimeRange?.end);
 
-                      const harvestDateLabel = hasHarvestRange
-                        ? `${formatDate(
-                            computeHarvestTimeRange.start,
-                          )} – ${formatDate(computeHarvestTimeRange.end)}`
-                        : cycle.estimatedHarvestDate
-                          ? formatDate(cycle.estimatedHarvestDate)
-                          : "—";
+                    const harvestDateLabel = hasHarvestRange
+                      ? `${formatDate(
+                          computeHarvestTimeRange.start,
+                        )} – ${formatDate(computeHarvestTimeRange.end)}`
+                      : cycle.estimatedHarvestDate
+                        ? formatDate(cycle.estimatedHarvestDate)
+                        : "—";
 
-                      const harvestTitle = hasHarvestRange
-                        ? "Cosecha"
-                        : "Cosecha (Est.)";
+                    const harvestTitle = hasHarvestRange
+                      ? "Cosecha"
+                      : "Cosecha (Est.)";
 
-                      const phases = [
-                        {
-                          key: "fallow",
-                          title: "Barbecho",
-                          date: cycle.fallowStartDate
-                            ? formatDate(cycle.fallowStartDate)
-                            : "—",
-                          color: "primary.main",
-                          labelColor: "primary",
-                          icon: <GrassIcon />,
-                        },
-                        {
-                          key: "sowing",
-                          title: "Siembra",
-                          date: cycle.sowingDate
-                            ? formatDate(cycle.sowingDate)
-                            : "—",
-                          color: "primary.main",
-                          labelColor: "primary",
-                          icon: <AgricultureIcon />,
-                        },
-                        {
-                          key: "harvest",
-                          title: harvestTitle,
-                          date: harvestDateLabel,
-                          color: hasHarvestRange
-                            ? "success.main"
-                            : "warning.main",
-                          labelColor: hasHarvestRange
-                            ? "success.dark"
-                            : "warning.dark",
-                          icon: hasHarvestRange ? (
-                            <EventAvailableIcon />
-                          ) : (
-                            <DateRangeIcon />
-                          ),
-                        },
-                      ];
-
-                      return (
-                        <Stack
-                          direction="row"
-                          justifyContent="space-between"
-                          alignItems="flex-start"
-                          sx={{ position: "relative", zIndex: 1 }}
-                        >
-                          {phases.map((p) => (
-                            <Stack
-                              key={p.key}
-                              alignItems="center"
-                              spacing={1}
-                              sx={{ width: "33.333%" }}
-                            >
-                              <Box
-                                sx={(theme) => ({
-                                  width: 64,
-                                  height: 64,
-                                  borderRadius: "50%",
-                                  bgcolor: p.color,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  color: "white",
-                                  position: "relative",
-                                  zIndex: 1,
-                                  boxShadow: `0 4px 12px ${alpha(
-                                    theme.palette[
-                                      typeof p.color === "string" &&
-                                      p.color.includes("warning")
-                                        ? "warning"
-                                        : typeof p.color === "string" &&
-                                            p.color.includes("success")
-                                          ? "success"
-                                          : "primary"
-                                    ].main,
-                                    0.3,
-                                  )}`,
-                                })}
-                              >
-                                {/* icono */}
-                                <Box
-                                  sx={{
-                                    display: "flex",
-                                    "& svg": { fontSize: 30 },
-                                  }}
-                                >
-                                  {p.icon}
-                                </Box>
-                              </Box>
-
-                              <Typography
-                                variant="caption"
-                                color={p.labelColor}
-                                fontWeight={700}
-                                textAlign="center"
-                                textTransform="uppercase"
-                              >
-                                {p.title}
-                              </Typography>
-
-                              <Typography
-                                variant="body2"
-                                fontWeight={600}
-                                textAlign="center"
-                              >
-                                {p.date}
-                              </Typography>
-                            </Stack>
-                          ))}
-                        </Stack>
-                      );
-                    })()}
-                  </Box>
-                </Box>
-
-                {/* Mobile Timeline */}
-                <Box sx={{ display: { xs: "block", md: "none" } }}>
-                  <Stack spacing={3}>
-                    {[
+                    const phases = [
                       {
-                        num: 1,
-                        label: "Barbecho",
-                        date: cycle.fallowStartDate,
-                        color: "primary",
+                        key: "fallow",
+                        title: "Barbecho",
+                        date: cycle.fallowStartDate
+                          ? formatDate(cycle.fallowStartDate)
+                          : "—",
+                        color: "primary.main",
+                        labelColor: "primary",
+                        icon: <GrassIcon />,
                       },
                       {
-                        num: 2,
-                        label: "Siembra",
-                        date: cycle.sowingDate,
-                        color: "primary",
+                        key: "sowing",
+                        title: "Siembra",
+                        date: cycle.sowingDate
+                          ? formatDate(cycle.sowingDate)
+                          : "—",
+                        color: "primary.main",
+                        labelColor: "primary",
+                        icon: <AgricultureIcon />,
                       },
                       {
-                        num: 3,
-                        label: "Cosecha Est.",
-                        date: cycle.estimatedHarvestDate,
-                        color: "warning",
+                        key: "harvest",
+                        title: harvestTitle,
+                        date: harvestDateLabel,
+                        color: hasHarvestRange
+                          ? "success.main"
+                          : "warning.main",
+                        labelColor: hasHarvestRange
+                          ? "success.dark"
+                          : "warning.dark",
+                        icon: hasHarvestRange ? (
+                          <EventAvailableIcon />
+                        ) : (
+                          <DateRangeIcon />
+                        ),
                       },
-                      {
-                        num: 4,
-                        label: "Inicio",
-                        date: computeHarvestTimeRange.start,
-                        color: "success",
-                      },
-                      {
-                        num: 5,
-                        label: "Fin",
-                        date: computeHarvestTimeRange.end,
-                        color: "success",
-                      },
-                    ].map((item, idx) => (
+                    ];
+
+                    return (
                       <Stack
-                        key={idx}
                         direction="row"
-                        spacing={2}
-                        alignItems="center"
+                        justifyContent="space-between"
+                        alignItems="flex-start"
+                        sx={{ position: "relative", zIndex: 1 }}
                       >
-                        <Box
-                          sx={(theme) => ({
-                            width: "48px",
-                            height: "48px",
-                            borderRadius: "50%",
-                            bgcolor: theme.palette[item.color].main,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            color: "white",
-                            fontWeight: 700,
-                            fontSize: "1.25rem",
-                            flexShrink: 0,
-                          })}
-                        >
-                          {item.num}
-                        </Box>
-                        <Box sx={{ flex: 1 }}>
-                          <Typography
-                            variant="caption"
-                            color={`${item.color}.dark`}
-                            fontWeight={700}
-                            textTransform="uppercase"
+                        {phases.map((p) => (
+                          <Stack
+                            key={p.key}
+                            alignItems="center"
+                            spacing={1}
+                            sx={{ width: "33.333%" }}
                           >
-                            {item.label}
-                          </Typography>
-                          <Typography variant="body1" fontWeight={600}>
-                            {formatDate(item.date)}
-                          </Typography>
-                        </Box>
-                      </Stack>
-                    ))}
+                            <Box
+                              sx={(theme) => ({
+                                width: 64,
+                                height: 64,
+                                borderRadius: "50%",
+                                bgcolor: p.color,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: "white",
+                                position: "relative",
+                                zIndex: 1,
+                                boxShadow: `0 4px 12px ${alpha(
+                                  theme.palette[
+                                    typeof p.color === "string" &&
+                                    p.color.includes("warning")
+                                      ? "warning"
+                                      : typeof p.color === "string" &&
+                                          p.color.includes("success")
+                                        ? "success"
+                                        : "primary"
+                                  ].main,
+                                  0.3,
+                                )}`,
+                              })}
+                            >
+                              {/* icono */}
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  "& svg": { fontSize: 30 },
+                                }}
+                              >
+                                {p.icon}
+                              </Box>
+                            </Box>
 
-                    {computeHarvestTimeRange.days && (
+                            <Typography
+                              variant="caption"
+                              color={p.labelColor}
+                              fontWeight={700}
+                              textAlign="center"
+                              textTransform="uppercase"
+                            >
+                              {p.title}
+                            </Typography>
+
+                            <Typography
+                              variant="body2"
+                              fontWeight={600}
+                              textAlign="center"
+                            >
+                              {p.date}
+                            </Typography>
+                          </Stack>
+                        ))}
+                      </Stack>
+                    );
+                  })()}
+                </Box>
+              </Box>
+
+              {/* Mobile Timeline */}
+              <Box sx={{ display: { xs: "block", md: "none" } }}>
+                <Stack spacing={3}>
+                  {[
+                    {
+                      num: 1,
+                      label: "Barbecho",
+                      date: cycle.fallowStartDate,
+                      color: "primary",
+                    },
+                    {
+                      num: 2,
+                      label: "Siembra",
+                      date: cycle.sowingDate,
+                      color: "primary",
+                    },
+                    {
+                      num: 3,
+                      label: "Cosecha Est.",
+                      date: cycle.estimatedHarvestDate,
+                      color: "warning",
+                    },
+                    {
+                      num: 4,
+                      label: "Inicio",
+                      date: computeHarvestTimeRange.start,
+                      color: "success",
+                    },
+                    {
+                      num: 5,
+                      label: "Fin",
+                      date: computeHarvestTimeRange.end,
+                      color: "success",
+                    },
+                  ].map((item, idx) => (
+                    <Stack
+                      key={idx}
+                      direction="row"
+                      spacing={2}
+                      alignItems="center"
+                    >
                       <Box
                         sx={(theme) => ({
-                          p: 2,
-                          bgcolor: alpha(theme.palette.success.main, 0.1),
-                          borderRadius: 2,
-                          textAlign: "center",
+                          width: "48px",
+                          height: "48px",
+                          borderRadius: "50%",
+                          bgcolor: theme.palette[item.color].main,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "white",
+                          fontWeight: 700,
+                          fontSize: "1.25rem",
+                          flexShrink: 0,
                         })}
                       >
+                        {item.num}
+                      </Box>
+                      <Box sx={{ flex: 1 }}>
                         <Typography
                           variant="caption"
-                          color="success.dark"
+                          color={`${item.color}.dark`}
                           fontWeight={700}
                           textTransform="uppercase"
                         >
-                          Duración
+                          {item.label}
                         </Typography>
-                        <Typography
-                          variant="h6"
-                          fontWeight={800}
-                          color="success.main"
-                        >
-                          {computeHarvestTimeRange.days} días
+                        <Typography variant="body1" fontWeight={600}>
+                          {formatDate(item.date)}
                         </Typography>
                       </Box>
-                    )}
-                  </Stack>
-                </Box>
-              </Paper>
-          </Stack>
+                    </Stack>
+                  ))}
 
-          {/* Row 2 */}
+                  {computeHarvestTimeRange.days && (
+                    <Box
+                      sx={(theme) => ({
+                        p: 2,
+                        bgcolor: alpha(theme.palette.success.main, 0.1),
+                        borderRadius: 2,
+                        textAlign: "center",
+                      })}
+                    >
+                      <Typography
+                        variant="caption"
+                        color="success.dark"
+                        fontWeight={700}
+                        textTransform="uppercase"
+                      >
+                        Duración
+                      </Typography>
+                      <Typography
+                        variant="h6"
+                        fontWeight={800}
+                        color="success.main"
+                      >
+                        {computeHarvestTimeRange.days} días
+                      </Typography>
+                    </Box>
+                  )}
+                </Stack>
+              </Box>
+            </Paper>
+          </Stack>
+          <Typography
+            variant="h4"
+            fontWeight={800}
+            color="primary.main"
+            sx={{ mt: 2 }}
+          >
+            Campo: {rowFieldTitle}
+          </Typography>
+
           <Stack
             direction={{ xs: "column", md: "row" }}
-            spacing={3}
+            spacing={5}
             alignItems="stretch"
           >
             <Box
               sx={(theme) => ({
-                p: 3,
                 borderRadius: 2,
-                border: `1px solid ${theme.palette.divider}`,
                 height: "100%",
                 flex: { xs: "1 1 auto", md: "0 0 25%" },
+                width: "100%",
               })}
             >
-              <Stack spacing={2}>
+              <Stack spacing={2} alignItems="center" marginTop={"10px"}>
                 <Paper
                   elevation={0}
-                    sx={(theme) => ({
-                      p: 2.5,
-                      borderRadius: 2,
-                      border: `1px solid ${theme.palette.divider}`,
-                      transition: "all 0.2s ease",
-                      "&:hover": {
-                        borderColor: theme.palette.primary.main,
-                        boxShadow: `0 4px 12px ${alpha(
-                          theme.palette.primary.main,
-                          0.1,
-                        )}`,
-                      },
-                    })}
+                  sx={(theme) => ({
+                    width: "70%",
+                    p: 2.5,
+                    borderRadius: 2,
+                    border: `1px solid ${theme.palette.divider}`,
+                    transition: "all 0.2s ease",
+                    "&:hover": {
+                      borderColor: theme.palette.primary.main,
+                      boxShadow: `0 4px 12px ${alpha(
+                        theme.palette.primary.main,
+                        0.1,
+                      )}`,
+                    },
+                  })}
+                >
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    fontWeight={600}
+                    textTransform="uppercase"
+                    letterSpacing="0.5px"
                   >
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      fontWeight={600}
-                      textTransform="uppercase"
-                      letterSpacing="0.5px"
-                    >
-                      Superficie
-                    </Typography>
-                    <Typography
-                      variant="h4"
-                      mt={1}
-                      fontWeight={800}
-                      color="primary"
-                    >
-                      {cycle.areaHa.toLocaleString("es-ES")}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      hectáreas
-                    </Typography>
-                  </Paper>
+                    Superficie
+                  </Typography>
+                  <Typography
+                    variant="h4"
+                    mt={1}
+                    fontWeight={800}
+                    color="primary"
+                  >
+                    {cycle.areaHa.toLocaleString("es-ES")}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    hectáreas
+                  </Typography>
+                </Paper>
 
-                  <Paper
-                    elevation={0}
-                    sx={(theme) => ({
-                      p: 2.5,
-                      borderRadius: 2,
-                      border: `1px solid ${theme.palette.divider}`,
-                      transition: "all 0.2s ease",
-                      "&:hover": {
-                        borderColor: theme.palette.info.main,
-                        boxShadow: `0 4px 12px ${alpha(
-                          theme.palette.info.main,
-                          0.1,
-                        )}`,
-                      },
-                    })}
+                <Paper
+                  elevation={0}
+                  sx={(theme) => ({
+                    width: "70%",
+                    p: 2.5,
+                    borderRadius: 2,
+                    border: `1px solid ${theme.palette.divider}`,
+                    transition: "all 0.2s ease",
+                    "&:hover": {
+                      borderColor: theme.palette.info.main,
+                      boxShadow: `0 4px 12px ${alpha(
+                        theme.palette.info.main,
+                        0.1,
+                      )}`,
+                    },
+                  })}
+                >
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    fontWeight={600}
+                    textTransform="uppercase"
+                    letterSpacing="0.5px"
                   >
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      fontWeight={600}
-                      textTransform="uppercase"
-                      letterSpacing="0.5px"
-                    >
-                      Rendimiento
+                    Rendimiento
+                  </Typography>
+                  <Stack
+                    direction="row"
+                    spacing={0.5}
+                    alignItems="baseline"
+                    mt={1}
+                  >
+                    <Typography variant="h4" fontWeight={800} color="info.main">
+                      {cycle.actualYield.toFixed(1)}
                     </Typography>
-                    <Stack
-                      direction="row"
-                      spacing={0.5}
-                      alignItems="baseline"
-                      mt={1}
-                    >
-                      <Typography variant="h4" fontWeight={800} color="info.main">
-                        {cycle.actualYield.toFixed(1)}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        / {cycle.expectedYield.toFixed(1)}
-                      </Typography>
-                    </Stack>
-                    <Typography variant="caption" color="text.secondary">
-                      quintales/ha
+                    <Typography variant="body2" color="text.secondary">
+                      / {cycle.expectedYield.toFixed(1)}
                     </Typography>
-                  </Paper>
-                </Stack>
-              </Box>
-            <Box sx={{ flex: 1 }}>
+                  </Stack>
+                  <Typography variant="caption" color="text.secondary">
+                    quintales/ha
+                  </Typography>
+                </Paper>
+              </Stack>
+            </Box>
+            <Stack spacing={3} sx={{ flex: 1 }}>
               <DashboardCard>
-                <Typography variant="h4" fontWeight={800} mb={1}>
-                  {fieldNameDisplay}
-                </Typography>
                 <Typography
-                  variant="caption"
-                  color="text.secondary"
+                  variant="body1"
+                  color="text.body"
                   fontWeight={700}
-                  textTransform="uppercase"
-                  letterSpacing={0.5}
-                  display="block"
                   mb={2}
                 >
                   Lotes ({lots.length})
@@ -772,20 +779,15 @@ const CycleDetailPageClient = ({
                         sx={{
                           borderRadius: 2.5,
                           overflow: "hidden",
-                          boxShadow: (theme) =>
-                            `0 2px 12px ${alpha(theme.palette.grey[500], 0.1)}`,
                         }}
                       >
                         <Table size="small">
                           <TableHead
                             sx={(theme) => ({
-                              background: `linear-gradient(135deg, ${alpha(
+                              background: `${alpha(
                                 theme.palette.primary.main,
                                 0.08,
-                              )} 0%, ${alpha(
-                                theme.palette.primary.light,
-                                0.08,
-                              )} 100%)`,
+                              )}`,
                               "& .MuiTableCell-root": {
                                 fontWeight: 700,
                                 color: theme.palette.primary.main,
@@ -892,28 +894,43 @@ const CycleDetailPageClient = ({
                   </>
                 )}
               </DashboardCard>
-            </Box>
+            </Stack>
           </Stack>
 
-          {/* Row 3 */}
+          <Typography
+            variant="h4"
+            fontWeight={800}
+            color="primary.main"
+            sx={{ mt: 2 }}
+          >
+            Eventos
+          </Typography>
           <Stack
             direction={{ xs: "column", md: "row" }}
-            spacing={3}
+            spacing={5}
             alignItems="stretch"
+            mt={"20px"}
           >
-            <Box
-              sx={(theme) => ({
-                p: 3,
-                borderRadius: 2,
-                border: `1px solid ${theme.palette.divider}`,
-                height: "100%",
+            <Stack
+              spacing={3}
+              mt={"20px"}
+              sx={{
                 flex: { xs: "1 1 auto", md: "0 0 25%" },
-              })}
+                width: "100%",
+              }}
             >
-              <Stack spacing={2}>
-                <Paper
-                  elevation={0}
+              <Box
+                sx={(theme) => ({
+                  borderRadius: 2,
+                  height: "100%",
+                  width: "100%",
+                })}
+              >
+                <Stack spacing={2} alignItems="center" marginTop={"10px"}>
+                  <Paper
+                    elevation={0}
                     sx={(theme) => ({
+                      width: "70%",
                       p: 2.5,
                       borderRadius: 2,
                       border: `1px solid ${theme.palette.divider}`,
@@ -953,6 +970,7 @@ const CycleDetailPageClient = ({
                     <Paper
                       elevation={0}
                       sx={(theme) => ({
+                        width: "70%",
                         p: 2.5,
                         borderRadius: 2,
                         border: `1px solid ${theme.palette.divider}`,
@@ -990,13 +1008,14 @@ const CycleDetailPageClient = ({
                   )}
                 </Stack>
               </Box>
-            <Box sx={{ flex: 1 }}>
+            </Stack>
+            <Stack spacing={3} sx={{ flex: 1 }}>
               <DashboardCard>
                 <Typography
-                  variant="h6"
+                  variant="body1"
                   fontWeight={700}
                   mb={2.5}
-                  color="primary"
+                  color="text.body"
                 >
                   Cosechas ({harvests.length})
                 </Typography>
@@ -1023,8 +1042,6 @@ const CycleDetailPageClient = ({
                         sx={{
                           borderRadius: 2.5,
                           overflow: "hidden",
-                          boxShadow: (theme) =>
-                            `0 2px 12px ${alpha(theme.palette.grey[500], 0.1)}`,
                         }}
                       >
                         <Table size="small">
@@ -1231,109 +1248,117 @@ const CycleDetailPageClient = ({
                   </>
                 )}
               </DashboardCard>
-            </Box>
+            </Stack>
           </Stack>
 
-          {/* Row 4 */}
+          <Typography
+            variant="h4"
+            fontWeight={800}
+            color="primary.main"
+            sx={{ mt: 2 }}
+          >
+            Distribución
+          </Typography>
           <Stack
             direction={{ xs: "column", md: "row" }}
-            spacing={3}
+            spacing={5}
             alignItems="stretch"
           >
             <Box
               sx={(theme) => ({
-                p: 3,
                 borderRadius: 2,
-                border: `1px solid ${theme.palette.divider}`,
                 height: "100%",
                 flex: { xs: "1 1 auto", md: "0 0 25%" },
+                width: "100%",
               })}
             >
-              <Stack spacing={2}>
+              <Stack spacing={2} alignItems="center" marginTop={"10px"}>
                 <Paper
                   elevation={0}
-                    sx={(theme) => ({
-                      p: 2.5,
-                      borderRadius: 2,
-                      border: `1px solid ${theme.palette.divider}`,
-                      transition: "all 0.2s ease",
-                      "&:hover": {
-                        borderColor: theme.palette.warning.main,
-                        boxShadow: `0 4px 12px ${alpha(
-                          theme.palette.warning.main,
-                          0.1,
-                        )}`,
-                      },
-                    })}
+                  sx={(theme) => ({
+                    width: "70%",
+                    p: 2.5,
+                    borderRadius: 2,
+                    border: `1px solid ${theme.palette.divider}`,
+                    transition: "all 0.2s ease",
+                    "&:hover": {
+                      borderColor: theme.palette.warning.main,
+                      boxShadow: `0 4px 12px ${alpha(
+                        theme.palette.warning.main,
+                        0.1,
+                      )}`,
+                    },
+                  })}
+                >
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    fontWeight={600}
+                    textTransform="uppercase"
+                    letterSpacing="0.5px"
                   >
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      fontWeight={600}
-                      textTransform="uppercase"
-                      letterSpacing="0.5px"
-                    >
-                      En stock
-                    </Typography>
-                    <Typography
-                      variant="h4"
-                      mt={1}
-                      fontWeight={800}
-                      color="warning.main"
-                    >
-                      {cycle.stockKgs.toLocaleString("es-ES")}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      kilogramos
-                    </Typography>
-                  </Paper>
+                    En stock
+                  </Typography>
+                  <Typography
+                    variant="h4"
+                    mt={1}
+                    fontWeight={800}
+                    color="warning.main"
+                  >
+                    {cycle.stockKgs.toLocaleString("es-ES")}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    kilogramos
+                  </Typography>
+                </Paper>
 
-                  <Paper
-                    elevation={0}
-                    sx={(theme) => ({
-                      p: 2.5,
-                      borderRadius: 2,
-                      border: `1px solid ${theme.palette.divider}`,
-                      transition: "all 0.2s ease",
-                      "&:hover": {
-                        borderColor: theme.palette.secondary.main,
-                        boxShadow: `0 4px 12px ${alpha(
-                          theme.palette.secondary.main,
-                          0.1,
-                        )}`,
-                      },
-                    })}
+                <Paper
+                  elevation={0}
+                  sx={(theme) => ({
+                    width: "70%",
+                    p: 2.5,
+                    borderRadius: 2,
+                    border: `1px solid ${theme.palette.divider}`,
+                    transition: "all 0.2s ease",
+                    "&:hover": {
+                      borderColor: theme.palette.secondary.main,
+                      boxShadow: `0 4px 12px ${alpha(
+                        theme.palette.secondary.main,
+                        0.1,
+                      )}`,
+                    },
+                  })}
+                >
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    fontWeight={600}
+                    textTransform="uppercase"
+                    letterSpacing="0.5px"
                   >
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      fontWeight={600}
-                      textTransform="uppercase"
-                      letterSpacing="0.5px"
-                    >
-                      En camión
-                    </Typography>
-                    <Typography
-                      variant="h4"
-                      mt={1}
-                      fontWeight={800}
-                      color="secondary.main"
-                    >
-                      {cycle.truckKgs.toLocaleString("es-ES")}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {truckTrips.length} viajes
-                    </Typography>
-                  </Paper>
-                </Stack>
-              </Box>
+                    En camión
+                  </Typography>
+                  <Typography
+                    variant="h4"
+                    mt={1}
+                    fontWeight={800}
+                    color="secondary.main"
+                  >
+                    {cycle.truckKgs.toLocaleString("es-ES")}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {truckTrips.length} viajes
+                  </Typography>
+                </Paper>
+              </Stack>
+            </Box>
             <Stack spacing={3} sx={{ flex: 1 }}>
               <DashboardCard>
                 <Typography
-                  variant="h6"
+                  variant="body1"
                   fontWeight={700}
-                  mb={2.5}
-                  color="primary"
+                  mb={2}
+                  color="text.body"
                 >
                   Stock ({stockUnits.length})
                 </Typography>
@@ -1360,23 +1385,15 @@ const CycleDetailPageClient = ({
                         sx={{
                           borderRadius: 2.5,
                           overflow: "hidden",
-                          boxShadow: (theme) =>
-                            `0 2px 12px ${alpha(
-                              theme.palette.grey[500],
-                              0.1,
-                            )}`,
                         }}
                       >
                         <Table size="small">
                           <TableHead
                             sx={(theme) => ({
-                              background: `linear-gradient(135deg, ${alpha(
+                              background: `${alpha(
                                 theme.palette.warning.main,
                                 0.1,
-                              )} 0%, ${alpha(
-                                theme.palette.warning.light,
-                                0.1,
-                              )} 100%)`,
+                              )}`,
                               "& .MuiTableCell-root": {
                                 fontWeight: 700,
                                 color: theme.palette.warning.dark,
@@ -1394,9 +1411,7 @@ const CycleDetailPageClient = ({
                               <TableCell align="right">
                                 Kgs ingresados
                               </TableCell>
-                              <TableCell align="right">
-                                Kgs egresados
-                              </TableCell>
+                              <TableCell align="right">Kgs egresados</TableCell>
                               <TableCell align="right">Saldo actual</TableCell>
                             </TableRow>
                           </TableHead>
@@ -1418,10 +1433,7 @@ const CycleDetailPageClient = ({
                                 })}
                               >
                                 <TableCell>
-                                  <Typography
-                                    variant="body1"
-                                    fontWeight={700}
-                                  >
+                                  <Typography variant="body1" fontWeight={700}>
                                     {s.name}
                                   </Typography>
                                 </TableCell>
@@ -1433,18 +1445,12 @@ const CycleDetailPageClient = ({
                                   />
                                 </TableCell>
                                 <TableCell align="right">
-                                  <Typography
-                                    variant="body1"
-                                    fontWeight={600}
-                                  >
+                                  <Typography variant="body1" fontWeight={600}>
                                     {s.totalInKgs.toLocaleString("es-ES")}
                                   </Typography>
                                 </TableCell>
                                 <TableCell align="right">
-                                  <Typography
-                                    variant="body1"
-                                    fontWeight={600}
-                                  >
+                                  <Typography variant="body1" fontWeight={600}>
                                     {s.totalOutFromHarvestKgs.toLocaleString(
                                       "es-ES",
                                     )}
@@ -1596,10 +1602,10 @@ const CycleDetailPageClient = ({
 
               <DashboardCard>
                 <Typography
-                  variant="h6"
+                  variant="body1"
                   fontWeight={700}
-                  mb={2.5}
-                  color="primary"
+                  mb={2}
+                  color="text.body"
                 >
                   Viajes de camión ({truckTrips.length})
                 </Typography>
@@ -1626,11 +1632,6 @@ const CycleDetailPageClient = ({
                         sx={{
                           borderRadius: 2.5,
                           overflow: "hidden",
-                          boxShadow: (theme) =>
-                            `0 2px 12px ${alpha(
-                              theme.palette.grey[500],
-                              0.1,
-                            )}`,
                         }}
                       >
                         <Table size="small">
@@ -1751,8 +1752,7 @@ const CycleDetailPageClient = ({
                     <Box sx={{ display: { xs: "block", md: "none" } }}>
                       <Stack spacing={2}>
                         {truckTrips.map((t) => {
-                          const fromStock =
-                            (t.stockOriginIds ?? []).length > 0;
+                          const fromStock = (t.stockOriginIds ?? []).length > 0;
                           const fromHarvest =
                             (t.harvestOriginIds ?? []).length > 0;
                           const originLabel = fromStock
