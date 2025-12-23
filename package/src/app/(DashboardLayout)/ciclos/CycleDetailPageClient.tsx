@@ -80,11 +80,6 @@ const CycleDetailPageClient = ({
     { value: "Vacío", color: "default" },
   ];
 
-  const LOTS_STATUS_OPTIONS: StatusChipOption[] = [
-    { value: "Activo", color: "success" },
-    { value: "Inactivo", color: "default" },
-  ];
-
   const getStockStatusLabel = (status: any): string => {
     if (!status) return "—";
     if (typeof status === "string") return status;
@@ -146,85 +141,31 @@ const CycleDetailPageClient = ({
     >
       <Stack spacing={4}>
         {/* A. Hero Header - More compact and integrated */}
-        <Box
-          sx={(theme) => ({
-            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-            borderRadius: 3,
-            p: { xs: 3, md: 4 },
-            color: "white",
-            position: "relative",
-            overflow: "hidden",
-            "&::before": {
-              content: '""',
-              position: "absolute",
-              top: 0,
-              right: 0,
-              width: "300px",
-              height: "300px",
-              background: `radial-gradient(circle, ${alpha(
-                theme.palette.primary.light,
-                0.2,
-              )} 0%, transparent 70%)`,
-              borderRadius: "50%",
-              transform: "translate(30%, -30%)",
-            },
-          })}
-        >
-          <Stack spacing={2} sx={{ position: "relative", zIndex: 1 }}>
-            <Box>
-              <Typography
-                variant="h3"
-                component="h1"
-                sx={{
-                  fontWeight: 800,
-                  mb: 1,
-                  fontSize: { xs: "2rem", md: "2.5rem" },
-                }}
-              >
-                {cycle.cycleId}
-              </Typography>
-              <Stack
-                direction={{ xs: "column", sm: "row" }}
-                spacing={{ xs: 1, sm: 2 }}
-                divider={
-                  <Box
-                    sx={{
-                      display: { xs: "none", sm: "block" },
-                      width: "4px",
-                      height: "4px",
-                      borderRadius: "50%",
-                      bgcolor: "white",
-                      opacity: 0.6,
-                      alignSelf: "center",
-                    }}
-                  />
-                }
-              >
-                <Typography variant="h6" sx={{ opacity: 0.95 }}>
-                  {cycle.crop}
-                </Typography>
-                <Typography variant="h6" sx={{ opacity: 0.95 }}>
-                  {cycle.field}
-                </Typography>
-                <Typography variant="h6" sx={{ opacity: 0.95 }}>
-                  Campaña {cycle.period}
-                </Typography>
-              </Stack>
-            </Box>
-            <StatusChip
-              status={cycle.status}
-              options={CYCLE_STATUS_OPTIONS}
-              sx={{
-                alignSelf: "flex-start",
-                bgcolor: "white",
-                fontWeight: 700,
-              }}
-            />
-          </Stack>
+        <Box>
+          <Typography
+            variant="h3"
+            component="h1"
+            sx={{
+              color: "primary.main",
+              fontWeight: 800,
+              mb: 1,
+              fontSize: { xs: "2rem", md: "2.5rem" },
+            }}
+          >
+            {cycle.cycleId}
+          </Typography>
         </Box>
         {/* B. KPIs Grid - Cleaner cards */}
-        <Grid container spacing={2.5}>
-          <Grid item xs={6} md={4} lg={2.4}>
+        <Stack direction="row" spacing={2.5}>
+          <StatusChip
+            status={cycle.status}
+            options={CYCLE_STATUS_OPTIONS}
+            sx={{
+              alignSelf: "flex-start",
+              fontWeight: 700,
+            }}
+          />
+          <Stack>
             <Paper
               elevation={0}
               sx={(theme) => ({
@@ -258,9 +199,9 @@ const CycleDetailPageClient = ({
                 hectáreas
               </Typography>
             </Paper>
-          </Grid>
+          </Stack>
 
-          <Grid item xs={6} md={4} lg={2.4}>
+          <Stack>
             <Paper
               elevation={0}
               sx={(theme) => ({
@@ -299,9 +240,9 @@ const CycleDetailPageClient = ({
                 quintales/ha
               </Typography>
             </Paper>
-          </Grid>
+          </Stack>
 
-          <Grid item xs={6} md={4} lg={2.4}>
+          <Stack>
             <Paper
               elevation={0}
               sx={(theme) => ({
@@ -340,9 +281,52 @@ const CycleDetailPageClient = ({
                 kilogramos
               </Typography>
             </Paper>
-          </Grid>
+          </Stack>
 
-          <Grid item xs={6} md={4} lg={2.4}>
+          {Boolean(computeHarvestTimeRange?.days) && (
+            <Stack>
+              <Paper
+                elevation={0}
+                sx={(theme) => ({
+                  p: 2.5,
+                  height: "100%",
+                  borderRadius: 2,
+                  border: `1px solid ${theme.palette.divider}`,
+                  transition: "all 0.2s ease",
+                  "&:hover": {
+                    borderColor: theme.palette.success.main,
+                    boxShadow: `0 4px 12px ${alpha(
+                      theme.palette.success.main,
+                      0.1,
+                    )}`,
+                  },
+                })}
+              >
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  fontWeight={600}
+                  textTransform="uppercase"
+                  letterSpacing="0.5px"
+                >
+                  Duración cosecha
+                </Typography>
+                <Typography
+                  variant="h4"
+                  mt={1}
+                  fontWeight={800}
+                  color="success.main"
+                >
+                  {computeHarvestTimeRange.days}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  días
+                </Typography>
+              </Paper>
+            </Stack>
+          )}
+
+          <Stack>
             <Paper
               elevation={0}
               sx={(theme) => ({
@@ -381,9 +365,9 @@ const CycleDetailPageClient = ({
                 kilogramos
               </Typography>
             </Paper>
-          </Grid>
+          </Stack>
 
-          <Grid item xs={6} md={4} lg={2.4}>
+          <Stack>
             <Paper
               elevation={0}
               sx={(theme) => ({
@@ -422,8 +406,8 @@ const CycleDetailPageClient = ({
                 {truckTrips.length} viajes
               </Typography>
             </Paper>
-          </Grid>
-        </Grid>
+          </Stack>
+        </Stack>
         {/* C. Timeline - Visual horizontal timeline */}
         <Paper
           elevation={0}
@@ -535,7 +519,6 @@ const CycleDetailPageClient = ({
                             position: "relative",
                             zIndex: 1,
                             boxShadow: `0 4px 12px ${alpha(
-                              // @ts-expect-error: sx theme access
                               theme.palette[
                                 typeof p.color === "string" &&
                                 p.color.includes("warning")
@@ -579,35 +562,6 @@ const CycleDetailPageClient = ({
                   </Stack>
                 );
               })()}
-
-              {/* Duration badge: solo si hay rango real */}
-              {Boolean(computeHarvestTimeRange?.days) && (
-                <Box
-                  sx={(theme) => ({
-                    mt: 3,
-                    textAlign: "center",
-                    p: 2,
-                    bgcolor: alpha(theme.palette.success.main, 0.1),
-                    borderRadius: 2,
-                  })}
-                >
-                  <Typography
-                    variant="caption"
-                    color="success.dark"
-                    fontWeight={700}
-                    textTransform="uppercase"
-                  >
-                    Duración total de cosecha
-                  </Typography>
-                  <Typography
-                    variant="h5"
-                    fontWeight={800}
-                    color="success.main"
-                  >
-                    {computeHarvestTimeRange.days} días
-                  </Typography>
-                </Box>
-              )}
             </Box>
           </Box>
 
@@ -716,454 +670,6 @@ const CycleDetailPageClient = ({
         </Paper>{" "}
       </Stack>
       <Stack spacing={3}>
-        {/* A. Encabezado mejorado */}
-        <Box>
-          <Typography
-            variant="h2"
-            component="h1"
-            sx={{
-              background: "linear-gradient(135deg, #3A3184 0%, #6962A2 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              fontWeight: 700,
-              mb: 1,
-            }}
-          >
-            {cycle.cycleId}
-          </Typography>
-          <Typography
-            variant="body1"
-            color="text.secondary"
-            sx={{ maxWidth: "900px", mb: 2 }}
-          >
-            {cycle.crop} · {cycle.field} · Campaña {cycle.period}
-          </Typography>
-
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-            <StatusChip status={cycle.status} options={CYCLE_STATUS_OPTIONS} />
-          </Stack>
-        </Box>
-
-        {/* B. Resumen de KPIs */}
-        <DashboardCard>
-          <Typography variant="h6" fontWeight={700} mb={2.5} color="primary">
-            Resumen general
-          </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6} md={4} lg={2.4}>
-              <Paper
-                elevation={0}
-                sx={(theme) => ({
-                  p: 2.5,
-                  borderRadius: 2.5,
-                  border: `2px solid ${alpha(
-                    theme.palette.primary.main,
-                    0.12,
-                  )}`,
-                  background: `linear-gradient(135deg, ${alpha(
-                    theme.palette.primary.main,
-                    0.04,
-                  )} 0%, ${alpha(theme.palette.primary.light, 0.04)} 100%)`,
-                  transition: "all 0.3s ease",
-                  "&:hover": {
-                    transform: "translateY(-4px)",
-                    boxShadow: `0 8px 24px ${alpha(
-                      theme.palette.primary.main,
-                      0.15,
-                    )}`,
-                    borderColor: theme.palette.primary.main,
-                  },
-                })}
-              >
-                <Typography
-                  variant="body2"
-                  color="primary"
-                  fontWeight={700}
-                  textTransform="uppercase"
-                  letterSpacing="0.5px"
-                >
-                  Superficie total
-                </Typography>
-                <Typography
-                  variant="h4"
-                  mt={1}
-                  fontWeight={800}
-                  color="primary"
-                >
-                  {cycle.areaHa.toLocaleString("es-ES")}
-                </Typography>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  fontWeight={600}
-                >
-                  hectáreas
-                </Typography>
-              </Paper>
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={4} lg={2.4}>
-              <Paper
-                elevation={0}
-                sx={(theme) => ({
-                  p: 2.5,
-                  borderRadius: 2.5,
-                  border: `2px solid ${alpha(theme.palette.info.main, 0.75)}`,
-                  background: `linear-gradient(135deg, ${alpha(
-                    theme.palette.info.main,
-                    0.06,
-                  )} 0%, ${alpha(theme.palette.info.light, 0.06)} 100%)`,
-                  transition: "all 0.3s ease",
-                  "&:hover": {
-                    transform: "translateY(-4px)",
-                    boxShadow: `0 8px 24px ${alpha(
-                      theme.palette.info.main,
-                      0.2,
-                    )}`,
-                    borderColor: theme.palette.info.main,
-                  },
-                })}
-              >
-                <Typography
-                  variant="body2"
-                  color="info.dark"
-                  fontWeight={700}
-                  textTransform="uppercase"
-                  letterSpacing="0.5px"
-                >
-                  Rend. Obt / Esp
-                </Typography>
-                <Stack
-                  direction="row"
-                  spacing={0.5}
-                  alignItems="baseline"
-                  mt={1}
-                >
-                  <Typography variant="h4" fontWeight={800} color="info.dark">
-                    {cycle.actualYield.toFixed(1)}
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    fontWeight={600}
-                  >
-                    / {cycle.expectedYield.toFixed(1)}
-                  </Typography>
-                </Stack>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  fontWeight={600}
-                >
-                  quintales/ha
-                </Typography>
-              </Paper>
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={4} lg={2.4}>
-              <Paper
-                elevation={0}
-                sx={(theme) => ({
-                  p: 2.5,
-                  borderRadius: 2.5,
-                  border: `2px solid ${alpha(theme.palette.success.main, 0.7)}`,
-                  background: `linear-gradient(135deg, ${alpha(
-                    theme.palette.success.main,
-                    0.08,
-                  )} 0%, ${alpha(theme.palette.success.light, 0.08)} 100%)`,
-                  transition: "all 0.3s ease",
-                  "&:hover": {
-                    transform: "translateY(-4px)",
-                    boxShadow: `0 8px 24px ${alpha(
-                      theme.palette.success.main,
-                      0.25,
-                    )}`,
-                    borderColor: theme.palette.success.main,
-                  },
-                })}
-              >
-                <Typography
-                  variant="body2"
-                  color="success.dark"
-                  fontWeight={700}
-                  textTransform="uppercase"
-                  letterSpacing="0.5px"
-                >
-                  Total cosechado
-                </Typography>
-                <Typography
-                  variant="h4"
-                  mt={1}
-                  fontWeight={800}
-                  color="success.dark"
-                >
-                  {cycle.totalKgs.toLocaleString("es-ES")}
-                </Typography>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  fontWeight={600}
-                >
-                  kilogramos
-                </Typography>
-              </Paper>
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={4} lg={2.4}>
-              <Paper
-                elevation={0}
-                sx={(theme) => ({
-                  p: 2.5,
-                  borderRadius: 2.5,
-                  border: `2px solid ${alpha(theme.palette.warning.main, 0.7)}`,
-                  background: `linear-gradient(135deg, ${alpha(
-                    theme.palette.warning.main,
-                    0.06,
-                  )} 0%, ${alpha(theme.palette.warning.light, 0.06)} 100%)`,
-                  transition: "all 0.3s ease",
-                  "&:hover": {
-                    transform: "translateY(-4px)",
-                    boxShadow: `0 8px 24px ${alpha(
-                      theme.palette.warning.main,
-                      0.25,
-                    )}`,
-                    borderColor: theme.palette.warning.main,
-                  },
-                })}
-              >
-                <Typography
-                  variant="body2"
-                  color="warning.dark"
-                  fontWeight={700}
-                  textTransform="uppercase"
-                  letterSpacing="0.5px"
-                >
-                  En stock
-                </Typography>
-                <Typography
-                  variant="h4"
-                  mt={1}
-                  fontWeight={800}
-                  color="warning.dark"
-                >
-                  {cycle.stockKgs.toLocaleString("es-ES")}
-                </Typography>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  fontWeight={600}
-                >
-                  kilogramos
-                </Typography>
-              </Paper>
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={4} lg={2.4}>
-              <Paper
-                elevation={0}
-                sx={(theme) => ({
-                  p: 2.5,
-                  borderRadius: 2.5,
-                  border: `2px solid ${alpha(
-                    theme.palette.secondary.main,
-                    0.2,
-                  )}`,
-                  background: `linear-gradient(135deg, ${alpha(
-                    theme.palette.secondary.main,
-                    0.06,
-                  )} 0%, ${alpha(theme.palette.secondary.light, 0.06)} 100%)`,
-                  transition: "all 0.3s ease",
-                  "&:hover": {
-                    transform: "translateY(-4px)",
-                    boxShadow: `0 8px 24px ${alpha(
-                      theme.palette.secondary.main,
-                      0.25,
-                    )}`,
-                    borderColor: theme.palette.secondary.main,
-                  },
-                })}
-              >
-                <Typography
-                  variant="body2"
-                  color="secondary.dark"
-                  fontWeight={700}
-                  textTransform="uppercase"
-                  letterSpacing="0.5px"
-                >
-                  En camión
-                </Typography>
-                <Typography
-                  variant="h4"
-                  mt={1}
-                  fontWeight={800}
-                  color="secondary.dark"
-                >
-                  {cycle.truckKgs.toLocaleString("es-ES")}
-                </Typography>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  fontWeight={600}
-                >
-                  {truckTrips.length} viajes
-                </Typography>
-              </Paper>
-            </Grid>
-          </Grid>
-        </DashboardCard>
-
-        {/* C. Línea de tiempo */}
-
-        <DashboardCard>
-          <Typography variant="h5" fontWeight={700} mb={2.5} color="primary">
-            Línea de tiempo
-          </Typography>
-
-          <Stack>
-            {/* Columna 1: Siembra + Cosecha estimada */}
-            <Stack>
-              <Stack spacing={3}>
-                <Box>
-                  <Typography
-                    variant="subtitle"
-                    color="primary"
-                    fontWeight={700}
-                    textTransform="uppercase"
-                    letterSpacing="0.5px"
-                  >
-                    Fecha de barbecho
-                  </Typography>
-                  <Typography variant="h5" mt={0.5} fontWeight={700}>
-                    {formatDate(cycle.fallowStartDate)}
-                  </Typography>
-                </Box>
-                <Box>
-                  <Typography
-                    variant="body2"
-                    color="primary"
-                    fontWeight={700}
-                    textTransform="uppercase"
-                    letterSpacing="0.5px"
-                  >
-                    Fecha de siembra
-                  </Typography>
-                  <Typography variant="h5" mt={0.5} fontWeight={700}>
-                    {formatDate(cycle.sowingDate)}
-                  </Typography>
-                </Box>
-
-                <Box>
-                  <Typography
-                    variant="body2"
-                    color="primary"
-                    fontWeight={700}
-                    textTransform="uppercase"
-                    letterSpacing="0.5px"
-                  >
-                    Cosecha estimada
-                  </Typography>
-                  <Typography variant="h5" mt={0.5} fontWeight={700}>
-                    {formatDate(cycle.estimatedHarvestDate)}
-                  </Typography>
-                </Box>
-              </Stack>
-            </Stack>
-
-            {/* Columna 2: Inicio + Fin cosecha con divisor vertical */}
-            <Stack
-              item
-              xs={12}
-              md={4}
-              sx={(theme) => ({
-                position: "relative",
-                ml: "50px",
-                [theme.breakpoints.up("md")]: {
-                  borderLeft: `1px solid #d9d9d9`,
-                  pl: 3,
-                },
-              })}
-            >
-              <Stack spacing={2}>
-                <Box paddingLeft="50px" paddingRight="50px">
-                  <Typography
-                    variant="body2"
-                    color="secondary"
-                    fontWeight={700}
-                    textTransform="uppercase"
-                    letterSpacing="0.5px"
-                  >
-                    Inicio cosecha
-                  </Typography>
-                  <Typography variant="h5" mt={0.5} fontWeight={700}>
-                    {computeHarvestTimeRange.start
-                      ? formatDate(computeHarvestTimeRange.start)
-                      : "—"}
-                  </Typography>
-                </Box>
-
-                <Box paddingLeft="50px">
-                  <Typography
-                    variant="body2"
-                    color="secondary"
-                    fontWeight={700}
-                    textTransform="uppercase"
-                    letterSpacing="0.5px"
-                  >
-                    Fin cosecha
-                  </Typography>
-                  <Typography variant="h5" mt={0.5} fontWeight={700}>
-                    {computeHarvestTimeRange.end
-                      ? formatDate(computeHarvestTimeRange.end)
-                      : "—"}
-                  </Typography>
-                </Box>
-              </Stack>
-            </Stack>
-
-            {/* Columna 3: Duración, alineada a la derecha */}
-            <Stack item xs={12} md={4}>
-              <Box
-                sx={(theme) => ({
-                  height: "100%",
-                  width: "fit-content",
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  alignItems: "stretch",
-                })}
-              >
-                <Box
-                  sx={(theme) => ({
-                    minWidth: { xs: "100%", md: "100px" },
-                    textAlign: "right",
-                  })}
-                >
-                  <Typography
-                    variant="body2"
-                    color="secondary"
-                    fontWeight={700}
-                    textTransform="uppercase"
-                    letterSpacing="0.5px"
-                  >
-                    Duración cosecha
-                  </Typography>
-                  <Typography variant="h6" mt={0.5} fontWeight={800}>
-                    {computeHarvestTimeRange.days || "—"}
-                  </Typography>
-                  {computeHarvestTimeRange.days && (
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      fontWeight={600}
-                    >
-                      días
-                    </Typography>
-                  )}
-                </Box>
-              </Box>
-            </Stack>
-          </Stack>
-        </DashboardCard>
-
         {/* D. Lotes del ciclo */}
         <DashboardCard>
           <Typography variant="h6" fontWeight={700} mb={2.5} color="primary">
@@ -1219,9 +725,8 @@ const CycleDetailPageClient = ({
                     >
                       <TableRow>
                         <TableCell>Lote</TableCell>
-                        <TableCell>Campo</TableCell>
+
                         <TableCell align="right">Superficie (ha)</TableCell>
-                        <TableCell>Estado</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -1243,21 +748,11 @@ const CycleDetailPageClient = ({
                               {lot.code}
                             </Typography>
                           </TableCell>
-                          <TableCell>
-                            <Typography variant="body1">
-                              {lot.fieldName}
-                            </Typography>
-                          </TableCell>
+
                           <TableCell align="right">
                             <Typography variant="body1" fontWeight={600}>
                               {lot.areaHa.toLocaleString("es-ES")}
                             </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <StatusChip
-                              status={lot.isActive ? "Activo" : "Inactivo"}
-                              options={LOTS_STATUS_OPTIONS}
-                            />
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1304,18 +799,8 @@ const CycleDetailPageClient = ({
                             >
                               {lot.code}
                             </Typography>
-                            <StatusChip
-                              status={lot.isActive ? "Activo" : "Inactivo"}
-                              options={LOTS_STATUS_OPTIONS}
-                            />
                           </Stack>
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            fontWeight={600}
-                          >
-                            {lot.fieldName}
-                          </Typography>
+
                           <Typography variant="h6" fontWeight={700}>
                             {lot.areaHa.toLocaleString("es-ES")} ha
                           </Typography>
@@ -1387,7 +872,6 @@ const CycleDetailPageClient = ({
                         <TableCell>Lotes</TableCell>
                         <TableCell align="right">Kgs cosechados</TableCell>
                         <TableCell align="right">Kgs camión directo</TableCell>
-                        <TableCell>Notas</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -1431,20 +915,6 @@ const CycleDetailPageClient = ({
                               <Typography variant="body1" fontWeight={600}>
                                 {h.directTruckKgs.toLocaleString("es-ES")}
                               </Typography>
-                            </TableCell>
-                            <TableCell>
-                              {h.notes ? (
-                                <Typography variant="body2" mt={0.5}>
-                                  {h.notes}
-                                </Typography>
-                              ) : (
-                                <Typography
-                                  variant="body2"
-                                  color="text.secondary"
-                                >
-                                  —
-                                </Typography>
-                              )}
                             </TableCell>
                           </TableRow>
                         );
@@ -1621,12 +1091,10 @@ const CycleDetailPageClient = ({
                     >
                       <TableRow>
                         <TableCell>Bolsón / Unidad</TableCell>
-                        <TableCell>Campo</TableCell>
-                        <TableCell>Cultivo</TableCell>
+                        <TableCell>Estado</TableCell>
                         <TableCell align="right">Kgs ingresados</TableCell>
                         <TableCell align="right">Kgs egresados</TableCell>
                         <TableCell align="right">Saldo actual</TableCell>
-                        <TableCell>Estado</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -1649,10 +1117,11 @@ const CycleDetailPageClient = ({
                             </Typography>
                           </TableCell>
                           <TableCell>
-                            <Typography variant="body1">{s.field}</Typography>
-                          </TableCell>
-                          <TableCell>
-                            <CropChip crop={s.crop} />
+                            {/*TODO: usar la funcion del backend */}
+                            <StatusChip
+                              status={getStockStatusLabel(s.status)}
+                              options={STOCK_STATUS_OPTIONS}
+                            />
                           </TableCell>
                           <TableCell align="right">
                             <Typography variant="body1" fontWeight={600}>
@@ -1672,13 +1141,6 @@ const CycleDetailPageClient = ({
                             >
                               {s.currentKgs.toLocaleString("es-ES")}
                             </Typography>
-                          </TableCell>
-                          <TableCell>
-                            {/*TODO: usar la funcion del backend */}
-                            <StatusChip
-                              status={getStockStatusLabel(s.status)}
-                              options={STOCK_STATUS_OPTIONS}
-                            />
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1733,19 +1195,7 @@ const CycleDetailPageClient = ({
                               options={STOCK_STATUS_OPTIONS}
                             />
                           </Stack>
-                          <Stack direction="row" spacing={1}>
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              fontWeight={600}
-                            >
-                              {s.field}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              ·
-                            </Typography>
-                            <CropChip crop={s.crop} />
-                          </Stack>
+
                           <Divider />
                           <Grid container spacing={1.5}>
                             <Grid item xs={6}>
@@ -1873,10 +1323,10 @@ const CycleDetailPageClient = ({
                       <TableRow>
                         <TableCell>Fecha</TableCell>
                         <TableCell>Camión</TableCell>
+                        <TableCell>Estado</TableCell>
                         <TableCell>Origen</TableCell>
                         <TableCell>Destino</TableCell>
                         <TableCell align="right">Kgs cargados</TableCell>
-                        <TableCell>Estado</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -1912,6 +1362,12 @@ const CycleDetailPageClient = ({
                               </Typography>
                             </TableCell>
                             <TableCell>
+                              <StatusChip
+                                status={t.status}
+                                options={TRIP_STATUS_OPTIONS}
+                              />
+                            </TableCell>
+                            <TableCell>
                               <Typography variant="body1">
                                 {t.truckPlate || "—"}
                               </Typography>
@@ -1942,12 +1398,6 @@ const CycleDetailPageClient = ({
                               >
                                 {t.totalKgsDestination.toLocaleString("es-ES")}
                               </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <StatusChip
-                                status={t.status}
-                                options={TRIP_STATUS_OPTIONS}
-                              />
                             </TableCell>
                           </TableRow>
                         );
