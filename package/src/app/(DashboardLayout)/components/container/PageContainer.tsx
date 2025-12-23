@@ -1,6 +1,6 @@
 // import { Helmet } from 'react-helmet';
-import react from 'react'
-
+import react from "react";
+import { Container } from "@mui/material";
 
 type Props = {
   description?: string;
@@ -9,15 +9,21 @@ type Props = {
 };
 
 const PageContainer = ({ title, description, children }: Props) => (
-
-  <div>
-
+  <>
     <title>{title}</title>
     <meta name="description" content={description} />
 
-    {children}
-  </div>
-
+    <Container
+      maxWidth={false}
+      disableGutters
+      sx={{
+        px: 3,
+        maxWidth: "100%",
+      }}
+    >
+      {children}
+    </Container>
+  </>
 );
 
 export default PageContainer;
