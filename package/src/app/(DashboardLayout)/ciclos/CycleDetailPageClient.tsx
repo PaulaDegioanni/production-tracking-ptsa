@@ -5,7 +5,6 @@ import {
   Box,
   Stack,
   Typography,
-  Grid,
   Chip,
   Paper,
   Table,
@@ -260,21 +259,25 @@ const CycleDetailPageClient = ({
         {/* Consolidated layout */}
         <Stack spacing={4}>
           {/* Row 1 */}
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={3}>
-              <Box
-                sx={(theme) => ({
-                  p: 3,
-                  borderRadius: 2,
-                  border: `1px solid ${theme.palette.divider}`,
-                  height: "100%",
-                })}
-              >
-                <Stack spacing={2}>
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    alignItems="center"
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={3}
+            alignItems="stretch"
+          >
+            <Box
+              sx={(theme) => ({
+                p: 3,
+                borderRadius: 2,
+                border: `1px solid ${theme.palette.divider}`,
+                height: "100%",
+                flex: { xs: "1 1 auto", md: "0 0 25%" },
+              })}
+            >
+              <Stack spacing={2}>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  alignItems="center"
                     justifyContent="space-between"
                   >
                     <StatusChip
@@ -361,18 +364,17 @@ const CycleDetailPageClient = ({
                   })}
                 />
               </Box>
-            </Grid>
-            <Grid item xs={12} md={9}>
-              {/* Timeline - Visual horizontal timeline */}
-              <Paper
-                elevation={0}
-                sx={(theme) => ({
-                  p: { xs: 3, md: 4 },
-                  borderRadius: 2,
-                  border: `1px solid ${theme.palette.divider}`,
-                  height: "100%",
-                })}
-              >
+            {/* Timeline - Visual horizontal timeline */}
+            <Paper
+              elevation={0}
+              sx={(theme) => ({
+                p: { xs: 3, md: 4 },
+                borderRadius: 2,
+                border: `1px solid ${theme.palette.divider}`,
+                height: "100%",
+                flex: 1,
+              })}
+            >
                 {/* Desktop Timeline */}
                 <Box sx={{ display: { xs: "none", md: "block" } }}>
                   <Box sx={{ position: "relative", px: 2 }}>
@@ -631,23 +633,26 @@ const CycleDetailPageClient = ({
                   </Stack>
                 </Box>
               </Paper>
-            </Grid>
-          </Grid>
+          </Stack>
 
           {/* Row 2 */}
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={3}>
-              <Box
-                sx={(theme) => ({
-                  p: 3,
-                  borderRadius: 2,
-                  border: `1px solid ${theme.palette.divider}`,
-                  height: "100%",
-                })}
-              >
-                <Stack spacing={2}>
-                  <Paper
-                    elevation={0}
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={3}
+            alignItems="stretch"
+          >
+            <Box
+              sx={(theme) => ({
+                p: 3,
+                borderRadius: 2,
+                border: `1px solid ${theme.palette.divider}`,
+                height: "100%",
+                flex: { xs: "1 1 auto", md: "0 0 25%" },
+              })}
+            >
+              <Stack spacing={2}>
+                <Paper
+                  elevation={0}
                     sx={(theme) => ({
                       p: 2.5,
                       borderRadius: 2,
@@ -728,8 +733,7 @@ const CycleDetailPageClient = ({
                   </Paper>
                 </Stack>
               </Box>
-            </Grid>
-            <Grid item xs={12} md={9}>
+            <Box sx={{ flex: 1 }}>
               <DashboardCard>
                 <Typography variant="h4" fontWeight={800} mb={1}>
                   {fieldNameDisplay}
@@ -888,23 +892,27 @@ const CycleDetailPageClient = ({
                   </>
                 )}
               </DashboardCard>
-            </Grid>
-          </Grid>
+            </Box>
+          </Stack>
 
           {/* Row 3 */}
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={3}>
-              <Box
-                sx={(theme) => ({
-                  p: 3,
-                  borderRadius: 2,
-                  border: `1px solid ${theme.palette.divider}`,
-                  height: "100%",
-                })}
-              >
-                <Stack spacing={2}>
-                  <Paper
-                    elevation={0}
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={3}
+            alignItems="stretch"
+          >
+            <Box
+              sx={(theme) => ({
+                p: 3,
+                borderRadius: 2,
+                border: `1px solid ${theme.palette.divider}`,
+                height: "100%",
+                flex: { xs: "1 1 auto", md: "0 0 25%" },
+              })}
+            >
+              <Stack spacing={2}>
+                <Paper
+                  elevation={0}
                     sx={(theme) => ({
                       p: 2.5,
                       borderRadius: 2,
@@ -982,8 +990,7 @@ const CycleDetailPageClient = ({
                   )}
                 </Stack>
               </Box>
-            </Grid>
-            <Grid item xs={12} md={9}>
+            <Box sx={{ flex: 1 }}>
               <DashboardCard>
                 <Typography
                   variant="h6"
@@ -1224,23 +1231,27 @@ const CycleDetailPageClient = ({
                   </>
                 )}
               </DashboardCard>
-            </Grid>
-          </Grid>
+            </Box>
+          </Stack>
 
           {/* Row 4 */}
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={3}>
-              <Box
-                sx={(theme) => ({
-                  p: 3,
-                  borderRadius: 2,
-                  border: `1px solid ${theme.palette.divider}`,
-                  height: "100%",
-                })}
-              >
-                <Stack spacing={2}>
-                  <Paper
-                    elevation={0}
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={3}
+            alignItems="stretch"
+          >
+            <Box
+              sx={(theme) => ({
+                p: 3,
+                borderRadius: 2,
+                border: `1px solid ${theme.palette.divider}`,
+                height: "100%",
+                flex: { xs: "1 1 auto", md: "0 0 25%" },
+              })}
+            >
+              <Stack spacing={2}>
+                <Paper
+                  elevation={0}
                     sx={(theme) => ({
                       p: 2.5,
                       borderRadius: 2,
@@ -1316,87 +1327,357 @@ const CycleDetailPageClient = ({
                   </Paper>
                 </Stack>
               </Box>
-            </Grid>
-            <Grid item xs={12} md={9}>
-              <Stack spacing={3}>
-                <DashboardCard>
-                  <Typography
-                    variant="h6"
-                    fontWeight={700}
-                    mb={2.5}
-                    color="primary"
+            <Stack spacing={3} sx={{ flex: 1 }}>
+              <DashboardCard>
+                <Typography
+                  variant="h6"
+                  fontWeight={700}
+                  mb={2.5}
+                  color="primary"
+                >
+                  Stock ({stockUnits.length})
+                </Typography>
+                {stockUnits.length === 0 ? (
+                  <Box
+                    sx={(theme) => ({
+                      py: 4,
+                      textAlign: "center",
+                      borderRadius: 2,
+                      bgcolor: alpha(theme.palette.grey[500], 0.04),
+                    })}
                   >
-                    Stock ({stockUnits.length})
-                  </Typography>
-                  {stockUnits.length === 0 ? (
-                    <Box
-                      sx={(theme) => ({
-                        py: 4,
-                        textAlign: "center",
-                        borderRadius: 2,
-                        bgcolor: alpha(theme.palette.grey[500], 0.04),
-                      })}
-                    >
-                      <Typography variant="body1" color="text.secondary">
-                        No hay unidades de stock asociadas a este ciclo.
-                      </Typography>
-                    </Box>
-                  ) : (
-                    <>
-                      {/* Desktop table */}
-                      <Box sx={{ display: { xs: "none", md: "block" } }}>
-                        <TableContainer
-                          component={Paper}
-                          variant="outlined"
-                          sx={{
-                            borderRadius: 2.5,
-                            overflow: "hidden",
-                            boxShadow: (theme) =>
-                              `0 2px 12px ${alpha(
-                                theme.palette.grey[500],
+                    <Typography variant="body1" color="text.secondary">
+                      No hay unidades de stock asociadas a este ciclo.
+                    </Typography>
+                  </Box>
+                ) : (
+                  <>
+                    {/* Desktop table */}
+                    <Box sx={{ display: { xs: "none", md: "block" } }}>
+                      <TableContainer
+                        component={Paper}
+                        variant="outlined"
+                        sx={{
+                          borderRadius: 2.5,
+                          overflow: "hidden",
+                          boxShadow: (theme) =>
+                            `0 2px 12px ${alpha(
+                              theme.palette.grey[500],
+                              0.1,
+                            )}`,
+                        }}
+                      >
+                        <Table size="small">
+                          <TableHead
+                            sx={(theme) => ({
+                              background: `linear-gradient(135deg, ${alpha(
+                                theme.palette.warning.main,
                                 0.1,
-                              )}`,
-                          }}
-                        >
-                          <Table size="small">
-                            <TableHead
-                              sx={(theme) => ({
-                                background: `linear-gradient(135deg, ${alpha(
-                                  theme.palette.warning.main,
-                                  0.1,
-                                )} 0%, ${alpha(
-                                  theme.palette.warning.light,
-                                  0.1,
-                                )} 100%)`,
-                                "& .MuiTableCell-root": {
-                                  fontWeight: 700,
-                                  color: theme.palette.warning.dark,
-                                  borderBottom: `2px solid ${theme.palette.warning.main}`,
-                                  py: 1.5,
-                                  fontSize: "0.8rem",
-                                  textTransform: "uppercase",
-                                  letterSpacing: "0.5px",
-                                },
-                              })}
-                            >
-                              <TableRow>
-                                <TableCell>Bolsón / Unidad</TableCell>
-                                <TableCell>Estado</TableCell>
-                                <TableCell align="right">
-                                  Kgs ingresados
+                              )} 0%, ${alpha(
+                                theme.palette.warning.light,
+                                0.1,
+                              )} 100%)`,
+                              "& .MuiTableCell-root": {
+                                fontWeight: 700,
+                                color: theme.palette.warning.dark,
+                                borderBottom: `2px solid ${theme.palette.warning.main}`,
+                                py: 1.5,
+                                fontSize: "0.8rem",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.5px",
+                              },
+                            })}
+                          >
+                            <TableRow>
+                              <TableCell>Bolsón / Unidad</TableCell>
+                              <TableCell>Estado</TableCell>
+                              <TableCell align="right">
+                                Kgs ingresados
+                              </TableCell>
+                              <TableCell align="right">
+                                Kgs egresados
+                              </TableCell>
+                              <TableCell align="right">Saldo actual</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {stockUnits.map((s, index) => (
+                              <TableRow
+                                key={s.id}
+                                sx={(theme) => ({
+                                  bgcolor:
+                                    index % 2 === 0
+                                      ? "transparent"
+                                      : alpha(theme.palette.grey[100], 0.4),
+                                  "&:hover": {
+                                    bgcolor: alpha(
+                                      theme.palette.warning.main,
+                                      0.04,
+                                    ),
+                                  },
+                                })}
+                              >
+                                <TableCell>
+                                  <Typography
+                                    variant="body1"
+                                    fontWeight={700}
+                                  >
+                                    {s.name}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell>
+                                  {/*TODO: usar la funcion del backend */}
+                                  <StatusChip
+                                    status={getStockStatusLabel(s.status)}
+                                    options={STOCK_STATUS_OPTIONS}
+                                  />
                                 </TableCell>
                                 <TableCell align="right">
-                                  Kgs egresados
+                                  <Typography
+                                    variant="body1"
+                                    fontWeight={600}
+                                  >
+                                    {s.totalInKgs.toLocaleString("es-ES")}
+                                  </Typography>
                                 </TableCell>
                                 <TableCell align="right">
-                                  Saldo actual
+                                  <Typography
+                                    variant="body1"
+                                    fontWeight={600}
+                                  >
+                                    {s.totalOutFromHarvestKgs.toLocaleString(
+                                      "es-ES",
+                                    )}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell align="right">
+                                  <Typography
+                                    variant="body1"
+                                    fontWeight={800}
+                                    color="warning.dark"
+                                  >
+                                    {s.currentKgs.toLocaleString("es-ES")}
+                                  </Typography>
                                 </TableCell>
                               </TableRow>
-                            </TableHead>
-                            <TableBody>
-                              {stockUnits.map((s, index) => (
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    </Box>
+
+                    {/* Mobile cards */}
+                    <Box sx={{ display: { xs: "block", md: "none" } }}>
+                      <Stack spacing={2}>
+                        {stockUnits.map((s) => (
+                          <Card
+                            key={s.id}
+                            sx={(theme) => ({
+                              borderRadius: 2.5,
+                              border: `2px solid ${alpha(
+                                theme.palette.warning.main,
+                                0.7,
+                              )}`,
+                              boxShadow: `0 2px 8px ${alpha(
+                                theme.palette.warning.main,
+                                0.1,
+                              )}`,
+                              transition: "all 0.3s ease",
+                              "&:hover": {
+                                transform: "translateY(-2px)",
+                                boxShadow: `0 4px 16px ${alpha(
+                                  theme.palette.warning.main,
+                                  0.2,
+                                )}`,
+                                borderColor: theme.palette.warning.main,
+                              },
+                            })}
+                          >
+                            <CardContent sx={{ p: 2.5 }}>
+                              <Stack spacing={1.5}>
+                                <Stack
+                                  direction="row"
+                                  justifyContent="space-between"
+                                  alignItems="center"
+                                >
+                                  <Typography
+                                    variant="subtitle1"
+                                    fontWeight={700}
+                                    color="warning.dark"
+                                  >
+                                    {s.name}
+                                  </Typography>
+                                  <StatusChip
+                                    status={getStockStatusLabel(s.status)}
+                                    options={STOCK_STATUS_OPTIONS}
+                                  />
+                                </Stack>
+
+                                <Divider />
+                                <Box
+                                  sx={{
+                                    display: "grid",
+                                    gridTemplateColumns:
+                                      "repeat(2, minmax(0, 1fr))",
+                                    gap: 1.5,
+                                  }}
+                                >
+                                  <Box>
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                      fontWeight={700}
+                                    >
+                                      Ingresados
+                                    </Typography>
+                                    <Typography
+                                      variant="body2"
+                                      fontWeight={700}
+                                      mt={0.5}
+                                    >
+                                      {s.totalInKgs.toLocaleString("es-ES")} kg
+                                    </Typography>
+                                  </Box>
+                                  <Box>
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                      fontWeight={700}
+                                    >
+                                      Egresados
+                                    </Typography>
+                                    <Typography
+                                      variant="body2"
+                                      fontWeight={700}
+                                      mt={0.5}
+                                    >
+                                      {s.totalOutFromHarvestKgs.toLocaleString(
+                                        "es-ES",
+                                      )}{" "}
+                                      kg
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                                <Box
+                                  sx={(theme) => ({
+                                    p: 1.5,
+                                    borderRadius: 1.5,
+                                    bgcolor: alpha(
+                                      theme.palette.warning.main,
+                                      0.15,
+                                    ),
+                                  })}
+                                >
+                                  <Typography
+                                    variant="caption"
+                                    color="warning.dark"
+                                    fontWeight={700}
+                                  >
+                                    Saldo actual
+                                  </Typography>
+                                  <Typography
+                                    variant="h6"
+                                    fontWeight={800}
+                                    color="warning.dark"
+                                    mt={0.5}
+                                  >
+                                    {s.currentKgs.toLocaleString("es-ES")} kg
+                                  </Typography>
+                                </Box>
+                              </Stack>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </Stack>
+                    </Box>
+                  </>
+                )}
+              </DashboardCard>
+
+              <DashboardCard>
+                <Typography
+                  variant="h6"
+                  fontWeight={700}
+                  mb={2.5}
+                  color="primary"
+                >
+                  Viajes de camión ({truckTrips.length})
+                </Typography>
+                {truckTrips.length === 0 ? (
+                  <Box
+                    sx={(theme) => ({
+                      py: 4,
+                      textAlign: "center",
+                      borderRadius: 2,
+                      bgcolor: alpha(theme.palette.grey[500], 0.04),
+                    })}
+                  >
+                    <Typography variant="body1" color="text.secondary">
+                      No hay viajes de camión registrados para este ciclo.
+                    </Typography>
+                  </Box>
+                ) : (
+                  <>
+                    {/* Desktop table */}
+                    <Box sx={{ display: { xs: "none", md: "block" } }}>
+                      <TableContainer
+                        component={Paper}
+                        variant="outlined"
+                        sx={{
+                          borderRadius: 2.5,
+                          overflow: "hidden",
+                          boxShadow: (theme) =>
+                            `0 2px 12px ${alpha(
+                              theme.palette.grey[500],
+                              0.1,
+                            )}`,
+                        }}
+                      >
+                        <Table size="small">
+                          <TableHead
+                            sx={(theme) => ({
+                              background: `linear-gradient(135deg, ${alpha(
+                                theme.palette.secondary.main,
+                                0.08,
+                              )} 0%, ${alpha(
+                                theme.palette.secondary.light,
+                                0.08,
+                              )} 100%)`,
+                              "& .MuiTableCell-root": {
+                                fontWeight: 700,
+                                color: theme.palette.secondary.dark,
+                                borderBottom: `2px solid ${theme.palette.secondary.main}`,
+                                py: 1.5,
+                                fontSize: "0.8rem",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.5px",
+                              },
+                            })}
+                          >
+                            <TableRow>
+                              <TableCell>Fecha</TableCell>
+                              <TableCell>Camión</TableCell>
+                              <TableCell>Estado</TableCell>
+                              <TableCell>Origen</TableCell>
+                              <TableCell>Destino</TableCell>
+                              <TableCell align="right">Kgs cargados</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {truckTrips.map((t, index) => {
+                              const fromStock =
+                                (t.stockOriginIds ?? []).length > 0;
+                              const fromHarvest =
+                                (t.harvestOriginIds ?? []).length > 0;
+                              const originLabel = fromStock
+                                ? "Desde stock"
+                                : fromHarvest
+                                  ? "Desde cosecha"
+                                  : "—";
+
+                              return (
                                 <TableRow
-                                  key={s.id}
+                                  key={t.id}
                                   sx={(theme) => ({
                                     bgcolor:
                                       index % 2 === 0
@@ -1404,7 +1685,7 @@ const CycleDetailPageClient = ({
                                         : alpha(theme.palette.grey[100], 0.4),
                                     "&:hover": {
                                       bgcolor: alpha(
-                                        theme.palette.warning.main,
+                                        theme.palette.secondary.main,
                                         0.04,
                                       ),
                                     },
@@ -1415,74 +1696,92 @@ const CycleDetailPageClient = ({
                                       variant="body1"
                                       fontWeight={700}
                                     >
-                                      {s.name}
+                                      {formatDate(t.date)}
                                     </Typography>
                                   </TableCell>
                                   <TableCell>
-                                    {/*TODO: usar la funcion del backend */}
                                     <StatusChip
-                                      status={getStockStatusLabel(s.status)}
-                                      options={STOCK_STATUS_OPTIONS}
+                                      status={t.status}
+                                      options={TRIP_STATUS_OPTIONS}
                                     />
                                   </TableCell>
-                                  <TableCell align="right">
-                                    <Typography
-                                      variant="body1"
-                                      fontWeight={600}
-                                    >
-                                      {s.totalInKgs.toLocaleString("es-ES")}
+                                  <TableCell>
+                                    <Typography variant="body1">
+                                      {t.truckPlate || "—"}
                                     </Typography>
                                   </TableCell>
-                                  <TableCell align="right">
-                                    <Typography
-                                      variant="body1"
-                                      fontWeight={600}
-                                    >
-                                      {s.totalOutFromHarvestKgs.toLocaleString(
-                                        "es-ES",
-                                      )}
+                                  <TableCell>
+                                    <Chip
+                                      size="small"
+                                      label={originLabel}
+                                      variant="outlined"
+                                      sx={{
+                                        fontWeight: 600,
+                                        fontSize: "0.7rem",
+                                      }}
+                                    />
+                                  </TableCell>
+                                  <TableCell>
+                                    <Typography variant="body1">
+                                      {t.destinationDetail ||
+                                        t.destinationType ||
+                                        "—"}
                                     </Typography>
                                   </TableCell>
                                   <TableCell align="right">
                                     <Typography
                                       variant="body1"
                                       fontWeight={800}
-                                      color="warning.dark"
+                                      color="secondary.dark"
                                     >
-                                      {s.currentKgs.toLocaleString("es-ES")}
+                                      {t.totalKgsDestination.toLocaleString(
+                                        "es-ES",
+                                      )}
                                     </Typography>
                                   </TableCell>
                                 </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </TableContainer>
-                      </Box>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    </Box>
 
-                      {/* Mobile cards */}
-                      <Box sx={{ display: { xs: "block", md: "none" } }}>
-                        <Stack spacing={2}>
-                          {stockUnits.map((s) => (
+                    {/* Mobile cards */}
+                    <Box sx={{ display: { xs: "block", md: "none" } }}>
+                      <Stack spacing={2}>
+                        {truckTrips.map((t) => {
+                          const fromStock =
+                            (t.stockOriginIds ?? []).length > 0;
+                          const fromHarvest =
+                            (t.harvestOriginIds ?? []).length > 0;
+                          const originLabel = fromStock
+                            ? "Desde stock"
+                            : fromHarvest
+                              ? "Desde cosecha"
+                              : "—";
+
+                          return (
                             <Card
-                              key={s.id}
+                              key={t.id}
                               sx={(theme) => ({
                                 borderRadius: 2.5,
                                 border: `2px solid ${alpha(
-                                  theme.palette.warning.main,
-                                  0.7,
+                                  theme.palette.secondary.main,
+                                  0.2,
                                 )}`,
                                 boxShadow: `0 2px 8px ${alpha(
-                                  theme.palette.warning.main,
+                                  theme.palette.secondary.main,
                                   0.1,
                                 )}`,
                                 transition: "all 0.3s ease",
                                 "&:hover": {
                                   transform: "translateY(-2px)",
                                   boxShadow: `0 4px 16px ${alpha(
-                                    theme.palette.warning.main,
+                                    theme.palette.secondary.main,
                                     0.2,
                                   )}`,
-                                  borderColor: theme.palette.warning.main,
+                                  borderColor: theme.palette.secondary.main,
                                 },
                               })}
                             >
@@ -1496,379 +1795,90 @@ const CycleDetailPageClient = ({
                                     <Typography
                                       variant="subtitle1"
                                       fontWeight={700}
-                                      color="warning.dark"
+                                      color="secondary.dark"
                                     >
-                                      {s.name}
+                                      {formatDate(t.date)}
                                     </Typography>
                                     <StatusChip
-                                      status={getStockStatusLabel(s.status)}
-                                      options={STOCK_STATUS_OPTIONS}
+                                      status={t.status}
+                                      options={TRIP_STATUS_OPTIONS}
                                     />
                                   </Stack>
-
+                                  <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                    fontWeight={600}
+                                  >
+                                    {t.truckPlate || "Camión sin identificar"}
+                                  </Typography>
                                   <Divider />
-                                  <Grid container spacing={1.5}>
-                                    <Grid item xs={6}>
-                                      <Typography
-                                        variant="caption"
-                                        color="text.secondary"
-                                        fontWeight={700}
-                                      >
-                                        Ingresados
-                                      </Typography>
-                                      <Typography
-                                        variant="body2"
-                                        fontWeight={700}
-                                        mt={0.5}
-                                      >
-                                        {s.totalInKgs.toLocaleString("es-ES")}{" "}
-                                        kg
-                                      </Typography>
-                                    </Grid>
-                                    <Grid item xs={6}>
-                                      <Typography
-                                        variant="caption"
-                                        color="text.secondary"
-                                        fontWeight={700}
-                                      >
-                                        Egresados
-                                      </Typography>
-                                      <Typography
-                                        variant="body2"
-                                        fontWeight={700}
-                                        mt={0.5}
-                                      >
-                                        {s.totalOutFromHarvestKgs.toLocaleString(
-                                          "es-ES",
-                                        )}{" "}
-                                        kg
-                                      </Typography>
-                                    </Grid>
-                                  </Grid>
+                                  <Box>
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                      fontWeight={700}
+                                    >
+                                      Origen
+                                    </Typography>
+                                    <Typography variant="body2" mt={0.5}>
+                                      {originLabel}
+                                    </Typography>
+                                  </Box>
+                                  <Box>
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                      fontWeight={700}
+                                    >
+                                      Destino
+                                    </Typography>
+                                    <Typography variant="body2" mt={0.5}>
+                                      {t.destinationType ||
+                                        t.destinationDetail ||
+                                        "—"}
+                                    </Typography>
+                                  </Box>
                                   <Box
                                     sx={(theme) => ({
                                       p: 1.5,
                                       borderRadius: 1.5,
                                       bgcolor: alpha(
-                                        theme.palette.warning.main,
+                                        theme.palette.secondary.main,
                                         0.15,
                                       ),
                                     })}
                                   >
                                     <Typography
                                       variant="caption"
-                                      color="warning.dark"
+                                      color="secondary.dark"
                                       fontWeight={700}
                                     >
-                                      Saldo actual
+                                      Carga
                                     </Typography>
                                     <Typography
                                       variant="h6"
                                       fontWeight={800}
-                                      color="warning.dark"
+                                      color="secondary.dark"
                                       mt={0.5}
                                     >
-                                      {s.currentKgs.toLocaleString("es-ES")} kg
+                                      {t.totalKgsDestination.toLocaleString(
+                                        "es-ES",
+                                      )}{" "}
+                                      kg
                                     </Typography>
                                   </Box>
                                 </Stack>
                               </CardContent>
                             </Card>
-                          ))}
-                        </Stack>
-                      </Box>
-                    </>
-                  )}
-                </DashboardCard>
-
-                <DashboardCard>
-                  <Typography
-                    variant="h6"
-                    fontWeight={700}
-                    mb={2.5}
-                    color="primary"
-                  >
-                    Viajes de camión ({truckTrips.length})
-                  </Typography>
-                  {truckTrips.length === 0 ? (
-                    <Box
-                      sx={(theme) => ({
-                        py: 4,
-                        textAlign: "center",
-                        borderRadius: 2,
-                        bgcolor: alpha(theme.palette.grey[500], 0.04),
-                      })}
-                    >
-                      <Typography variant="body1" color="text.secondary">
-                        No hay viajes de camión registrados para este ciclo.
-                      </Typography>
+                          );
+                        })}
+                      </Stack>
                     </Box>
-                  ) : (
-                    <>
-                      {/* Desktop table */}
-                      <Box sx={{ display: { xs: "none", md: "block" } }}>
-                        <TableContainer
-                          component={Paper}
-                          variant="outlined"
-                          sx={{
-                            borderRadius: 2.5,
-                            overflow: "hidden",
-                            boxShadow: (theme) =>
-                              `0 2px 12px ${alpha(
-                                theme.palette.grey[500],
-                                0.1,
-                              )}`,
-                          }}
-                        >
-                          <Table size="small">
-                            <TableHead
-                              sx={(theme) => ({
-                                background: `linear-gradient(135deg, ${alpha(
-                                  theme.palette.secondary.main,
-                                  0.08,
-                                )} 0%, ${alpha(
-                                  theme.palette.secondary.light,
-                                  0.08,
-                                )} 100%)`,
-                                "& .MuiTableCell-root": {
-                                  fontWeight: 700,
-                                  color: theme.palette.secondary.dark,
-                                  borderBottom: `2px solid ${theme.palette.secondary.main}`,
-                                  py: 1.5,
-                                  fontSize: "0.8rem",
-                                  textTransform: "uppercase",
-                                  letterSpacing: "0.5px",
-                                },
-                              })}
-                            >
-                              <TableRow>
-                                <TableCell>Fecha</TableCell>
-                                <TableCell>Camión</TableCell>
-                                <TableCell>Estado</TableCell>
-                                <TableCell>Origen</TableCell>
-                                <TableCell>Destino</TableCell>
-                                <TableCell align="right">
-                                  Kgs cargados
-                                </TableCell>
-                              </TableRow>
-                            </TableHead>
-                            <TableBody>
-                              {truckTrips.map((t, index) => {
-                                const fromStock =
-                                  (t.stockOriginIds ?? []).length > 0;
-                                const fromHarvest =
-                                  (t.harvestOriginIds ?? []).length > 0;
-                                const originLabel = fromStock
-                                  ? "Desde stock"
-                                  : fromHarvest
-                                    ? "Desde cosecha"
-                                    : "—";
-
-                                return (
-                                  <TableRow
-                                    key={t.id}
-                                    sx={(theme) => ({
-                                      bgcolor:
-                                        index % 2 === 0
-                                          ? "transparent"
-                                          : alpha(theme.palette.grey[100], 0.4),
-                                      "&:hover": {
-                                        bgcolor: alpha(
-                                          theme.palette.secondary.main,
-                                          0.04,
-                                        ),
-                                      },
-                                    })}
-                                  >
-                                    <TableCell>
-                                      <Typography
-                                        variant="body1"
-                                        fontWeight={700}
-                                      >
-                                        {formatDate(t.date)}
-                                      </Typography>
-                                    </TableCell>
-                                    <TableCell>
-                                      <StatusChip
-                                        status={t.status}
-                                        options={TRIP_STATUS_OPTIONS}
-                                      />
-                                    </TableCell>
-                                    <TableCell>
-                                      <Typography variant="body1">
-                                        {t.truckPlate || "—"}
-                                      </Typography>
-                                    </TableCell>
-                                    <TableCell>
-                                      <Chip
-                                        size="small"
-                                        label={originLabel}
-                                        variant="outlined"
-                                        sx={{
-                                          fontWeight: 600,
-                                          fontSize: "0.7rem",
-                                        }}
-                                      />
-                                    </TableCell>
-                                    <TableCell>
-                                      <Typography variant="body1">
-                                        {t.destinationDetail ||
-                                          t.destinationType ||
-                                          "—"}
-                                      </Typography>
-                                    </TableCell>
-                                    <TableCell align="right">
-                                      <Typography
-                                        variant="body1"
-                                        fontWeight={800}
-                                        color="secondary.dark"
-                                      >
-                                        {t.totalKgsDestination.toLocaleString(
-                                          "es-ES",
-                                        )}
-                                      </Typography>
-                                    </TableCell>
-                                  </TableRow>
-                                );
-                              })}
-                            </TableBody>
-                          </Table>
-                        </TableContainer>
-                      </Box>
-
-                      {/* Mobile cards */}
-                      <Box sx={{ display: { xs: "block", md: "none" } }}>
-                        <Stack spacing={2}>
-                          {truckTrips.map((t) => {
-                            const fromStock =
-                              (t.stockOriginIds ?? []).length > 0;
-                            const fromHarvest =
-                              (t.harvestOriginIds ?? []).length > 0;
-                            const originLabel = fromStock
-                              ? "Desde stock"
-                              : fromHarvest
-                                ? "Desde cosecha"
-                                : "—";
-
-                            return (
-                              <Card
-                                key={t.id}
-                                sx={(theme) => ({
-                                  borderRadius: 2.5,
-                                  border: `2px solid ${alpha(
-                                    theme.palette.secondary.main,
-                                    0.2,
-                                  )}`,
-                                  boxShadow: `0 2px 8px ${alpha(
-                                    theme.palette.secondary.main,
-                                    0.1,
-                                  )}`,
-                                  transition: "all 0.3s ease",
-                                  "&:hover": {
-                                    transform: "translateY(-2px)",
-                                    boxShadow: `0 4px 16px ${alpha(
-                                      theme.palette.secondary.main,
-                                      0.2,
-                                    )}`,
-                                    borderColor: theme.palette.secondary.main,
-                                  },
-                                })}
-                              >
-                                <CardContent sx={{ p: 2.5 }}>
-                                  <Stack spacing={1.5}>
-                                    <Stack
-                                      direction="row"
-                                      justifyContent="space-between"
-                                      alignItems="center"
-                                    >
-                                      <Typography
-                                        variant="subtitle1"
-                                        fontWeight={700}
-                                        color="secondary.dark"
-                                      >
-                                        {formatDate(t.date)}
-                                      </Typography>
-                                      <StatusChip
-                                        status={t.status}
-                                        options={TRIP_STATUS_OPTIONS}
-                                      />
-                                    </Stack>
-                                    <Typography
-                                      variant="body2"
-                                      color="text.secondary"
-                                      fontWeight={600}
-                                    >
-                                      {t.truckPlate || "Camión sin identificar"}
-                                    </Typography>
-                                    <Divider />
-                                    <Box>
-                                      <Typography
-                                        variant="caption"
-                                        color="text.secondary"
-                                        fontWeight={700}
-                                      >
-                                        Origen
-                                      </Typography>
-                                      <Typography variant="body2" mt={0.5}>
-                                        {originLabel}
-                                      </Typography>
-                                    </Box>
-                                    <Box>
-                                      <Typography
-                                        variant="caption"
-                                        color="text.secondary"
-                                        fontWeight={700}
-                                      >
-                                        Destino
-                                      </Typography>
-                                      <Typography variant="body2" mt={0.5}>
-                                        {t.destinationType ||
-                                          t.destinationDetail ||
-                                          "—"}
-                                      </Typography>
-                                    </Box>
-                                    <Box
-                                      sx={(theme) => ({
-                                        p: 1.5,
-                                        borderRadius: 1.5,
-                                        bgcolor: alpha(
-                                          theme.palette.secondary.main,
-                                          0.15,
-                                        ),
-                                      })}
-                                    >
-                                      <Typography
-                                        variant="caption"
-                                        color="secondary.dark"
-                                        fontWeight={700}
-                                      >
-                                        Carga
-                                      </Typography>
-                                      <Typography
-                                        variant="h6"
-                                        fontWeight={800}
-                                        color="secondary.dark"
-                                        mt={0.5}
-                                      >
-                                        {t.totalKgsDestination.toLocaleString(
-                                          "es-ES",
-                                        )}{" "}
-                                        kg
-                                      </Typography>
-                                    </Box>
-                                  </Stack>
-                                </CardContent>
-                              </Card>
-                            );
-                          })}
-                        </Stack>
-                      </Box>
-                    </>
-                  )}
-                </DashboardCard>
-              </Stack>
-            </Grid>
-          </Grid>
+                  </>
+                )}
+              </DashboardCard>
+            </Stack>
+          </Stack>
         </Stack>
       </Stack>
       <Snackbar
