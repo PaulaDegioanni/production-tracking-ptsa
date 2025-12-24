@@ -77,7 +77,13 @@ export type SimpleEntityDialogFieldConfig = {
   }>;
   renderValue?: (context: {
     value: any;
+    values: Record<string, any>;
     field: SimpleEntityDialogFieldConfig;
+    onChange: (value: any) => void;
+    error?: string;
+    touched?: boolean;
+    setError: (message?: string | null) => void;
+    setTouched: (isTouched?: boolean) => void;
   }) => React.ReactNode;
 };
 
@@ -152,6 +158,28 @@ const SimpleEntityDialogForm = ({
   const [loading, setLoading] = React.useState(false);
   const [touched, setTouched] = React.useState<Record<string, boolean>>({});
   const lastExternalValuesKey = React.useRef<string | number | null>(null);
+
+  const setCustomFieldError = React.useCallback(
+    (fieldKey: string, message?: string | null) => {
+      setErrors((prev) => {
+        if (!message || message === '') {
+          if (!prev[fieldKey]) return prev;
+          const { [fieldKey]: _removed, ...rest } = prev;
+          return rest;
+        }
+        if (prev[fieldKey] === message) return prev;
+        return { ...prev, [fieldKey]: message };
+      });
+    },
+    []
+  );
+
+  const setCustomFieldTouched = React.useCallback(
+    (fieldKey: string, value = true) => {
+      setTouched((prev) => ({ ...prev, [fieldKey]: value }));
+    },
+    []
+  );
 
   const resetForm = React.useCallback(() => {
     setValues(resolvedInitialValues);
@@ -514,7 +542,17 @@ const SimpleEntityDialogForm = ({
     if (field.renderValue) {
       return (
         <Box key={field.key} sx={{ width: '100%' }}>
-          {field.renderValue({ value: values[field.key], field })}
+          {field.renderValue({
+            value: values[field.key],
+            values,
+            field,
+            onChange: (nextValue: any) => handleFieldValueChange(field, nextValue),
+            error: errors[field.key],
+            touched: touched[field.key],
+            setError: (message) => setCustomFieldError(field.key, message),
+            setTouched: (isTouched) =>
+              setCustomFieldTouched(field.key, isTouched ?? true),
+          })}
         </Box>
       );
     }

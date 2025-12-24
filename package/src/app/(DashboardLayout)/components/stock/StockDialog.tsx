@@ -77,8 +77,11 @@ export type StockDialogProps = {
 };
 
 const createChipRenderer =
-  (title: string, emptyLabel: string) =>
-  ({ value }: { value: unknown }) => {
+  (
+    title: string,
+    emptyLabel: string
+  ): NonNullable<SimpleEntityDialogFieldConfig['renderValue']> =>
+  ({ value }) => {
     const chips = Array.isArray(value)
       ? (value as string[]).filter(
           (chip) => typeof chip === 'string' && chip.trim() !== ''

@@ -1,5 +1,6 @@
 // src/lib/baserow/lots.ts
-import { getTableRows } from './client';
+import { getTableRows, patchTableRow, deleteTableRow } from './client';
+import { createTableRow } from './rowsCrud';
 import {
   extractLinkRowIds,
   toNumber,
@@ -59,6 +60,84 @@ function mapLotRawToDto(row: LotRaw): LotDto {
   };
 }
 
+// Payload helpers
+
+type LotPayloadBase = {
+  code?: string;
+  notes?: string | null;
+  fieldId?: number | null;
+  areaHa?: number | string | null;
+  cycleIds?: number[] | null;
+};
+
+export type LotCreatePayload = LotPayloadBase & {
+  code: string;
+};
+
+export type LotUpdatePayload = LotPayloadBase;
+
+function mapLotPayloadToBaserowPayload(
+  payload: LotPayloadBase,
+  options?: { requireCode?: boolean }
+): Record<string, any> {
+  const result: Record<string, any> = {};
+  const requireCode = options?.requireCode ?? false;
+
+  if (payload.code !== undefined) {
+    const code = payload.code.trim();
+    if (!code) {
+      throw new Error('Ingresá un nombre o código válido para el lote');
+    }
+    result['Nombre / Código Lote'] = code;
+  } else if (requireCode) {
+    throw new Error('Ingresá un nombre o código válido para el lote');
+  }
+
+  if (payload.notes !== undefined) {
+    const value = payload.notes ?? '';
+    result['Notas'] = String(value).trim();
+  }
+
+  if (payload.fieldId !== undefined) {
+    const fieldId = Number(payload.fieldId);
+    if (payload.fieldId === null || payload.fieldId === undefined) {
+      result['Campo'] = [];
+    } else if (!Number.isFinite(fieldId) || fieldId <= 0) {
+      throw new Error('Seleccioná un campo válido');
+    } else {
+      result['Campo'] = [fieldId];
+    }
+  }
+
+  if (payload.areaHa !== undefined) {
+    const raw = payload.areaHa;
+    if (
+      raw === null ||
+      raw === '' ||
+      (typeof raw === 'string' && raw.trim() === '')
+    ) {
+      result['Superficie (ha)'] = null;
+    } else {
+      const numericValue = Number(raw);
+      if (!Number.isFinite(numericValue)) {
+        throw new Error('Ingresá una superficie válida (número)');
+      }
+      result['Superficie (ha)'] = numericValue;
+    }
+  }
+
+  if (payload.cycleIds !== undefined) {
+    const sanitizedCycleIds = Array.isArray(payload.cycleIds)
+      ? payload.cycleIds
+          .map((id) => Number(id))
+          .filter((id) => Number.isFinite(id) && id > 0)
+      : [];
+    result['Ciclos de Siembra'] = sanitizedCycleIds;
+  }
+
+  return result;
+}
+
 // Public API
 
 export async function getLotsRaw(): Promise<LotRaw[]> {
@@ -68,6 +147,41 @@ export async function getLotsRaw(): Promise<LotRaw[]> {
 export async function getLotsDto(): Promise<LotDto[]> {
   const rows = await getLotsRaw();
   return rows.map(mapLotRawToDto);
+}
+
+export async function createLot(payload: LotCreatePayload): Promise<LotDto> {
+  const baserowPayload = mapLotPayloadToBaserowPayload(payload, {
+    requireCode: true,
+  });
+
+  const row = await createTableRow<LotRaw>(LOTS_TABLE_ID, baserowPayload);
+  return mapLotRawToDto(row);
+}
+
+export async function updateLot(
+  lotId: number,
+  payload: LotUpdatePayload
+): Promise<LotDto> {
+  if (!lotId || Number.isNaN(lotId)) {
+    throw new Error('El lote seleccionado no es válido');
+  }
+
+  const baserowPayload = mapLotPayloadToBaserowPayload(payload);
+
+  if (!Object.keys(baserowPayload).length) {
+    throw new Error('No hay cambios para guardar');
+  }
+
+  const row = await patchTableRow<LotRaw>(LOTS_TABLE_ID, lotId, baserowPayload);
+  return mapLotRawToDto(row);
+}
+
+export async function deleteLot(lotId: number): Promise<void> {
+  if (!lotId || Number.isNaN(lotId)) {
+    throw new Error('El lote seleccionado no es válido');
+  }
+
+  await deleteTableRow(LOTS_TABLE_ID, lotId);
 }
 
 export async function getLotsByCycleIdDto(cycleId: number): Promise<LotDto[]> {
@@ -103,4 +217,15 @@ export async function getLotsByFieldId(
       label: lot.code || `Lote #${lot.id}`,
     }))
     .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+export async function getLotsByFieldIdDto(fieldId: number): Promise<LotDto[]> {
+  if (!fieldId || Number.isNaN(fieldId)) {
+    return [];
+  }
+
+  const rows = await getLotsRaw();
+  return rows
+    .map(mapLotRawToDto)
+    .filter((lot) => lot.fieldId === fieldId);
 }

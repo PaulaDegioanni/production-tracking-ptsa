@@ -27,6 +27,7 @@ import {
 } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import AddIcon from '@mui/icons-material/Add';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import Link from 'next/link';
 import PageContainer from '@/app/(DashboardLayout)/components/container/PageContainer';
 import DashboardCard from '@/app/(DashboardLayout)/components/shared/DashboardCard';
@@ -34,6 +35,10 @@ import StatusChip, {
   StatusChipOption,
 } from '@/app/(DashboardLayout)/components/shared/StatusChip';
 import CropChip from '@/app/(DashboardLayout)/components/shared/CropChip';
+import FieldFormDialog, {
+  type FieldFormDialogMode,
+  type FieldFormDialogInitialValues,
+} from '@/app/(DashboardLayout)/components/fields/FieldFormDialog';
 import type { FieldDto } from '@/lib/baserow/fields';
 import type { LotDto } from '@/lib/baserow/lots';
 import type { CycleDto } from '@/lib/baserow/cycles';
@@ -405,6 +410,12 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
   const [fieldActivityFilter, setFieldActivityFilter] = React.useState<
     'all' | 'active' | 'inactive'
   >('all');
+  const [fieldDialogOpen, setFieldDialogOpen] = React.useState(false);
+  const [fieldDialogMode, setFieldDialogMode] =
+    React.useState<FieldFormDialogMode>('create');
+  const [editingFieldId, setEditingFieldId] = React.useState<number | null>(
+    null
+  );
 
   React.useEffect(() => {
     if (!sortedFields.length) {
@@ -490,6 +501,52 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
   const toggleFieldExpansion = React.useCallback((fieldId: number) => {
     setExpandedFieldId((current) => (current === fieldId ? null : fieldId));
   }, []);
+
+  const handleOpenCreateFieldDialog = React.useCallback(() => {
+    setFieldDialogMode('create');
+    setEditingFieldId(null);
+    setFieldDialogOpen(true);
+  }, []);
+
+  const handleCloseFieldDialog = React.useCallback(() => {
+    setFieldDialogOpen(false);
+    setEditingFieldId(null);
+  }, []);
+
+  const handleOpenEditFieldDialog = React.useCallback((fieldId: number) => {
+    setFieldDialogMode('edit');
+    setEditingFieldId(fieldId);
+    setFieldDialogOpen(true);
+  }, []);
+
+  const fieldDialogInitialValues =
+    React.useMemo<FieldFormDialogInitialValues | undefined>(() => {
+      if (fieldDialogMode === 'edit' && editingFieldId) {
+        const targetField = fields.find(
+          (item) => item.id === editingFieldId
+        );
+        if (!targetField) return undefined;
+
+        const linkedLots = targetField.lotIds
+          .map((lotId) => lotsById.get(lotId))
+          .filter((lot): lot is LotDto => Boolean(lot));
+
+        return {
+          name: targetField.name,
+          totalAreaHa: targetField.totalAreaHa,
+          location: targetField.location,
+          isRented: targetField.isRented,
+          notes: targetField.notes,
+          lots: linkedLots.map((lot) => ({
+            id: lot.id,
+            code: lot.code,
+            areaHa: lot.areaHa,
+          })),
+        };
+      }
+
+      return undefined;
+    }, [fieldDialogMode, editingFieldId, fields, lotsById]);
 
   return (
     <PageContainer
@@ -595,6 +652,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                 variant="contained"
                 color="primary"
                 startIcon={<AddIcon />}
+                onClick={handleOpenCreateFieldDialog}
                 sx={{
                   flexGrow: { xs: 1, md: 0 },
                   borderRadius: 2,
@@ -762,11 +820,61 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                 ) : (
                   <Stack spacing={3}>
                     <Box>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Typography variant="h4" fontWeight={700}>
-                          {selectedField.field.name || 'Campo sin nombre'} -
-                        </Typography>
-                        {renderFieldLocationLink(selectedField.field.location)}
+                      <Stack
+                        direction={{ xs: 'column', md: 'row' }}
+                        spacing={1.5}
+                        justifyContent="space-between"
+                        alignItems={{ xs: 'flex-start', md: 'center' }}
+                      >
+                        <Stack
+                          direction={{ xs: 'column', sm: 'row' }}
+                          spacing={1}
+                          alignItems={{ xs: 'flex-start', sm: 'center' }}
+                          flexWrap="wrap"
+                        >
+                          <Stack
+                            direction="row"
+                            spacing={1}
+                            alignItems="center"
+                            flexWrap="wrap"
+                          >
+                            <Typography variant="h4" fontWeight={700}>
+                              {selectedField.field.name || 'Campo sin nombre'} -
+                            </Typography>
+                            {renderFieldLocationLink(
+                              selectedField.field.location
+                            )}
+                          </Stack>
+                          <Chip
+                            size="small"
+                            variant="outlined"
+                            label={
+                              selectedField.field.isRented
+                                ? 'Alquiler'
+                                : 'Propio'
+                            }
+                            color={
+                              selectedField.field.isRented
+                                ? 'secondary'
+                                : 'primary'
+                            }
+                            sx={{ fontWeight: 600 }}
+                          />
+                        </Stack>
+                        <Button
+                          variant="outlined"
+                          startIcon={<EditOutlinedIcon />}
+                          onClick={() =>
+                            handleOpenEditFieldDialog(selectedField.field.id)
+                          }
+                          sx={{
+                            textTransform: 'none',
+                            borderRadius: 2,
+                            fontWeight: 600,
+                          }}
+                        >
+                          Editar
+                        </Button>
                       </Stack>
                     </Box>
 
@@ -1126,7 +1234,8 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                             <Stack
                               direction="row"
                               flexWrap="wrap"
-                              spacing={0.3}
+                              spacing={0.5}
+                              alignItems="center"
                             >
                               <Chip
                                 size="small"
@@ -1135,6 +1244,22 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                                 variant="outlined"
                               />
                               <Chip size="small" {...statusChip} />
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                startIcon={<EditOutlinedIcon fontSize="small" />}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleOpenEditFieldDialog(field.id);
+                                }}
+                                sx={{
+                                  textTransform: 'none',
+                                  borderRadius: 2,
+                                  fontWeight: 600,
+                                }}
+                              >
+                                Editar
+                              </Button>
                             </Stack>
                           </Stack>
 
@@ -1378,6 +1503,13 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
           </Stack>
         </DashboardCard>
       </Stack>
+      <FieldFormDialog
+        open={fieldDialogOpen}
+        mode={fieldDialogMode}
+        onClose={handleCloseFieldDialog}
+        initialValues={fieldDialogInitialValues}
+        fieldId={editingFieldId}
+      />
     </PageContainer>
   );
 };
