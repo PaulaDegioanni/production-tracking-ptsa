@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import * as React from 'react';
+import * as React from "react";
 import {
   Alert,
   Box,
@@ -20,19 +20,19 @@ import {
   TableRow,
   TextField,
   Typography,
-} from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+} from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 
-import { useRouter } from 'next/navigation';
+import { useRouter } from "next/navigation";
 import SimpleEntityDialogForm, {
   type SimpleEntityDialogFieldConfig,
   type SimpleEntityDialogSection,
-} from '@/components/forms/SimpleEntityDialogForm';
-import type { FieldFormSubmitPayload } from '@/lib/fields/formTypes';
+} from "@/components/forms/SimpleEntityDialogForm";
+import type { FieldFormSubmitPayload } from "@/lib/fields/formTypes";
 
 const generateClientId = () =>
-  typeof crypto !== 'undefined' && crypto.randomUUID
+  typeof crypto !== "undefined" && crypto.randomUUID
     ? crypto.randomUUID()
     : `lot-${Math.random().toString(36).slice(2, 9)}`;
 
@@ -46,38 +46,38 @@ type FieldLotFormValue = {
 type LotErrorState = Record<string, { code?: string; areaHa?: string }>;
 
 const createLotFormValue = (
-  overrides?: Partial<Omit<FieldLotFormValue, 'clientId'>>
+  overrides?: Partial<Omit<FieldLotFormValue, "clientId">>,
 ): FieldLotFormValue => ({
   clientId: generateClientId(),
   id: overrides?.id,
-  code: overrides?.code ?? '',
+  code: overrides?.code ?? "",
   areaHa:
     overrides?.areaHa !== undefined && overrides?.areaHa !== null
       ? String(overrides.areaHa)
-      : '',
+      : "",
 });
 
 const DEFAULT_FORM_VALUES: FieldFormDialogValues = {
-  name: '',
-  totalAreaHa: '',
-  location: '',
-  isRented: false,
-  notes: '',
+  name: "",
+  totalAreaHa: "",
+  location: "",
+  isRented: true,
+  notes: "",
   lots: [createLotFormValue()],
 };
 
 const FIELD_FORM_SECTIONS: SimpleEntityDialogSection[] = [
   {
-    title: 'Datos del campo',
-    fields: ['name', 'totalAreaHa', 'location'],
+    title: "Datos del campo",
+    fields: ["name", "totalAreaHa", "isRented"],
   },
   {
-    title: 'Estado y notas',
-    fields: ['isRented', 'notes'],
+    title: "",
+    fields: ["location", "notes"],
   },
   {
-    title: 'Lotes asociados',
-    fields: ['lots'],
+    title: "Lotes asociados",
+    fields: ["lots"],
   },
 ];
 
@@ -90,7 +90,7 @@ type FieldFormDialogValues = {
   lots: FieldLotFormValue[];
 };
 
-export type FieldFormDialogMode = 'create' | 'edit';
+export type FieldFormDialogMode = "create" | "edit";
 
 export type FieldFormDialogInitialValues = Partial<{
   name: string;
@@ -114,12 +114,12 @@ type FieldFormDialogProps = {
 };
 
 type CustomFieldRenderContext = Parameters<
-  NonNullable<SimpleEntityDialogFieldConfig['renderValue']>
+  NonNullable<SimpleEntityDialogFieldConfig["renderValue"]>
 >[0];
 
 const parseErrorResponse = async (
   response: Response,
-  fallback: string
+  fallback: string,
 ): Promise<string> => {
   const errorBody = await response.text();
   if (!errorBody) return fallback;
@@ -140,17 +140,32 @@ const FieldFormDialog = ({
 }: FieldFormDialogProps) => {
   const router = useRouter();
   const [lotErrors, setLotErrors] = React.useState<LotErrorState>({});
-  const lotsFieldErrorRef = React.useRef<(message?: string | null) => void>();
+  const lotsFieldErrorRef = React.useRef<
+    ((message?: string | null) => void) | null
+  >(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [deleteLoading, setDeleteLoading] = React.useState(false);
   const [deleteError, setDeleteError] = React.useState<string | null>(null);
   const [sumWarningOpen, setSumWarningOpen] = React.useState(false);
+  const [sumWarningLoading, setSumWarningLoading] = React.useState(false);
+  const [sumWarningError, setSumWarningError] = React.useState<string | null>(
+    null,
+  );
   const pendingSubmitRef = React.useRef<FieldFormSubmitPayload | null>(null);
+  const pendingSubmitPromiseRef = React.useRef<{
+    resolve: () => void;
+    reject: (error: Error) => void;
+  } | null>(null);
 
   React.useEffect(() => {
     if (!open) {
       setLotErrors({});
       lotsFieldErrorRef.current?.(undefined);
+      setSumWarningOpen(false);
+      setSumWarningError(null);
+      setSumWarningLoading(false);
+      pendingSubmitRef.current = null;
+      pendingSubmitPromiseRef.current = null;
     }
   }, [open]);
 
@@ -175,11 +190,17 @@ const FieldFormDialog = ({
       base.totalAreaHa = String(initialValues.totalAreaHa);
     }
 
-    if (initialValues.location !== undefined && initialValues.location !== null) {
+    if (
+      initialValues.location !== undefined &&
+      initialValues.location !== null
+    ) {
       base.location = initialValues.location;
     }
 
-    if (initialValues.isRented !== undefined && initialValues.isRented !== null) {
+    if (
+      initialValues.isRented !== undefined &&
+      initialValues.isRented !== null
+    ) {
       base.isRented = Boolean(initialValues.isRented);
     }
 
@@ -191,12 +212,12 @@ const FieldFormDialog = ({
       base.lots = initialValues.lots.map((lot) =>
         createLotFormValue({
           id: lot.id,
-          code: lot.code ?? '',
+          code: lot.code ?? "",
           areaHa:
             lot.areaHa !== undefined && lot.areaHa !== null
               ? String(lot.areaHa)
-              : '',
-        })
+              : "",
+        }),
       );
     }
 
@@ -205,39 +226,42 @@ const FieldFormDialog = ({
 
   const renderIsRentedField = React.useCallback(
     ({ value, onChange }: CustomFieldRenderContext) => (
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        sx={{
-          border: (theme) => `1px solid ${theme.palette.divider}`,
-          borderRadius: 2,
-          px: 2,
-          py: 1.5,
-        }}
-      >
-        <Box>
-          <Typography variant="subtitle1" fontWeight={600}>
-            ¿Es un campo alquilado?
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Activá para marcarlo como alquilado.
-          </Typography>
-        </Box>
-        <FormControlLabel
-          control={
-            <Switch
-              color="primary"
-              checked={Boolean(value)}
-              onChange={(event) => onChange(event.target.checked)}
-            />
-          }
-          label={Boolean(value) ? 'Alquilado' : 'Propio'}
-          sx={{ m: 0 }}
-        />
-      </Stack>
+      <FormControlLabel
+        control={
+          <Switch
+            color="primary"
+            checked={Boolean(value)}
+            onChange={(event) => onChange(event.target.checked)}
+          />
+        }
+        label={Boolean(value) ? "Alquilado" : "Propio"}
+        sx={{ m: 0 }}
+      />
     ),
-    []
+    [],
+  );
+
+  const renderNotesField = React.useCallback(
+    ({
+      value,
+      onChange,
+      error,
+      touched,
+      setTouched,
+    }: CustomFieldRenderContext) => (
+      <TextField
+        fullWidth
+        multiline
+        minRows={1}
+        value={value ?? ""}
+        onChange={(event) => onChange(event.target.value)}
+        onBlur={() => setTouched(true)}
+        error={Boolean(error && touched)}
+        helperText={error || ""}
+        label="Notas"
+      />
+    ),
+    [],
   );
 
   const renderLotsField = React.useCallback(
@@ -249,9 +273,7 @@ const FieldFormDialog = ({
       setTouched,
     }: CustomFieldRenderContext) => {
       lotsFieldErrorRef.current = setError;
-      const lots = Array.isArray(value)
-        ? (value as FieldLotFormValue[])
-        : [];
+      const lots = Array.isArray(value) ? (value as FieldLotFormValue[]) : [];
 
       const ensureTouched = () => {
         setTouched(true);
@@ -260,12 +282,12 @@ const FieldFormDialog = ({
 
       const handleLotFieldChange = (
         clientId: string,
-        key: 'code' | 'areaHa',
-        nextValue: string
+        key: "code" | "areaHa",
+        nextValue: string,
       ) => {
         ensureTouched();
         const nextLots = lots.map((lot) =>
-          lot.clientId === clientId ? { ...lot, [key]: nextValue } : lot
+          lot.clientId === clientId ? { ...lot, [key]: nextValue } : lot,
         );
         onChange(nextLots);
         setLotErrors((prev) => {
@@ -299,77 +321,79 @@ const FieldFormDialog = ({
       };
 
       return (
-        <Stack spacing={1.5}>
-          <Typography variant="subtitle1" fontWeight={600}>
-            Lotes asociados
-          </Typography>
+        <Stack spacing={1} sx={{ width: "100%" }}>
           {lots.length ? (
-            <Table size="small" sx={{ borderRadius: 2, border: (theme) => `1px solid ${theme.palette.divider}` }}>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 600 }}>Código / Nombre</TableCell>
-                  <TableCell sx={{ fontWeight: 600, width: 180 }}>
-                    Superficie (ha)
-                  </TableCell>
-                  <TableCell align="right" sx={{ width: 80 }}>
-                    &nbsp;
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {lots.map((lot) => {
-                  const rowError = lotErrors[lot.clientId] ?? {};
-                  return (
-                    <TableRow key={lot.clientId}>
-                      <TableCell>
-                        <TextField
-                          fullWidth
-                          placeholder="Ej: Lote Norte"
-                          value={lot.code}
-                          onChange={(event) =>
-                            handleLotFieldChange(
-                              lot.clientId,
-                              'code',
-                              event.target.value
-                            )
-                          }
-                          required
-                          error={Boolean(rowError.code)}
-                          helperText={rowError.code || ' '}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <TextField
-                          fullWidth
-                          type="number"
-                          placeholder="Ej: 25"
-                          value={lot.areaHa}
-                          onChange={(event) =>
-                            handleLotFieldChange(
-                              lot.clientId,
-                              'areaHa',
-                              event.target.value
-                            )
-                          }
-                          inputProps={{ step: 0.1, min: 0 }}
-                          required
-                          error={Boolean(rowError.areaHa)}
-                          helperText={rowError.areaHa || ' '}
-                        />
-                      </TableCell>
-                      <TableCell align="right">
-                        <IconButton
-                          aria-label="Eliminar lote"
-                          onClick={() => handleRemoveLot(lot.clientId)}
-                        >
-                          <DeleteOutlineIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+            <Box
+              sx={{
+                width: "100%",
+                overflowX: "auto",
+                borderRadius: 2,
+                paddingY: 2,
+                border: (theme) => `1px solid ${theme.palette.divider}`,
+              }}
+            >
+              <Table
+                size="small"
+                sx={{
+                  width: "100%",
+                  minWidth: 360,
+                }}
+              >
+                <TableBody>
+                  {lots.map((lot) => {
+                    const rowError = lotErrors[lot.clientId] ?? {};
+                    return (
+                      <TableRow key={lot.clientId}>
+                        <TableCell>
+                          <TextField
+                            fullWidth
+                            value={lot.code}
+                            label="Código lote"
+                            onChange={(event) =>
+                              handleLotFieldChange(
+                                lot.clientId,
+                                "code",
+                                event.target.value,
+                              )
+                            }
+                            required
+                            error={Boolean(rowError.code)}
+                            helperText={rowError.code || ""}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            fullWidth
+                            type="number"
+                            value={lot.areaHa}
+                            label="Superficie (ha)"
+                            onChange={(event) =>
+                              handleLotFieldChange(
+                                lot.clientId,
+                                "areaHa",
+                                event.target.value,
+                              )
+                            }
+                            inputProps={{ step: 10, min: 0 }}
+                            required
+                            error={Boolean(rowError.areaHa)}
+                            helperText={rowError.areaHa || ""}
+                          />
+                        </TableCell>
+                        <TableCell align="justify">
+                          <IconButton
+                            aria-label="Eliminar lote"
+                            onClick={() => handleRemoveLot(lot.clientId)}
+                          >
+                            <DeleteOutlineIcon />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </Box>
           ) : (
             <Box
               sx={{
@@ -377,7 +401,7 @@ const FieldFormDialog = ({
                 borderRadius: 2,
                 px: 2,
                 py: 3,
-                textAlign: 'center',
+                textAlign: "center",
               }}
             >
               <Typography variant="body2" color="text.secondary">
@@ -397,7 +421,7 @@ const FieldFormDialog = ({
               variant="outlined"
               startIcon={<AddIcon />}
               onClick={handleAddLot}
-              sx={{ borderRadius: 2, textTransform: 'none' }}
+              sx={{ borderRadius: 2, textTransform: "none" }}
             >
               Agregar lote
             </Button>
@@ -405,73 +429,115 @@ const FieldFormDialog = ({
         </Stack>
       );
     },
-    [lotErrors]
+    [lotErrors],
   );
 
   const formFields = React.useMemo<SimpleEntityDialogFieldConfig[]>(
     () => [
       {
-        key: 'name',
-        label: 'Nombre',
-        type: 'text',
+        key: "name",
+        label: "Nombre",
+        type: "text",
         required: true,
-        placeholder: 'Ej: Campo La Esperanza',
       },
       {
-        key: 'totalAreaHa',
-        label: 'Superficie total (ha)',
-        type: 'number',
-        required: true,
-        step: 0.1,
-        helperText: 'Ingresá la superficie total del campo.',
+        key: "totalAreaHa",
+        label: "Superficie total (ha)",
+        type: "number",
+        step: 10,
       },
       {
-        key: 'location',
-        label: 'Ubicación',
-        type: 'text',
-        placeholder: 'Localidad, partido o coordenadas',
-      },
-      {
-        key: 'isRented',
-        label: 'Alquiler',
-        type: 'readonly',
+        key: "isRented",
+        label: "Alquiler",
+        type: "readonly",
         renderValue: renderIsRentedField,
       },
       {
-        key: 'notes',
-        label: 'Notas',
-        type: 'textarea',
-        placeholder: 'Agregá información adicional del campo...',
+        key: "location",
+        label: "Ubicación (link)",
+        type: "text",
       },
       {
-        key: 'lots',
-        label: 'Lotes',
-        type: 'readonly',
+        key: "notes",
+        label: "Notas",
+        type: "readonly",
+        renderValue: renderNotesField,
+      },
+      {
+        key: "lots",
+        label: "Lotes",
+        type: "readonly",
         renderValue: renderLotsField,
       },
     ],
-    [renderIsRentedField, renderLotsField]
+    [renderIsRentedField, renderLotsField, renderNotesField],
+  );
+
+  const submitPayload = React.useCallback(
+    async (payload: FieldFormSubmitPayload) => {
+      if (mode === "edit") {
+        if (!fieldId || Number.isNaN(fieldId)) {
+          throw new Error("No se encontró el campo a editar");
+        }
+
+        const response = await fetch(`/api/fields/${fieldId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ payload }),
+        });
+
+        if (!response.ok) {
+          const message = await parseErrorResponse(
+            response,
+            "No se pudo actualizar el campo",
+          );
+          throw new Error(message);
+        }
+      } else {
+        const response = await fetch("/api/fields", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ payload }),
+        });
+
+        if (!response.ok) {
+          const message = await parseErrorResponse(
+            response,
+            "No se pudo crear el campo",
+          );
+          throw new Error(message);
+        }
+      }
+
+      await Promise.resolve();
+      router.refresh();
+    },
+    [fieldId, mode, router],
   );
 
   const handleDialogSubmit = React.useCallback(
-    async (formValues: Record<string, any>, skipAreaCheck = false) => {
+    async (formValues: Record<string, any>) => {
       const values = formValues as FieldFormDialogValues;
       const nextLotErrors: LotErrorState = {};
-      const normalizedLots: FieldFormSubmitPayload['lots'] = [];
+      const normalizedLots: FieldFormSubmitPayload["lots"] = [];
 
       values.lots.forEach((lot, index) => {
         const clientId = lot.clientId || `tmp-${index}`;
-        const trimmedCode = (lot.code ?? '').trim();
+        const trimmedCode = (lot.code ?? "").trim();
         const rawArea =
-          typeof lot.areaHa === 'number' ? lot.areaHa : Number(lot.areaHa);
+          typeof lot.areaHa === "number" ? lot.areaHa : Number(lot.areaHa);
         const rowErrors: { code?: string; areaHa?: string } = {};
 
         if (!trimmedCode) {
-          rowErrors.code = 'Ingresá un código válido';
+          rowErrors.code = "Ingresá un código válido";
         }
 
         if (!Number.isFinite(rawArea) || rawArea <= 0) {
-          rowErrors.areaHa = 'Ingresá un número mayor a 0';
+          rowErrors.areaHa = "Ingresá un número mayor a 0";
         }
 
         if (rowErrors.code || rowErrors.areaHa) {
@@ -488,10 +554,8 @@ const FieldFormDialog = ({
 
       if (Object.keys(nextLotErrors).length) {
         setLotErrors(nextLotErrors);
-        lotsFieldErrorRef.current?.(
-          'Completá el código y la superficie de cada lote.'
-        );
-        throw new Error('Faltan datos obligatorios en los lotes');
+
+        throw new Error("Faltan datos obligatorios en los lotes");
       }
 
       setLotErrors({});
@@ -499,105 +563,62 @@ const FieldFormDialog = ({
 
       const parsedArea = Number(values.totalAreaHa);
       if (!Number.isFinite(parsedArea) || parsedArea <= 0) {
-        throw new Error('Ingresá una superficie total válida');
+        throw new Error("Ingresá una superficie total válida");
       }
 
       const payload: FieldFormSubmitPayload = {
         name: values.name.trim(),
         totalAreaHa: parsedArea,
-        location: values.location?.trim() ?? '',
+        location: values.location?.trim() ?? "",
         isRented: Boolean(values.isRented),
-        notes: values.notes?.trim() ?? '',
+        notes: values.notes?.trim() ?? "",
         lots: normalizedLots,
       };
 
-      if (!skipAreaCheck) {
-        const lotsAreaSum = normalizedLots.reduce(
-          (acc, lot) => acc + Number(lot.areaHa || 0),
-          0
-        );
-        if (lotsAreaSum !== parsedArea) {
+      const lotsAreaSum = normalizedLots.reduce(
+        (acc, lot) => acc + Number(lot.areaHa || 0),
+        0,
+      );
+      if (lotsAreaSum !== parsedArea) {
+        return new Promise<void>((resolve, reject) => {
           pendingSubmitRef.current = payload;
+          pendingSubmitPromiseRef.current = { resolve, reject };
+          setSumWarningError(null);
+          setSumWarningLoading(false);
           setSumWarningOpen(true);
-          throw new Error(
-            'Confirmá si querés guardar pese a la diferencia de superficie.'
-          );
-        }
-      }
-
-      if (mode === 'edit') {
-        if (!fieldId || Number.isNaN(fieldId)) {
-          throw new Error('No se encontró el campo a editar');
-        }
-
-        const response = await fetch(`/api/fields/${fieldId}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ payload }),
         });
-
-        if (!response.ok) {
-          const message = await parseErrorResponse(
-            response,
-            'No se pudo actualizar el campo'
-          );
-          throw new Error(message);
-        }
-
-        await response.json().catch(() => null);
-        router.refresh();
-        return;
       }
 
-      const response = await fetch('/api/fields', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ payload }),
-      });
-
-      if (!response.ok) {
-        const message = await parseErrorResponse(
-          response,
-          'No se pudo crear el campo'
-        );
-        throw new Error(message);
-      }
-
-      await response.json().catch(() => null);
-      router.refresh();
+      await submitPayload(payload);
     },
-    [mode, router]
+    [submitPayload],
   );
 
   const dialogTitle =
-    mode === 'create' ? 'Nuevo campo' : 'Editar información del campo';
+    mode === "create" ? "Nuevo campo" : "Editar información del campo";
 
   return (
     <>
       <SimpleEntityDialogForm
         open={open}
         title={dialogTitle}
-        subtitle="Gestioná los datos del campo y sus lotes asociados."
         onClose={onClose}
         onSubmit={(values) => handleDialogSubmit(values)}
         fields={formFields}
         sections={FIELD_FORM_SECTIONS}
         initialValues={resolvedInitialValues}
         extraActions={
-          mode === 'edit' && fieldId ? (
+          mode === "edit" && fieldId ? (
             <Button
               color="error"
               variant="outlined"
+              startIcon={<DeleteOutlineIcon />}
               onClick={() => {
                 setDeleteError(null);
                 setDeleteDialogOpen(true);
               }}
               sx={{
-                textTransform: 'none',
+                textTransform: "none",
                 borderRadius: 2,
                 fontWeight: 600,
               }}
@@ -621,7 +642,7 @@ const FieldFormDialog = ({
           <Stack spacing={2}>
             <Typography>
               Esta acción eliminará el campo y todos sus lotes asociados.
-              ¿Querés continuar?
+              ¿Seguro que querés continuar?
             </Typography>
             {deleteError && (
               <Alert
@@ -638,7 +659,7 @@ const FieldFormDialog = ({
           <Button
             onClick={() => setDeleteDialogOpen(false)}
             disabled={deleteLoading}
-            sx={{ textTransform: 'none' }}
+            sx={{ textTransform: "none" }}
           >
             Cancelar
           </Button>
@@ -648,7 +669,7 @@ const FieldFormDialog = ({
             disabled={deleteLoading}
             onClick={async () => {
               if (!fieldId) {
-                setDeleteError('No se encontró el campo a borrar');
+                setDeleteError("No se encontró el campo a borrar");
                 return;
               }
 
@@ -657,13 +678,13 @@ const FieldFormDialog = ({
                 setDeleteError(null);
 
                 const response = await fetch(`/api/fields/${fieldId}`, {
-                  method: 'DELETE',
+                  method: "DELETE",
                 });
 
                 if (!response.ok) {
                   const message = await parseErrorResponse(
                     response,
-                    'No se pudo borrar el campo'
+                    "No se pudo borrar el campo",
                   );
                   throw new Error(message);
                 }
@@ -675,68 +696,112 @@ const FieldFormDialog = ({
                 const message =
                   error instanceof Error
                     ? error.message
-                    : 'Error desconocido al borrar el campo';
+                    : "Error desconocido al borrar el campo";
                 setDeleteError(message);
               } finally {
                 setDeleteLoading(false);
               }
             }}
-            sx={{ textTransform: 'none', borderRadius: 2 }}
+            sx={{ textTransform: "none", borderRadius: 2 }}
           >
-            {deleteLoading ? 'Borrando...' : 'Borrar campo'}
+            {deleteLoading ? "Borrando..." : "Borrar campo"}
           </Button>
         </DialogActions>
       </Dialog>
 
-      <Dialog open={sumWarningOpen} onClose={() => setSumWarningOpen(false)}>
+      <Dialog
+        open={sumWarningOpen}
+        onClose={() => {
+          setSumWarningOpen(false);
+          setSumWarningError(null);
+          setSumWarningLoading(false);
+          const pendingPromise = pendingSubmitPromiseRef.current;
+          pendingSubmitRef.current = null;
+          pendingSubmitPromiseRef.current = null;
+          pendingPromise?.reject(
+            new Error(
+              "Guardado cancelado. Ajustá los datos o confirmá nuevamente.",
+            ),
+          );
+        }}
+      >
         <DialogTitle>Confirmar superficie</DialogTitle>
         <DialogContent dividers>
-          <Typography>
-            La suma de la superficie de los lotes no coincide con la superficie
-            total del campo. ¿Seguro que deseas guardar?
-          </Typography>
+          <Stack spacing={2}>
+            <Typography>
+              La suma de la superficie de los lotes no coincide con la
+              superficie total del campo. ¿Seguro que deseas guardar?
+            </Typography>
+            {sumWarningError && (
+              <Alert
+                severity="error"
+                onClose={() => setSumWarningError(null)}
+                sx={{ borderRadius: 2 }}
+              >
+                {sumWarningError}
+              </Alert>
+            )}
+          </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>
           <Button
             onClick={() => {
               setSumWarningOpen(false);
               pendingSubmitRef.current = null;
+              const pendingPromise = pendingSubmitPromiseRef.current;
+              pendingSubmitPromiseRef.current = null;
+              setSumWarningError(null);
+              setSumWarningLoading(false);
+              pendingPromise?.reject(
+                new Error(
+                  "Guardado cancelado. Ajustá los datos o confirmá nuevamente.",
+                ),
+              );
             }}
-            sx={{ textTransform: 'none' }}
+            disabled={sumWarningLoading}
+            sx={{ textTransform: "none" }}
           >
             Cancelar
           </Button>
           <Button
             variant="contained"
-            onClick={() => {
+            disabled={sumWarningLoading}
+            onClick={async () => {
               const pending = pendingSubmitRef.current;
-              if (!pending) {
-                setSumWarningOpen(false);
+              const pendingPromise = pendingSubmitPromiseRef.current;
+              if (!pending || !pendingPromise) {
+                setSumWarningError(
+                  "No se encontraron datos pendientes para guardar.",
+                );
                 return;
               }
-              setSumWarningOpen(false);
-              pendingSubmitRef.current = null;
-              void handleDialogSubmit(
-                {
-                  name: pending.name,
-                  totalAreaHa: String(pending.totalAreaHa),
-                  location: pending.location,
-                  isRented: pending.isRented,
-                  notes: pending.notes,
-                  lots: pending.lots.map((lot) =>
-                    createLotFormValue({
-                      id: lot.id,
-                      code: lot.code,
-                      areaHa: lot.areaHa,
-                    })
-                  ),
-                },
-                true
-              );
+              try {
+                setSumWarningLoading(true);
+                setSumWarningError(null);
+                await submitPayload(pending);
+                pendingPromise.resolve();
+                setSumWarningOpen(false);
+              } catch (error) {
+                const message =
+                  error instanceof Error
+                    ? error.message
+                    : "Error desconocido al guardar el campo";
+                setSumWarningError(message);
+                pendingPromise.reject(
+                  error instanceof Error
+                    ? error
+                    : new Error("Error desconocido al guardar el campo"),
+                );
+                setSumWarningOpen(false);
+              } finally {
+                setSumWarningLoading(false);
+                pendingSubmitRef.current = null;
+                pendingSubmitPromiseRef.current = null;
+              }
             }}
-            sx={{ textTransform: 'none', borderRadius: 2 }}
+            sx={{ textTransform: "none", borderRadius: 2 }}
           >
-            Guardar de todos modos
+            {sumWarningLoading ? "Guardando..." : "Guardar de todos modos"}
           </Button>
         </DialogActions>
       </Dialog>

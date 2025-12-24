@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import * as React from 'react';
+import * as React from "react";
 import {
   Alert,
   alpha,
@@ -27,32 +27,34 @@ import {
   TableRow,
   TextField,
   Typography,
-} from '@mui/material';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import AddIcon from '@mui/icons-material/Add';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import LocalShippingIcon from '@mui/icons-material/LocalShipping';
-import AgricultureIcon from '@mui/icons-material/Agriculture';
-import LandscapeIcon from '@mui/icons-material/Landscape';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+} from "@mui/material";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import AddIcon from "@mui/icons-material/Add";
+import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import AgricultureIcon from "@mui/icons-material/Agriculture";
+import LandscapeIcon from "@mui/icons-material/Landscape";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 
-import PageContainer from '@/app/(DashboardLayout)/components/container/PageContainer';
-import DashboardCard from '@/app/(DashboardLayout)/components/shared/DashboardCard';
-import CropChip from '@/app/(DashboardLayout)/components/shared/CropChip';
+import PageContainer from "@/app/(DashboardLayout)/components/container/PageContainer";
+import DashboardCard from "@/app/(DashboardLayout)/components/shared/DashboardCard";
+import CropChip from "@/app/(DashboardLayout)/components/shared/CropChip";
 import StockDialog, {
   type StockFormValues,
-} from '@/app/(DashboardLayout)/components/stock/StockDialog';
+  type StockDialogMode,
+} from "@/app/(DashboardLayout)/components/stock/StockDialog";
 import TruckTripDialog, {
   type TruckTripFormValues,
+  type TruckTripDialogMode,
   getDefaultTruckTripFormValues,
-} from '@/app/(DashboardLayout)/components/truckTrips/TruckTripDialog';
+} from "@/app/(DashboardLayout)/components/truckTrips/TruckTripDialog";
 import SimpleEntityDialogForm, {
   SimpleEntityDialogFieldConfig,
   SimpleEntityDialogSection,
-} from '@/components/forms/SimpleEntityDialogForm';
-import type { HarvestDto } from '@/lib/baserow/harvests';
-import { combineDateAndTimeToIso } from '@/lib/forms/datetime';
+} from "@/components/forms/SimpleEntityDialogForm";
+import type { HarvestDto } from "@/lib/baserow/harvests";
+import { combineDateAndTimeToIso } from "@/lib/forms/datetime";
 
 type CosechasPageClientProps = {
   initialHarvests: HarvestDto[];
@@ -65,42 +67,42 @@ type CosechasPageClientProps = {
 type HarvestFormValues = {
   Fecha_fecha: string; // YYYY-MM-DD (input date)
   Fecha_hora: string; // HH:mm (input time)
-  'KG Cosechados': string;
+  "KG Cosechados": string;
 
-  Campo: '' | number;
+  Campo: "" | number;
   Lotes: Array<string | number>;
-  'Ciclo de siembra': '' | number;
+  "Ciclo de siembra": "" | number;
 
   Cultivo: string; // readonly
   Stock: Array<string | number>;
-  'Viajes camión directos': Array<string | number>;
+  "Viajes camión directos": Array<string | number>;
 
   Notas: string;
 };
 
 const formatDateTimeParts = (
-  value: string | null
+  value: string | null,
 ): { date: string; time: string } => {
-  if (!value) return { date: '—', time: '' };
+  if (!value) return { date: "—", time: "" };
 
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return { date: value ?? '—', time: '' };
+  if (Number.isNaN(date.getTime())) return { date: value ?? "—", time: "" };
 
   return {
-    date: date.toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: '2-digit',
+    date: date.toLocaleDateString("es-ES", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
     }),
-    time: date.toLocaleTimeString('es-ES', {
-      hour: '2-digit',
-      minute: '2-digit',
+    time: date.toLocaleTimeString("es-ES", {
+      hour: "2-digit",
+      minute: "2-digit",
     }),
   };
 };
 
 const formatKgs = (value: number): string =>
-  (value || 0).toLocaleString('es-ES', {
+  (value || 0).toLocaleString("es-ES", {
     maximumFractionDigits: 0,
   });
 
@@ -109,27 +111,27 @@ const getDefaultHarvestFormValues = (): HarvestFormValues => {
   return {
     Fecha_fecha: now.toISOString().slice(0, 10),
     Fecha_hora: now.toTimeString().slice(0, 5),
-    'KG Cosechados': '',
-    Campo: '',
+    "KG Cosechados": "",
+    Campo: "",
     Lotes: [],
-    'Ciclo de siembra': '',
-    Cultivo: '',
+    "Ciclo de siembra": "",
+    Cultivo: "",
     Stock: [],
-    'Viajes camión directos': [],
-    Notas: '',
+    "Viajes camión directos": [],
+    Notas: "",
   };
 };
 
 const normalizeArrayForComparison = (arr: unknown[]) => {
   if (!arr.length) return [];
 
-  if (arr.every((value) => typeof value === 'number')) {
+  if (arr.every((value) => typeof value === "number")) {
     return [...arr].sort(
-      (a, b) => (Number(a) || 0) - (Number(b) || 0)
+      (a, b) => (Number(a) || 0) - (Number(b) || 0),
     ) as number[];
   }
 
-  if (arr.every((value) => typeof value === 'string')) {
+  if (arr.every((value) => typeof value === "string")) {
     return [...arr]
       .map((value) => String(value))
       .sort((a, b) => a.localeCompare(b));
@@ -151,7 +153,7 @@ const isEqualValue = (a: unknown, b: unknown) => {
 
 const computeDiffPayload = (
   prevPayload: Record<string, any>,
-  nextPayload: Record<string, any>
+  nextPayload: Record<string, any>,
 ) => {
   const diff: Record<string, any> = {};
 
@@ -166,45 +168,45 @@ const computeDiffPayload = (
 
 const normalizeHarvestFormToBaserowPayload = (
   formValues: Record<string, any>,
-  options?: { includeEmptyOptional?: boolean }
+  options?: { includeEmptyOptional?: boolean },
 ) => {
   const includeEmptyOptional = options?.includeEmptyOptional ?? false;
 
   const payload: Record<string, any> = {
     Fecha: combineDateAndTimeToIso(
-      formValues['Fecha_fecha'],
-      formValues['Fecha_hora']
+      formValues["Fecha_fecha"],
+      formValues["Fecha_hora"],
     ),
   };
 
-  const rawKgs = formValues['KG Cosechados'];
+  const rawKgs = formValues["KG Cosechados"];
   const harvestedKgs = parseFloat(rawKgs);
   if (Number.isNaN(harvestedKgs)) {
-    throw new Error('Ingresá un número válido para los kilos cosechados');
+    throw new Error("Ingresá un número válido para los kilos cosechados");
   }
-  payload['KG Cosechados'] = harvestedKgs;
+  payload["KG Cosechados"] = harvestedKgs;
 
   const lotsValue = Array.isArray(formValues.Lotes) ? formValues.Lotes : [];
   const lotIds = lotsValue
     .map((value) => Number(value))
     .filter((value) => !Number.isNaN(value));
   if (!lotIds.length) {
-    throw new Error('Seleccioná al menos un lote');
+    throw new Error("Seleccioná al menos un lote");
   }
   payload.Lotes = lotIds;
 
-  const cycleValue = formValues['Ciclo de siembra'];
+  const cycleValue = formValues["Ciclo de siembra"];
   const cycleId = Number(cycleValue);
   if (!cycleId || Number.isNaN(cycleId)) {
-    throw new Error('Seleccioná un ciclo de siembra válido');
+    throw new Error("Seleccioná un ciclo de siembra válido");
   }
-  payload['Ciclo de siembra'] = [cycleId];
+  payload["Ciclo de siembra"] = [cycleId];
 
   const stockValues = Array.isArray(formValues.Stock)
     ? formValues.Stock
     : formValues.Stock
-    ? [formValues.Stock]
-    : [];
+      ? [formValues.Stock]
+      : [];
   const stockIds = stockValues
     .map((value) => Number(value))
     .filter((value) => !Number.isNaN(value) && value > 0);
@@ -214,21 +216,21 @@ const normalizeHarvestFormToBaserowPayload = (
     payload.Stock = [];
   }
 
-  const tripValues = Array.isArray(formValues['Viajes camión directos'])
-    ? formValues['Viajes camión directos']
-    : formValues['Viajes camión directos']
-    ? [formValues['Viajes camión directos']]
-    : [];
+  const tripValues = Array.isArray(formValues["Viajes camión directos"])
+    ? formValues["Viajes camión directos"]
+    : formValues["Viajes camión directos"]
+      ? [formValues["Viajes camión directos"]]
+      : [];
   const tripIds = tripValues
     .map((value) => Number(value))
     .filter((value) => !Number.isNaN(value) && value > 0);
   if (tripIds.length) {
-    payload['Viajes camión directos'] = tripIds;
+    payload["Viajes camión directos"] = tripIds;
   } else if (includeEmptyOptional) {
-    payload['Viajes camión directos'] = [];
+    payload["Viajes camión directos"] = [];
   }
 
-  const notesValue = (formValues['Notas'] ?? '').trim();
+  const notesValue = (formValues["Notas"] ?? "").trim();
   if (notesValue || includeEmptyOptional) {
     payload.Notas = notesValue;
   }
@@ -246,34 +248,32 @@ const normalizeHarvestDtoToBaserowPayload = (harvest: HarvestDto) => {
     }
   }
 
-  payload['KG Cosechados'] =
-    typeof harvest.harvestedKgs === 'number' ? harvest.harvestedKgs : 0;
+  payload["KG Cosechados"] =
+    typeof harvest.harvestedKgs === "number" ? harvest.harvestedKgs : 0;
 
   payload.Lotes = Array.isArray(harvest.lotsIds) ? [...harvest.lotsIds] : [];
 
   const cycleId =
-    typeof harvest.cycleId === 'number' && !Number.isNaN(harvest.cycleId)
+    typeof harvest.cycleId === "number" && !Number.isNaN(harvest.cycleId)
       ? harvest.cycleId
       : null;
 
-  payload['Ciclo de siembra'] = cycleId ? [cycleId] : [];
+  payload["Ciclo de siembra"] = cycleId ? [cycleId] : [];
 
   payload.Stock = Array.isArray(harvest.stockIds)
     ? harvest.stockIds.filter(
-        (id): id is number => typeof id === 'number' && !Number.isNaN(id)
+        (id): id is number => typeof id === "number" && !Number.isNaN(id),
       )
     : [];
 
-  payload['Viajes camión directos'] = Array.isArray(
-    harvest.directTruckTripIds
-  )
+  payload["Viajes camión directos"] = Array.isArray(harvest.directTruckTripIds)
     ? harvest.directTruckTripIds.filter(
-        (id): id is number => typeof id === 'number' && !Number.isNaN(id)
+        (id): id is number => typeof id === "number" && !Number.isNaN(id),
       )
     : [];
 
   const notesValue =
-    typeof harvest.notes === 'string' ? harvest.notes.trim() : '';
+    typeof harvest.notes === "string" ? harvest.notes.trim() : "";
   payload.Notas = notesValue;
 
   return payload;
@@ -283,7 +283,7 @@ const buildHarvestInitialValues = (harvest: HarvestDto): HarvestFormValues => {
   const d = harvest.date ? new Date(harvest.date) : new Date();
   const dateObj = Number.isNaN(d.getTime()) ? new Date() : d;
 
-  const pad = (n: number) => String(n).padStart(2, '0');
+  const pad = (n: number) => String(n).padStart(2, "0");
   const yyyy = dateObj.getFullYear();
   const mm = pad(dateObj.getMonth() + 1);
   const dd = pad(dateObj.getDate());
@@ -293,20 +293,20 @@ const buildHarvestInitialValues = (harvest: HarvestDto): HarvestFormValues => {
   return {
     Fecha_fecha: `${yyyy}-${mm}-${dd}`,
     Fecha_hora: `${hh}:${min}`,
-    'KG Cosechados':
-      harvest.harvestedKgs != null ? String(harvest.harvestedKgs) : '',
+    "KG Cosechados":
+      harvest.harvestedKgs != null ? String(harvest.harvestedKgs) : "",
 
-    Campo: ((harvest as any).fieldId ?? '') as '' | number,
+    Campo: ((harvest as any).fieldId ?? "") as "" | number,
     Lotes: (harvest.lotsIds ?? []) as Array<string | number>,
-    'Ciclo de siembra': (harvest.cycleId ?? '') as '' | number,
+    "Ciclo de siembra": (harvest.cycleId ?? "") as "" | number,
 
-    Cultivo: harvest.crop ?? '',
+    Cultivo: harvest.crop ?? "",
     Stock: (harvest.stockIds ?? []) as Array<string | number>,
-    'Viajes camión directos': (harvest.directTruckTripIds ?? []) as Array<
+    "Viajes camión directos": (harvest.directTruckTripIds ?? []) as Array<
       string | number
     >,
 
-    Notas: harvest.notes ?? '',
+    Notas: harvest.notes ?? "",
   };
 };
 
@@ -336,23 +336,23 @@ const emptyDependencies: FieldDependencies = {
 const buildInlineStockDefaultValues = (
   unitTypeOptions: Option[],
   statusOptions: Option[],
-  params: { campoId: number | ''; cycleId: number | ''; cultivo?: string }
+  params: { campoId: number | ""; cycleId: number | ""; cultivo?: string },
 ): StockFormValues => {
   const todayString = new Date().toISOString().slice(0, 10);
   return {
-    'Tipo unidad': unitTypeOptions[0]?.id ?? '',
+    "Tipo unidad": unitTypeOptions[0]?.id ?? "",
     Campo: params.campoId,
-    'Ciclo de siembra': params.cycleId ?? '',
-    Cultivo: params.cultivo ?? '',
-    'Fecha de creación': todayString,
-    Estado: statusOptions[0]?.id ?? '',
-    Notas: '',
-    ID: '',
-    'Kgs actuales': '—',
-    'Total kgs ingresados': '—',
-    'Total kgs egresados': '—',
-    'Cosechas asociadas': [],
-    'Viajes de camión desde stock': [],
+    "Ciclo de siembra": params.cycleId ?? "",
+    Cultivo: params.cultivo ?? "",
+    "Fecha de creación": todayString,
+    Estado: statusOptions[0]?.id ?? "",
+    Notas: "",
+    ID: "",
+    "Kgs actuales": "—",
+    "Total kgs ingresados": "—",
+    "Total kgs egresados": "—",
+    "Cosechas asociadas": [],
+    "Viajes de camión desde stock": [],
   };
 };
 
@@ -364,25 +364,25 @@ const CosechasPageClient = ({
   stockStatusOptions,
 }: CosechasPageClientProps) => {
   const router = useRouter();
-  const [periodFilter, setPeriodFilter] = React.useState<string>('all');
-  const [fieldFilter, setFieldFilter] = React.useState<string>('all');
-  const [cropFilter, setCropFilter] = React.useState<string>('all');
-  const [cycleFilter, setCycleFilter] = React.useState<string>('all');
+  const [periodFilter, setPeriodFilter] = React.useState<string>("all");
+  const [fieldFilter, setFieldFilter] = React.useState<string>("all");
+  const [cropFilter, setCropFilter] = React.useState<string>("all");
+  const [cycleFilter, setCycleFilter] = React.useState<string>("all");
   const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [dialogMode, setDialogMode] = React.useState<'create' | 'edit'>(
-    'create'
+  const [dialogMode, setDialogMode] = React.useState<"create" | "edit">(
+    "create",
   );
   const [activeHarvest, setActiveHarvest] = React.useState<HarvestDto | null>(
-    null
+    null,
   );
   const [snackbarState, setSnackbarState] = React.useState<{
     open: boolean;
     message: string;
-    severity: 'success' | 'error' | 'info';
+    severity: "success" | "error" | "info";
   }>({
     open: false,
-    message: '',
-    severity: 'success',
+    message: "",
+    severity: "success",
   });
   const [dialogInitialValues, setDialogInitialValues] =
     React.useState<HarvestFormValues>(getDefaultHarvestFormValues);
@@ -393,7 +393,10 @@ const CosechasPageClient = ({
     key: number;
   } | null>(null);
   const dialogPatchKeyRef = React.useRef(0);
-  const inlineStockContextRef = React.useRef<{ field: Option; cycleId: number } | null>(null);
+  const inlineStockContextRef = React.useRef<{
+    field: Option;
+    cycleId: number;
+  } | null>(null);
   const inlineTripContextRef = React.useRef<{
     fieldId: number;
     fieldLabel?: string;
@@ -417,23 +420,23 @@ const CosechasPageClient = ({
   const [stockDialogInitialValues, setStockDialogInitialValues] =
     React.useState<StockFormValues>(() =>
       buildInlineStockDefaultValues(stockUnitTypeOptions, stockStatusOptions, {
-        campoId: '',
-        cycleId: '',
-      })
+        campoId: "",
+        cycleId: "",
+      }),
     );
   const [tripDialogOpen, setTripDialogOpen] = React.useState(false);
   const [tripDialogInitialValues, setTripDialogInitialValues] =
     React.useState<TruckTripFormValues | null>(null);
 
   const showToast = React.useCallback(
-    (message: string, severity: 'success' | 'error' | 'info') => {
+    (message: string, severity: "success" | "error" | "info") => {
       setSnackbarState({
         open: true,
         message,
         severity,
       });
     },
-    []
+    [],
   );
 
   const applyDialogValuePatch = React.useCallback(
@@ -444,7 +447,7 @@ const CosechasPageClient = ({
         key: dialogPatchKeyRef.current,
       });
     },
-    []
+    [],
   );
 
   const currentDependencies = React.useMemo(() => {
@@ -457,14 +460,14 @@ const CosechasPageClient = ({
     try {
       setFieldOptionsLoading(true);
       setFieldOptionsError(null);
-      const response = await fetch('/api/harvests/options', {
-        cache: 'no-store',
+      const response = await fetch("/api/harvests/options", {
+        cache: "no-store",
       });
 
       if (!response.ok) {
         const errorBody = await response.text();
         throw new Error(
-          errorBody || 'No se pudieron cargar los campos disponibles'
+          errorBody || "No se pudieron cargar los campos disponibles",
         );
       }
 
@@ -475,9 +478,9 @@ const CosechasPageClient = ({
       const message =
         error instanceof Error
           ? error.message
-          : 'Ocurrió un error al cargar la lista de campos';
+          : "Ocurrió un error al cargar la lista de campos";
       setFieldOptionsError(message);
-      showToast(message, 'error');
+      showToast(message, "error");
       fields = [];
     } finally {
       setFieldOptionsLoading(false);
@@ -497,17 +500,17 @@ const CosechasPageClient = ({
           campoId: String(field.id),
         });
         if (field.label) {
-          params.set('campoName', field.label);
+          params.set("campoName", field.label);
         }
         const response = await fetch(`/api/harvests/options?${params}`, {
-          cache: 'no-store',
+          cache: "no-store",
         });
 
         if (!response.ok) {
           const errorBody = await response.text();
           throw new Error(
             errorBody ||
-              'No se pudieron cargar las opciones para el campo seleccionado'
+              "No se pudieron cargar las opciones para el campo seleccionado",
           );
         }
 
@@ -530,14 +533,14 @@ const CosechasPageClient = ({
         const message =
           error instanceof Error
             ? error.message
-            : 'Ocurrió un error al cargar las opciones dependientes';
+            : "Ocurrió un error al cargar las opciones dependientes";
         setDependenciesError(message);
-        showToast(message, 'error');
+        showToast(message, "error");
       } finally {
         setDependenciesLoading(false);
       }
     },
-    [dependenciesCache, showToast]
+    [dependenciesCache, showToast],
   );
 
   React.useEffect(() => {
@@ -551,16 +554,16 @@ const CosechasPageClient = ({
       if (values) {
         setDialogCurrentValues(values as HarvestFormValues);
       }
-      if (key !== 'Campo') return;
+      if (key !== "Campo") return;
 
-      if (rawValue === '' || rawValue === null || rawValue === undefined) {
+      if (rawValue === "" || rawValue === null || rawValue === undefined) {
         setSelectedField(null);
         setDependenciesError(null);
         return;
       }
 
       const parsedValue =
-        typeof rawValue === 'number' ? rawValue : Number(rawValue);
+        typeof rawValue === "number" ? rawValue : Number(rawValue);
       if (!parsedValue || Number.isNaN(parsedValue)) {
         setSelectedField(null);
         setDependenciesError(null);
@@ -576,12 +579,12 @@ const CosechasPageClient = ({
         fetchFieldDependencies(field);
       }
     },
-    [fieldOptions, fetchFieldDependencies]
+    [fieldOptions, fetchFieldDependencies],
   );
 
   const openEditDialog = React.useCallback(
     async (harvest: HarvestDto) => {
-      setDialogMode('edit');
+      setDialogMode("edit");
       setActiveHarvest(harvest);
       setDependenciesError(null);
       setSelectedField(null);
@@ -608,12 +611,12 @@ const CosechasPageClient = ({
       }
 
       if (!matchedField) {
-        const harvestFieldLabel = harvest.field?.trim().toLowerCase() ?? '';
+        const harvestFieldLabel = harvest.field?.trim().toLowerCase() ?? "";
         if (harvestFieldLabel) {
           matchedField =
             availableFields.find(
               (option) =>
-                option.label.trim().toLowerCase() === harvestFieldLabel
+                option.label.trim().toLowerCase() === harvestFieldLabel,
             ) ?? null;
         }
       }
@@ -621,7 +624,7 @@ const CosechasPageClient = ({
       if (matchedField) {
         harvestInitialValues.Campo = matchedField.id;
       } else {
-        harvestInitialValues.Campo = '';
+        harvestInitialValues.Campo = "";
       }
 
       setSelectedField(matchedField);
@@ -638,11 +641,16 @@ const CosechasPageClient = ({
 
       setDialogOpen(true);
     },
-    [dependenciesCache, fetchFieldDependencies, fetchFieldOptions, fieldOptions]
+    [
+      dependenciesCache,
+      fetchFieldDependencies,
+      fetchFieldOptions,
+      fieldOptions,
+    ],
   );
 
   const handleOpenCreateDialog = React.useCallback(() => {
-    setDialogMode('create');
+    setDialogMode("create");
     setActiveHarvest(null);
     const defaults = getDefaultHarvestFormValues();
     setDialogInitialValues(defaults);
@@ -660,7 +668,7 @@ const CosechasPageClient = ({
 
   const handleDialogClose = React.useCallback(() => {
     setDialogOpen(false);
-    setDialogMode('create');
+    setDialogMode("create");
     setActiveHarvest(null);
     setSelectedField(null);
     setDependenciesError(null);
@@ -677,16 +685,16 @@ const CosechasPageClient = ({
     inlineTripContextRef.current = null;
   }, []);
 
-  const selectedCycleValue = dialogCurrentValues['Ciclo de siembra'];
+  const selectedCycleValue = dialogCurrentValues["Ciclo de siembra"];
   const selectedCycleId =
-    typeof selectedCycleValue === 'number'
+    typeof selectedCycleValue === "number"
       ? selectedCycleValue
       : Number(selectedCycleValue);
   const campoValue = dialogCurrentValues.Campo;
   const campoIdForActions =
-    typeof campoValue === 'number'
+    typeof campoValue === "number"
       ? campoValue
-      : Number(campoValue ? `${campoValue}` : '');
+      : Number(campoValue ? `${campoValue}` : "");
 
   const campoOptionForActions = React.useMemo(() => {
     if (selectedField) return selectedField;
@@ -707,12 +715,12 @@ const CosechasPageClient = ({
 
   const handleOpenInlineStockDialog = React.useCallback(() => {
     if (!selectedField) return;
-    const rawCycle = dialogCurrentValues['Ciclo de siembra'];
+    const rawCycle = dialogCurrentValues["Ciclo de siembra"];
     const cycleId =
-      typeof rawCycle === 'number' ? rawCycle : Number(rawCycle || '');
+      typeof rawCycle === "number" ? rawCycle : Number(rawCycle || "");
     if (!cycleId || Number.isNaN(cycleId)) return;
     const cycleMatch = currentDependencies.cycles.find(
-      (cycle) => cycle.id === cycleId
+      (cycle) => cycle.id === cycleId,
     );
     inlineStockContextRef.current = { field: selectedField, cycleId };
     const initialValues = buildInlineStockDefaultValues(
@@ -721,8 +729,8 @@ const CosechasPageClient = ({
       {
         campoId: selectedField.id,
         cycleId,
-        cultivo: cycleMatch?.crop ?? dialogCurrentValues.Cultivo ?? '',
-      }
+        cultivo: cycleMatch?.crop ?? dialogCurrentValues.Cultivo ?? "",
+      },
     );
     setStockDialogInitialValues(initialValues);
     setStockDialogOpen(true);
@@ -740,46 +748,50 @@ const CosechasPageClient = ({
   }, []);
 
   const handleStockDialogSuccess = React.useCallback(
-    async ({ stockId }: { mode: 'create'; stockId?: number }) => {
+    (result: { mode: StockDialogMode; stockId?: number }) => {
       setStockDialogOpen(false);
-      const context = inlineStockContextRef.current;
-      inlineStockContextRef.current = null;
-      if (!stockId || !context) return;
-      const { field } = context;
-      const normalizedStockId = Number(stockId);
-      if (!normalizedStockId || Number.isNaN(normalizedStockId)) return;
+      void (async () => {
+        if (result.mode !== "create") return;
+        const { stockId } = result;
+        const context = inlineStockContextRef.current;
+        inlineStockContextRef.current = null;
+        if (!stockId || !context) return;
+        const { field } = context;
+        const normalizedStockId = Number(stockId);
+        if (!normalizedStockId || Number.isNaN(normalizedStockId)) return;
 
-      setDependenciesCache((prev) => {
-        const next = { ...prev };
-        delete next[field.id];
-        return next;
-      });
+        setDependenciesCache((prev) => {
+          const next = { ...prev };
+          delete next[field.id];
+          return next;
+        });
 
-      await fetchFieldDependencies(field, { force: true });
+        await fetchFieldDependencies(field, { force: true });
 
-      setDialogCurrentValues((prev) => {
-        if (!selectedField || selectedField.id !== field.id) {
-          return prev;
-        }
-        const prevStocks = Array.isArray(prev.Stock) ? prev.Stock : [];
-        const alreadyExists = prevStocks.some(
-          (value) => Number(value) === normalizedStockId
-        );
-        if (alreadyExists) return prev;
-        const updatedStocks = [...prevStocks, normalizedStockId];
-        applyDialogValuePatch({ Stock: updatedStocks });
-        return {
-          ...prev,
-          Stock: updatedStocks,
-        } as HarvestFormValues;
-      });
+        setDialogCurrentValues((prev) => {
+          if (!selectedField || selectedField.id !== field.id) {
+            return prev;
+          }
+          const prevStocks = Array.isArray(prev.Stock) ? prev.Stock : [];
+          const alreadyExists = prevStocks.some(
+            (value) => Number(value) === normalizedStockId,
+          );
+          if (alreadyExists) return prev;
+          const updatedStocks = [...prevStocks, normalizedStockId];
+          applyDialogValuePatch({ Stock: updatedStocks });
+          return {
+            ...prev,
+            Stock: updatedStocks,
+          } as HarvestFormValues;
+        });
+      })();
     },
     [
       applyDialogValuePatch,
       fetchFieldDependencies,
       selectedField,
       setDependenciesCache,
-    ]
+    ],
   );
 
   const handleOpenInlineTruckTripDialog = React.useCallback(() => {
@@ -788,17 +800,16 @@ const CosechasPageClient = ({
     if (!cycleId || Number.isNaN(cycleId)) return;
     const defaults = getDefaultTruckTripFormValues();
     const cycleMatch = currentDependencies.cycles.find(
-      (cycle) => cycle.id === cycleId
+      (cycle) => cycle.id === cycleId,
     );
     const initialValues: TruckTripFormValues = {
       ...defaults,
-      'Campo origen': campoIdForActions,
-      'Tipo origen': 'harvest',
+      "Campo origen": campoIdForActions,
+      "Tipo origen": "harvest",
       Origen:
-        dialogMode === 'edit' && activeHarvest?.id ? activeHarvest.id : '',
-      'Ciclo de siembra':
-        activeHarvest?.cycleLabel ?? cycleMatch?.label ?? '',
-      'Kg carga origen': dialogCurrentValues['KG Cosechados'] ?? '',
+        dialogMode === "edit" && activeHarvest?.id ? activeHarvest.id : "",
+      "Ciclo de siembra": activeHarvest?.cycleLabel ?? cycleMatch?.label ?? "",
+      "Kg carga origen": dialogCurrentValues["KG Cosechados"] ?? "",
     };
     inlineTripContextRef.current = {
       fieldId: campoIdForActions,
@@ -827,87 +838,91 @@ const CosechasPageClient = ({
   }, []);
 
   const handleTripDialogSuccess = React.useCallback(
-    async ({ tripId }: { mode: 'create'; tripId?: number }) => {
+    (result: { mode: TruckTripDialogMode; tripId?: number }) => {
       setTripDialogOpen(false);
-      const context = inlineTripContextRef.current;
-      inlineTripContextRef.current = null;
-      if (!tripId || !context) return;
-      const normalizedTripId = Number(tripId);
-      if (!normalizedTripId || Number.isNaN(normalizedTripId)) return;
+      void (async () => {
+        if (result.mode !== "create") return;
+        const { tripId } = result;
+        const context = inlineTripContextRef.current;
+        inlineTripContextRef.current = null;
+        if (!tripId || !context) return;
+        const normalizedTripId = Number(tripId);
+        if (!normalizedTripId || Number.isNaN(normalizedTripId)) return;
 
-      setDependenciesCache((prev) => {
-        const next = { ...prev };
-        delete next[context.fieldId];
-        return next;
-      });
+        setDependenciesCache((prev) => {
+          const next = { ...prev };
+          delete next[context.fieldId];
+          return next;
+        });
 
-      const contextField: Option = {
-        id: context.fieldId,
-        label:
-          context.fieldLabel ||
-          selectedField?.label ||
-          `Campo #${context.fieldId}`,
-      };
+        const contextField: Option = {
+          id: context.fieldId,
+          label:
+            context.fieldLabel ||
+            selectedField?.label ||
+            `Campo #${context.fieldId}`,
+        };
 
-      await fetchFieldDependencies(contextField, { force: true });
+        await fetchFieldDependencies(contextField, { force: true });
 
-      setDialogCurrentValues((prev) => {
-        const prevCampoRaw = prev.Campo;
-        const prevCampoId =
-          typeof prevCampoRaw === 'number'
-            ? prevCampoRaw
-            : Number(prevCampoRaw ? `${prevCampoRaw}` : '');
-        if (!prevCampoId || Number.isNaN(prevCampoId)) {
-          return prev;
-        }
-        if (prevCampoId !== context.fieldId) {
-          return prev;
-        }
-        const prevTrips = Array.isArray(prev['Viajes camión directos'])
-          ? prev['Viajes camión directos']
-          : [];
-        if (prevTrips.some((value) => Number(value) === normalizedTripId)) {
-          return prev;
-        }
-        const updatedTrips = [...prevTrips, normalizedTripId];
-        applyDialogValuePatch({ 'Viajes camión directos': updatedTrips });
-        return {
-          ...prev,
-          'Viajes camión directos': updatedTrips,
-        } as HarvestFormValues;
-      });
+        setDialogCurrentValues((prev) => {
+          const prevCampoRaw = prev.Campo;
+          const prevCampoId =
+            typeof prevCampoRaw === "number"
+              ? prevCampoRaw
+              : Number(prevCampoRaw ? `${prevCampoRaw}` : "");
+          if (!prevCampoId || Number.isNaN(prevCampoId)) {
+            return prev;
+          }
+          if (prevCampoId !== context.fieldId) {
+            return prev;
+          }
+          const prevTrips = Array.isArray(prev["Viajes camión directos"])
+            ? prev["Viajes camión directos"]
+            : [];
+          if (prevTrips.some((value) => Number(value) === normalizedTripId)) {
+            return prev;
+          }
+          const updatedTrips = [...prevTrips, normalizedTripId];
+          applyDialogValuePatch({ "Viajes camión directos": updatedTrips });
+          return {
+            ...prev,
+            "Viajes camión directos": updatedTrips,
+          } as HarvestFormValues;
+        });
+      })();
     },
-    [applyDialogValuePatch, fetchFieldDependencies, setDependenciesCache]
+    [applyDialogValuePatch, fetchFieldDependencies, selectedField, setDependenciesCache],
   );
 
   const harvestFormSections = React.useMemo<SimpleEntityDialogSection[]>(
     () => [
       {
-        title: 'Información básica',
-        description: 'Fecha y cantidad total cosechada',
+        title: "Información básica",
+        description: "Fecha y cantidad total cosechada",
         icon: <CalendarTodayIcon />,
-        fields: ['Fecha_fecha', 'Fecha_hora', 'KG Cosechados'],
+        fields: ["Fecha_fecha", "Fecha_hora", "KG Cosechados"],
       },
       {
-        title: 'Ubicación y origen',
-        description: 'Campo, lotes y ciclo de donde proviene la cosecha',
+        title: "Ubicación y origen",
+        description: "Campo, lotes y ciclo de donde proviene la cosecha",
         icon: <LandscapeIcon />,
-        fields: ['Campo', 'Lotes', 'Ciclo de siembra', 'Cultivo'],
+        fields: ["Campo", "Lotes", "Ciclo de siembra", "Cultivo"],
       },
       {
-        title: 'Distribución',
-        description: 'Stock y viajes directos asociados (opcional)',
+        title: "Distribución",
+        description: "Stock y viajes directos asociados (opcional)",
         icon: <LocalShippingIcon />,
-        fields: ['Stock', 'Viajes camión directos'],
+        fields: ["Stock", "Viajes camión directos"],
       },
       {
-        title: 'Notas adicionales',
-        description: 'Observaciones y detalles extras',
+        title: "Notas adicionales",
+        description: "Observaciones y detalles extras",
         icon: <AgricultureIcon />,
-        fields: ['Notas'],
+        fields: ["Notas"],
       },
     ],
-    []
+    [],
   );
 
   const harvestFormFields = React.useMemo<
@@ -940,15 +955,15 @@ const CosechasPageClient = ({
     }));
 
     const dependentHelperText = selectedField
-      ? dependenciesError ?? undefined
-      : 'Seleccioná un campo primero';
+      ? dependenciesError
+      : "Seleccioná un campo primero";
 
     const dependentDisabled = !selectedField || dependenciesLoading;
 
     const inlineStockDisabled = !canCreateInlineStock || dependenciesLoading;
     const stockHelperMessage = dependentHelperText
       ? dependentHelperText
-      : 'Opcional: asociá esta cosecha a uno o más stocks existentes';
+      : "Opcional: asociar esta cosecha a uno o más stocks existentes";
     const stockHelperContent = (
       <Stack spacing={0.5} alignItems="flex-start">
         <Typography variant="caption" color="text.secondary">
@@ -959,7 +974,7 @@ const CosechasPageClient = ({
           size="small"
           disabled={inlineStockDisabled}
           onClick={handleOpenInlineStockDialog}
-          sx={{ px: 0, textTransform: 'none' }}
+          sx={{ px: 0, textTransform: "none" }}
         >
           + Nuevo stock
         </Button>
@@ -967,7 +982,7 @@ const CosechasPageClient = ({
     );
     const truckHelperMessage = dependentHelperText
       ? dependentHelperText
-      : 'Opcional: asociá viajes directos desde campo';
+      : "Opcional: asociá viajes directos desde campo";
     const truckHelperContent = (
       <Stack spacing={0.5} alignItems="flex-start">
         <Typography variant="caption" color="text.secondary">
@@ -978,7 +993,7 @@ const CosechasPageClient = ({
           size="small"
           disabled={!canCreateInlineTruckTrip || dependenciesLoading}
           onClick={handleOpenInlineTruckTripDialog}
-          sx={{ px: 0, textTransform: 'none' }}
+          sx={{ px: 0, textTransform: "none" }}
         >
           + Nuevo viaje de camión
         </Button>
@@ -987,44 +1002,44 @@ const CosechasPageClient = ({
 
     return [
       {
-        key: 'Fecha_fecha',
-        label: 'Fecha',
-        type: 'date',
+        key: "Fecha_fecha",
+        label: "Fecha",
+        type: "date",
         required: true,
       },
       {
-        key: 'Fecha_hora',
-        label: 'Hora',
-        type: 'time',
+        key: "Fecha_hora",
+        label: "Hora",
+        type: "time",
         required: true,
       },
       {
-        key: 'KG Cosechados',
-        label: 'Kilos cosechados',
-        type: 'number',
+        key: "KG Cosechados",
+        label: "Kilos cosechados",
+        type: "number",
         required: true,
         step: 0.01,
-        placeholder: '0.00',
+        placeholder: "0.00",
       },
       {
-        key: 'Campo',
-        label: 'Campo',
-        type: 'select',
+        key: "Campo",
+        label: "Campo",
+        type: "select",
         required: true,
         options: campoOptions,
         loading: fieldOptionsLoading,
         onValueChange: () => ({
           Lotes: [],
-          'Ciclo de siembra': '',
-          Cultivo: '',
+          "Ciclo de siembra": "",
+          Cultivo: "",
           Stock: [],
-          'Viajes camión directos': [],
+          "Viajes camión directos": [],
         }),
       },
       {
-        key: 'Lotes',
-        label: 'Lotes',
-        type: 'multi-select',
+        key: "Lotes",
+        label: "Lotes",
+        type: "multi-select",
         required: true,
         options: lotsOptions,
         loading: dependenciesLoading,
@@ -1032,9 +1047,9 @@ const CosechasPageClient = ({
         helperText: dependentHelperText,
       },
       {
-        key: 'Ciclo de siembra',
-        label: 'Ciclo de siembra',
-        type: 'select',
+        key: "Ciclo de siembra",
+        label: "Ciclo de siembra",
+        type: "select",
         required: true,
         options: cycleOptions,
         loading: dependenciesLoading,
@@ -1044,61 +1059,63 @@ const CosechasPageClient = ({
         onValueChange: (value) => {
           const cycle = cycleOptions.find((option) => option.value === value);
           return {
-            Cultivo: cycle?.meta?.crop ?? '',
+            Cultivo: cycle?.meta?.crop ?? "",
           };
         },
       },
       {
-        key: 'Cultivo',
-        label: 'Cultivo',
-        type: 'readonly',
-        helperText: 'Se completa automáticamente según el ciclo elegido',
+        key: "Cultivo",
+        label: "Cultivo",
+        type: "readonly",
+        helperText: "Se completa automáticamente según el ciclo elegido",
       },
       {
-        key: 'Stock',
-        label: 'Stock',
+        key: "Stock",
+        label: "Stock",
         labelNode: (
           <Box
             sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
             }}
           >
             <span>Stock</span>
           </Box>
         ),
-        type: 'multi-select',
+        type: "multi-select",
         options: stockOptions,
         loading: dependenciesLoading,
         disabled: dependentDisabled,
-        helperText: stockHelperContent,
+        helperText: stockHelperMessage,
+        helperTooltip: stockHelperContent,
       },
       {
-        key: 'Viajes camión directos',
-        label: 'Viajes de camión',
+        key: "Viajes camión directos",
+        label: "Viajes de camión",
         labelNode: (
           <Box
             sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
             }}
           >
             <span>Viajes de camión</span>
           </Box>
         ),
-        type: 'multi-select',
+        type: "multi-select",
         options: truckOptions,
         loading: dependenciesLoading,
         disabled: dependentDisabled,
-        helperText: truckHelperContent,
+        helperText: dependentHelperText,
+        helperTooltip: truckHelperContent,
       },
       {
-        key: 'Notas',
-        label: 'Notas y observaciones',
-        type: 'textarea',
-        placeholder: 'Escribí aquí tus observaciones...',
+        key: "Notas",
+        label: "Notas y observaciones",
+        type: "textarea",
+        placeholder: "Escribí aquí tus observaciones...",
       },
     ];
   }, [
@@ -1123,11 +1140,11 @@ const CosechasPageClient = ({
       Array.from(
         new Set(
           initialHarvests
-            .map((h) => (h.period ?? '').trim())
-            .filter((p) => Boolean(p))
-        )
+            .map((h) => (h.period ?? "").trim())
+            .filter((p) => Boolean(p)),
+        ),
       ).sort((a, b) => b.localeCompare(a)),
-    [initialHarvests]
+    [initialHarvests],
   );
 
   const uniqueCycles = React.useMemo(
@@ -1135,41 +1152,41 @@ const CosechasPageClient = ({
       Array.from(
         new Set(
           initialHarvests
-            .map((h) => h.cycleLabel?.trim() || '')
-            .filter((v) => Boolean(v))
-        )
+            .map((h) => h.cycleLabel?.trim() || "")
+            .filter((v) => Boolean(v)),
+        ),
       ).sort(),
-    [initialHarvests]
+    [initialHarvests],
   );
 
   const uniqueFields = React.useMemo(
     () =>
       Array.from(
         new Set(
-          initialHarvests.map((h) => h.field).filter((field) => Boolean(field))
-        )
+          initialHarvests.map((h) => h.field).filter((field) => Boolean(field)),
+        ),
       ).sort(),
-    [initialHarvests]
+    [initialHarvests],
   );
 
   const uniqueCrops = React.useMemo(
     () =>
       Array.from(
         new Set(
-          initialHarvests.map((h) => h.crop).filter((crop) => Boolean(crop))
-        )
+          initialHarvests.map((h) => h.crop).filter((crop) => Boolean(crop)),
+        ),
       ).sort(),
-    [initialHarvests]
+    [initialHarvests],
   );
 
   const filteredHarvests = React.useMemo(() => {
     return initialHarvests.filter((harvest) => {
-      const period = (harvest.period ?? '').trim();
-      if (periodFilter !== 'all' && period !== periodFilter) return false;
-      if (fieldFilter !== 'all' && harvest.field !== fieldFilter) return false;
-      if (cropFilter !== 'all' && harvest.crop !== cropFilter) return false;
-      if (cycleFilter !== 'all') {
-        const cycleLabel = harvest.cycleLabel?.trim() || '';
+      const period = (harvest.period ?? "").trim();
+      if (periodFilter !== "all" && period !== periodFilter) return false;
+      if (fieldFilter !== "all" && harvest.field !== fieldFilter) return false;
+      if (cropFilter !== "all" && harvest.crop !== cropFilter) return false;
+      if (cycleFilter !== "all") {
+        const cycleLabel = harvest.cycleLabel?.trim() || "";
         if (cycleLabel !== cycleFilter) return false;
       }
 
@@ -1199,24 +1216,24 @@ const CosechasPageClient = ({
         totalDirectTruckKgs: 0,
         totalToStockKgs: 0,
         harvestCount: 0,
-      }
+      },
     );
   }, [sortedHarvests]);
 
   const handleCreateSubmit = React.useCallback(
     async (formValues: Record<string, any>) => {
       const payload = normalizeHarvestFormToBaserowPayload(formValues);
-      const response = await fetch('/api/harvests', {
-        method: 'POST',
+      const response = await fetch("/api/harvests", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ payload }),
       });
 
       if (!response.ok) {
         const errorBody = await response.text();
-        let message = 'No se pudo registrar la cosecha';
+        let message = "No se pudo registrar la cosecha";
         if (errorBody) {
           try {
             const parsed = JSON.parse(errorBody);
@@ -1225,20 +1242,20 @@ const CosechasPageClient = ({
             message = errorBody;
           }
         }
-        showToast(message, 'error');
+        showToast(message, "error");
         throw new Error(message);
       }
 
-      showToast('Cosecha registrada correctamente', 'success');
+      showToast("Cosecha registrada correctamente", "success");
       router.refresh();
     },
-    [router, showToast]
+    [router, showToast],
   );
 
   const handleEditSubmit = React.useCallback(
     async (formValues: Record<string, any>) => {
       if (!activeHarvest) {
-        throw new Error('No se encontró la cosecha a editar');
+        throw new Error("No se encontró la cosecha a editar");
       }
 
       const nextPayload = normalizeHarvestFormToBaserowPayload(formValues, {
@@ -1248,21 +1265,21 @@ const CosechasPageClient = ({
       const diffPayload = computeDiffPayload(prevPayload, nextPayload);
 
       if (!Object.keys(diffPayload).length) {
-        showToast('No hay cambios para guardar', 'info');
+        showToast("No hay cambios para guardar", "info");
         return;
       }
 
       const response = await fetch(`/api/harvests/${activeHarvest.id}`, {
-        method: 'PATCH',
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ payload: diffPayload }),
       });
 
       if (!response.ok) {
         const errorBody = await response.text();
-        let message = 'No se pudo actualizar la cosecha';
+        let message = "No se pudo actualizar la cosecha";
         if (errorBody) {
           try {
             const parsed = JSON.parse(errorBody);
@@ -1271,21 +1288,21 @@ const CosechasPageClient = ({
             message = errorBody;
           }
         }
-        showToast(message, 'error');
+        showToast(message, "error");
         throw new Error(message);
       }
 
-      showToast('Cosecha actualizada correctamente', 'success');
+      showToast("Cosecha actualizada correctamente", "success");
       router.refresh();
     },
-    [activeHarvest, router, showToast]
+    [activeHarvest, router, showToast],
   );
 
   const handleSnackbarClose = (
     _event?: React.SyntheticEvent | Event,
-    reason?: string
+    reason?: string,
   ) => {
-    if (reason === 'clickaway') return;
+    if (reason === "clickaway") return;
     setSnackbarState((prev) => ({ ...prev, open: false }));
   };
 
@@ -1301,19 +1318,19 @@ const CosechasPageClient = ({
 
   const handleDeleteConfirmed = React.useCallback(async () => {
     if (!activeHarvest) {
-      showToast('No se encontró la cosecha a borrar', 'error');
+      showToast("No se encontró la cosecha a borrar", "error");
       return;
     }
 
     try {
       setDeleteLoading(true);
       const response = await fetch(`/api/harvests/${activeHarvest.id}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       if (!response.ok) {
         const errorBody = await response.text();
-        let message = 'No se pudo borrar la cosecha';
+        let message = "No se pudo borrar la cosecha";
         if (errorBody) {
           try {
             const parsed = JSON.parse(errorBody);
@@ -1325,7 +1342,7 @@ const CosechasPageClient = ({
         throw new Error(message);
       }
 
-      showToast('Cosecha borrada correctamente', 'success');
+      showToast("Cosecha borrada correctamente", "success");
       setDeleteConfirmOpen(false);
       handleDialogClose();
       router.refresh();
@@ -1333,8 +1350,8 @@ const CosechasPageClient = ({
       const message =
         error instanceof Error
           ? error.message
-          : 'Ocurrió un error al borrar la cosecha';
-      showToast(message, 'error');
+          : "Ocurrió un error al borrar la cosecha";
+      showToast(message, "error");
     } finally {
       setDeleteLoading(false);
     }
@@ -1343,13 +1360,13 @@ const CosechasPageClient = ({
   const editHarvestIdentifier =
     activeHarvest?.harvestId || (activeHarvest ? `#${activeHarvest.id}` : null);
   const dialogTitle =
-    dialogMode === 'create'
-      ? 'Registrar nueva cosecha'
+    dialogMode === "create"
+      ? "Registrar nueva cosecha"
       : editHarvestIdentifier
-      ? `Editar cosecha ${editHarvestIdentifier}`
-      : 'Editar cosecha';
+        ? `Editar cosecha ${editHarvestIdentifier}`
+        : "Editar cosecha";
   const dialogSubmitHandler =
-    dialogMode === 'create' ? handleCreateSubmit : handleEditSubmit;
+    dialogMode === "create" ? handleCreateSubmit : handleEditSubmit;
 
   return (
     <PageContainer
@@ -1362,9 +1379,9 @@ const CosechasPageClient = ({
             variant="h2"
             component="h1"
             sx={{
-              background: 'linear-gradient(135deg, #3A3184 0%, #6962A2 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              background: "linear-gradient(135deg, #3A3184 0%, #6962A2 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
               fontWeight: 700,
               mb: 1,
             }}
@@ -1374,7 +1391,7 @@ const CosechasPageClient = ({
           <Typography
             variant="body1"
             color="text.secondary"
-            sx={{ maxWidth: '800px' }}
+            sx={{ maxWidth: "800px" }}
           >
             Registro y seguimiento de kilos cosechados, su distribución entre
             viajes directos y stock.
@@ -1389,15 +1406,15 @@ const CosechasPageClient = ({
                 borderRadius: 2,
                 background: `linear-gradient(135deg, ${alpha(
                   theme.palette.primary.main,
-                  0.03
+                  0.03,
                 )} 0%, ${alpha(theme.palette.primary.light, 0.03)} 100%)`,
                 border: `1px solid ${theme.palette.divider}`,
               })}
             >
               <Stack
-                direction={{ xs: 'column', md: 'row' }}
+                direction={{ xs: "column", md: "row" }}
                 spacing={2}
-                sx={{ alignItems: { xs: 'stretch', md: 'center' } }}
+                sx={{ alignItems: { xs: "stretch", md: "center" } }}
               >
                 <FormControl fullWidth size="small">
                   <TextField
@@ -1407,7 +1424,7 @@ const CosechasPageClient = ({
                     onChange={(event) => setPeriodFilter(event.target.value)}
                     fullWidth
                     size="small"
-                    sx={{ bgcolor: 'background.paper' }}
+                    sx={{ bgcolor: "background.paper" }}
                   >
                     <MenuItem value="all">Todos</MenuItem>
                     {uniquePeriods.map((period) => (
@@ -1425,7 +1442,7 @@ const CosechasPageClient = ({
                     onChange={(event) => setFieldFilter(event.target.value)}
                     fullWidth
                     size="small"
-                    sx={{ bgcolor: 'background.paper' }}
+                    sx={{ bgcolor: "background.paper" }}
                   >
                     <MenuItem value="all">Todos</MenuItem>
                     {uniqueFields.map((field) => (
@@ -1443,7 +1460,7 @@ const CosechasPageClient = ({
                     onChange={(event) => setCropFilter(event.target.value)}
                     fullWidth
                     size="small"
-                    sx={{ bgcolor: 'background.paper' }}
+                    sx={{ bgcolor: "background.paper" }}
                   >
                     <MenuItem value="all">Todos</MenuItem>
                     {uniqueCrops.map((crop) => (
@@ -1461,7 +1478,7 @@ const CosechasPageClient = ({
                     onChange={(event) => setCycleFilter(event.target.value)}
                     fullWidth
                     size="small"
-                    sx={{ bgcolor: 'background.paper' }}
+                    sx={{ bgcolor: "background.paper" }}
                   >
                     <MenuItem value="all">Todos</MenuItem>
                     {uniqueCycles.map((cycle) => (
@@ -1474,12 +1491,12 @@ const CosechasPageClient = ({
               </Stack>
             </Box>
             <Stack
-              direction={{ xs: 'column', md: 'row' }}
+              direction={{ xs: "column", md: "row" }}
               spacing={2}
               sx={{
-                justifyContent: 'space-between',
-                alignItems: { xs: 'stretch', md: 'center' },
-                marginBottom: '2rem',
+                justifyContent: "space-between",
+                alignItems: { xs: "stretch", md: "center" },
+                marginBottom: "2rem",
               }}
             >
               <Box
@@ -1490,7 +1507,7 @@ const CosechasPageClient = ({
                   bgcolor: alpha(theme.palette.primary.main, 0.08),
                   border: `1px solid ${alpha(
                     theme.palette.primary.main,
-                    0.12
+                    0.12,
                   )}`,
                 })}
               >
@@ -1500,16 +1517,16 @@ const CosechasPageClient = ({
                   fontWeight={600}
                 >
                   {filteredHarvests.length} cosecha
-                  {filteredHarvests.length === 1 ? '' : 's'} registrada
-                  {filteredHarvests.length === 1 ? '' : 's'}
+                  {filteredHarvests.length === 1 ? "" : "s"} registrada
+                  {filteredHarvests.length === 1 ? "" : "s"}
                 </Typography>
               </Box>
               <Stack
                 direction="row"
                 spacing={2}
                 sx={{
-                  width: { xs: '100%', md: 'auto' },
-                  justifyContent: { xs: 'space-between', md: 'flex-end' },
+                  width: { xs: "100%", md: "auto" },
+                  justifyContent: { xs: "space-between", md: "flex-end" },
                 }}
               >
                 <Button
@@ -1519,12 +1536,12 @@ const CosechasPageClient = ({
                   sx={{
                     flexGrow: { xs: 1, md: 0 },
                     borderRadius: 2,
-                    textTransform: 'none',
+                    textTransform: "none",
                     fontWeight: 700,
                     px: 3,
                     boxShadow: (theme) =>
                       `0 4px 12px ${alpha(theme.palette.primary.main, 0.25)}`,
-                    '&:hover': {
+                    "&:hover": {
                       boxShadow: (theme) =>
                         `0 6px 16px ${alpha(theme.palette.primary.main, 0.35)}`,
                     },
@@ -1548,17 +1565,17 @@ const CosechasPageClient = ({
             </Stack>
 
             {/* Desktop table */}
-            <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+            <Box sx={{ display: { xs: "none", md: "block" } }}>
               <TableContainer
                 component={Paper}
                 variant="outlined"
                 sx={(theme) => ({
                   borderRadius: 2,
-                  width: '100%',
-                  overflowX: 'auto',
+                  width: "100%",
+                  overflowX: "auto",
                   boxShadow: `0 2px 8px ${alpha(
                     theme.palette.grey[500],
-                    0.08
+                    0.08,
                   )}`,
                 })}
               >
@@ -1567,16 +1584,16 @@ const CosechasPageClient = ({
                     sx={(theme) => ({
                       background: `linear-gradient(135deg, ${alpha(
                         theme.palette.primary.main,
-                        0.06
+                        0.06,
                       )} 0%, ${alpha(theme.palette.primary.light, 0.06)} 100%)`,
-                      '& .MuiTableCell-root': {
+                      "& .MuiTableCell-root": {
                         fontWeight: 700,
                         color: theme.palette.primary.main,
                         borderBottom: `2px solid ${theme.palette.primary.main}`,
                         py: 1.5,
-                        fontSize: '0.8rem',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px',
+                        fontSize: "0.8rem",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.5px",
                       },
                     })}
                   >
@@ -1589,7 +1606,7 @@ const CosechasPageClient = ({
                         sx={(theme) => ({
                           borderLeft: `2px solid ${alpha(
                             theme.palette.primary.main,
-                            0.15
+                            0.15,
                           )}`,
                         })}
                       />
@@ -1602,7 +1619,7 @@ const CosechasPageClient = ({
                         sx={(theme) => ({
                           borderLeft: `2px solid ${alpha(
                             theme.palette.primary.main,
-                            0.15
+                            0.15,
                           )}`,
                         })}
                       />
@@ -1628,21 +1645,21 @@ const CosechasPageClient = ({
                             void openEditDialog(harvest);
                           }}
                           sx={(theme) => ({
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
+                            cursor: "pointer",
+                            transition: "all 0.2s ease",
                             bgcolor:
                               index % 2 === 0
-                                ? 'transparent'
+                                ? "transparent"
                                 : alpha(theme.palette.grey[100], 0.4),
-                            '&:hover': {
+                            "&:hover": {
                               bgcolor: alpha(theme.palette.primary.main, 0.04),
-                              transform: 'scale(1.003)',
+                              transform: "scale(1.003)",
                               boxShadow: `0 2px 8px ${alpha(
                                 theme.palette.primary.main,
-                                0.1
+                                0.1,
                               )}`,
                             },
-                            '& .MuiTableCell-root': {
+                            "& .MuiTableCell-root": {
                               borderBottom: `1px solid ${theme.palette.divider}`,
                               py: 1.5,
                             },
@@ -1661,7 +1678,7 @@ const CosechasPageClient = ({
                               {date}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                              {time || '—'}
+                              {time || "—"}
                             </Typography>
                           </TableCell>
                           <TableCell>
@@ -1692,7 +1709,7 @@ const CosechasPageClient = ({
                             sx={(theme) => ({
                               borderLeft: `2px solid ${alpha(
                                 theme.palette.primary.main,
-                                0.08
+                                0.08,
                               )}`,
                             })}
                           />
@@ -1702,11 +1719,11 @@ const CosechasPageClient = ({
                               href={`/ciclos/${harvest.cycleId}`}
                               onClick={(event) => event.stopPropagation()}
                               sx={(theme) => ({
-                                fontSize: '0.85rem',
+                                fontSize: "0.85rem",
                                 fontWeight: 700,
                                 color: theme.palette.primary.main,
-                                textDecoration: 'none',
-                                '&:hover': { textDecoration: 'underline' },
+                                textDecoration: "none",
+                                "&:hover": { textDecoration: "underline" },
                               })}
                             >
                               {harvest.cycleLabel || `Ciclo ${harvest.cycleId}`}
@@ -1722,7 +1739,7 @@ const CosechasPageClient = ({
                                     variant="outlined"
                                     label={`${harvest.stockLabels[i]}`}
                                     sx={{
-                                      fontSize: 'body2',
+                                      fontSize: "body2",
                                       fontWeight: 600,
                                       mb: 0.5,
                                     }}
@@ -1748,7 +1765,7 @@ const CosechasPageClient = ({
                                     variant="outlined"
                                     label={`${harvest.directTruckLabels[i]}`}
                                     sx={{
-                                      fontSize: 'body2',
+                                      fontSize: "body2",
                                       fontWeight: 600,
                                       mb: 0.5,
                                     }}
@@ -1768,7 +1785,7 @@ const CosechasPageClient = ({
                             sx={(theme) => ({
                               borderLeft: `2px solid ${alpha(
                                 theme.palette.primary.main,
-                                0.08
+                                0.08,
                               )}`,
                             })}
                           />
@@ -1801,14 +1818,14 @@ const CosechasPageClient = ({
                     <TableRow
                       sx={(theme) => ({
                         background: theme.palette.grey.A100,
-                        '& .MuiTableCell-root': {
+                        "& .MuiTableCell-root": {
                           borderTop: `2px solid ${theme.palette.grey[300]}`,
                           fontWeight: 800,
                           color: theme.palette.primary.main,
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.5px',
+                          textTransform: "uppercase",
+                          letterSpacing: "0.5px",
                           py: 1.5,
-                          fontSize: '0.85rem',
+                          fontSize: "0.85rem",
                         },
                       })}
                     >
@@ -1821,7 +1838,7 @@ const CosechasPageClient = ({
                         sx={(theme) => ({
                           borderLeft: `2px solid ${alpha(
                             theme.palette.primary.main,
-                            0.08
+                            0.08,
                           )}`,
                         })}
                       />
@@ -1851,18 +1868,18 @@ const CosechasPageClient = ({
             </Box>
 
             {/* Mobile cards */}
-            <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+            <Box sx={{ display: { xs: "block", md: "none" } }}>
               <Stack spacing={2}>
                 <Card
                   sx={(theme) => ({
                     borderRadius: 2,
                     border: `1px solid ${alpha(
                       theme.palette.primary.main,
-                      0.2
+                      0.2,
                     )}`,
                     background: `linear-gradient(135deg, ${alpha(
                       theme.palette.primary.main,
-                      0.05
+                      0.05,
                     )} 0%, ${alpha(theme.palette.primary.light, 0.05)} 100%)`,
                   })}
                 >
@@ -1940,15 +1957,15 @@ const CosechasPageClient = ({
                         border: `1px solid ${theme.palette.divider}`,
                         boxShadow: `0 2px 8px ${alpha(
                           theme.palette.grey[500],
-                          0.08
+                          0.08,
                         )}`,
-                        transition: 'all 0.2s ease',
-                        cursor: 'pointer',
-                        '&:hover': {
-                          transform: 'translateY(-4px)',
+                        transition: "all 0.2s ease",
+                        cursor: "pointer",
+                        "&:hover": {
+                          transform: "translateY(-4px)",
                           boxShadow: `0 8px 24px ${alpha(
                             theme.palette.primary.main,
-                            0.15
+                            0.15,
                           )}`,
                           borderColor: theme.palette.primary.main,
                         },
@@ -1984,7 +2001,7 @@ const CosechasPageClient = ({
                                     variant="outlined"
                                     label={`${harvest.lotsLabels[i]}`}
                                     sx={{
-                                      fontSize: 'body2',
+                                      fontSize: "body2",
                                       fontWeight: 600,
                                       mb: 0.5,
                                     }}
@@ -2002,7 +2019,7 @@ const CosechasPageClient = ({
                           </Stack>
                           <Box
                             sx={(theme) => ({
-                              height: '1px',
+                              height: "1px",
                               background: `linear-gradient(90deg, ${theme.palette.divider} 0%, transparent 100%)`,
                             })}
                           />
@@ -2019,11 +2036,11 @@ const CosechasPageClient = ({
                               href={`/ciclos/${harvest.cycleId}`}
                               onClick={(event) => event.stopPropagation()}
                               sx={(theme) => ({
-                                fontSize: '0.9rem',
+                                fontSize: "0.9rem",
                                 fontWeight: 700,
                                 color: theme.palette.primary.main,
-                                textDecoration: 'none',
-                                '&:hover': { textDecoration: 'underline' },
+                                textDecoration: "none",
+                                "&:hover": { textDecoration: "underline" },
                               })}
                             >
                               {harvest.cycleLabel || `Ciclo ${harvest.cycleId}`}
@@ -2098,54 +2115,54 @@ const CosechasPageClient = ({
           </Stack>
         </DashboardCard>
       </Stack>
-        <SimpleEntityDialogForm
-          open={dialogOpen}
-          title={dialogTitle}
-          onClose={handleDialogClose}
-          onSubmit={dialogSubmitHandler}
-          fields={harvestFormFields}
-          sections={harvestFormSections}
-          initialValues={dialogInitialValues}
-          onFieldChange={handleDialogFieldChange}
-          externalValues={dialogValuesPatch?.data ?? null}
-          externalValuesKey={dialogValuesPatch?.key ?? null}
-          extraActions={
-            dialogMode === 'edit' ? (
-              <Button
-                color="error"
-                variant="outlined"
-                onClick={openDeleteConfirm}
+      <SimpleEntityDialogForm
+        open={dialogOpen}
+        title={dialogTitle}
+        onClose={handleDialogClose}
+        onSubmit={dialogSubmitHandler}
+        fields={harvestFormFields}
+        sections={harvestFormSections}
+        initialValues={dialogInitialValues}
+        onFieldChange={handleDialogFieldChange}
+        externalValues={dialogValuesPatch?.data ?? null}
+        externalValuesKey={dialogValuesPatch?.key ?? null}
+        extraActions={
+          dialogMode === "edit" ? (
+            <Button
+              color="error"
+              variant="outlined"
+              onClick={openDeleteConfirm}
               startIcon={<DeleteOutlineIcon />}
               sx={{
                 borderRadius: 2,
-                textTransform: 'none',
+                textTransform: "none",
                 fontWeight: 600,
                 px: 2.5,
               }}
             >
               Borrar cosecha
             </Button>
-            ) : undefined
-          }
-        />
-        <StockDialog
-          open={stockDialogOpen}
-          mode="create"
-          activeStock={null}
-          initialValues={stockDialogInitialValues}
-          unitTypeOptions={stockUnitTypeOptions}
-          statusOptions={stockStatusOptions}
-          onClose={handleStockDialogClose}
-          onSuccess={handleStockDialogSuccess}
-        />
-        <TruckTripDialog
-          open={tripDialogOpen}
-          mode="create"
-          activeTrip={null}
-          initialValues={tripDialogInitialValues ?? undefined}
-          onClose={handleTripDialogClose}
-          onSuccess={handleTripDialogSuccess}
-        />
+          ) : undefined
+        }
+      />
+      <StockDialog
+        open={stockDialogOpen}
+        mode="create"
+        activeStock={null}
+        initialValues={stockDialogInitialValues}
+        unitTypeOptions={stockUnitTypeOptions}
+        statusOptions={stockStatusOptions}
+        onClose={handleStockDialogClose}
+        onSuccess={handleStockDialogSuccess}
+      />
+      <TruckTripDialog
+        open={tripDialogOpen}
+        mode="create"
+        activeTrip={null}
+        initialValues={tripDialogInitialValues ?? undefined}
+        onClose={handleTripDialogClose}
+        onSuccess={handleTripDialogSuccess}
+      />
       <Dialog
         open={deleteConfirmOpen}
         onClose={handleCloseDeleteConfirm}
@@ -2161,7 +2178,7 @@ const CosechasPageClient = ({
           <Button
             onClick={handleCloseDeleteConfirm}
             disabled={deleteLoading}
-            sx={{ textTransform: 'none' }}
+            sx={{ textTransform: "none" }}
           >
             Cancelar
           </Button>
@@ -2175,9 +2192,9 @@ const CosechasPageClient = ({
                 <CircularProgress color="inherit" size={18} />
               ) : null
             }
-            sx={{ textTransform: 'none' }}
+            sx={{ textTransform: "none" }}
           >
-            {deleteLoading ? 'Borrando...' : 'Borrar'}
+            {deleteLoading ? "Borrando..." : "Borrar"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -2185,13 +2202,13 @@ const CosechasPageClient = ({
         open={snackbarState.open}
         autoHideDuration={5000}
         onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
       >
         <Alert
           onClose={handleSnackbarClose}
           severity={snackbarState.severity}
           variant="filled"
-          sx={{ width: '100%' }}
+          sx={{ width: "100%" }}
         >
           {snackbarState.message}
         </Alert>

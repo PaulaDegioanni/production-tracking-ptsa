@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import * as React from 'react';
+import * as React from "react";
 import {
   alpha,
   Box,
@@ -24,24 +24,24 @@ import {
   TableHead,
   TableRow,
   Typography,
-} from '@mui/material';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import AddIcon from '@mui/icons-material/Add';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import Link from 'next/link';
-import PageContainer from '@/app/(DashboardLayout)/components/container/PageContainer';
-import DashboardCard from '@/app/(DashboardLayout)/components/shared/DashboardCard';
+} from "@mui/material";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import AddIcon from "@mui/icons-material/Add";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import Link from "next/link";
+import PageContainer from "@/app/(DashboardLayout)/components/container/PageContainer";
+import DashboardCard from "@/app/(DashboardLayout)/components/shared/DashboardCard";
 import StatusChip, {
   StatusChipOption,
-} from '@/app/(DashboardLayout)/components/shared/StatusChip';
-import CropChip from '@/app/(DashboardLayout)/components/shared/CropChip';
+} from "@/app/(DashboardLayout)/components/shared/StatusChip";
+import CropChip from "@/app/(DashboardLayout)/components/shared/CropChip";
 import FieldFormDialog, {
   type FieldFormDialogMode,
   type FieldFormDialogInitialValues,
-} from '@/app/(DashboardLayout)/components/fields/FieldFormDialog';
-import type { FieldDto } from '@/lib/baserow/fields';
-import type { LotDto } from '@/lib/baserow/lots';
-import type { CycleDto } from '@/lib/baserow/cycles';
+} from "@/app/(DashboardLayout)/components/fields/FieldFormDialog";
+import type { FieldDto } from "@/lib/baserow/fields";
+import type { LotDto } from "@/lib/baserow/lots";
+import type { CycleDto } from "@/lib/baserow/cycles";
 
 type CamposPageClientProps = {
   fields: FieldDto[];
@@ -68,26 +68,26 @@ type CropProductionSummary = {
 };
 
 const CYCLE_STATUS_OPTIONS: StatusChipOption[] = [
-  { value: 'planificado', label: 'Planificado', color: 'default' },
-  { value: 'barbecho', label: 'Barbecho', color: 'warning' },
-  { value: 'sembrado', label: 'Sembrado', color: 'info' },
+  { value: "planificado", label: "Planificado", color: "default" },
+  { value: "barbecho", label: "Barbecho", color: "warning" },
+  { value: "sembrado", label: "Sembrado", color: "info" },
   {
-    value: 'listo-para-cosechar',
-    label: 'Listo para cosechar',
-    color: 'warning',
+    value: "listo-para-cosechar",
+    label: "Listo para cosechar",
+    color: "warning",
   },
-  { value: 'en-cosecha', label: 'En cosecha', color: 'primary' },
-  { value: 'cosechado', label: 'Cosechado', color: 'success' },
+  { value: "en-cosecha", label: "En cosecha", color: "primary" },
+  { value: "cosechado", label: "Cosechado", color: "success" },
 ];
 
 const formatArea = (value: number) =>
-  value.toLocaleString('es-AR', {
+  value.toLocaleString("es-AR", {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   });
 
 const formatKgs = (value: number) =>
-  value.toLocaleString('es-AR', {
+  value.toLocaleString("es-AR", {
     maximumFractionDigits: 0,
   });
 
@@ -118,15 +118,15 @@ const extractYear = (value?: string | null): number | null => {
   return date.getFullYear();
 };
 
-const ACTIVE_CYCLE_STATUSES = new Set<CycleDto['status']>([
-  'barbecho',
-  'sembrado',
-  'listo-para-cosechar',
-  'en-cosecha',
+const ACTIVE_CYCLE_STATUSES = new Set<CycleDto["status"]>([
+  "barbecho",
+  "sembrado",
+  "listo-para-cosechar",
+  "en-cosecha",
 ]);
 
 const buildProductionSummary = (
-  fieldData?: FieldWithLots | null
+  fieldData?: FieldWithLots | null,
 ): CropProductionSummary[] => {
   if (!fieldData) return [];
 
@@ -141,15 +141,15 @@ const buildProductionSummary = (
   const yieldCount = new Map<string, number>();
 
   uniqueCycles.forEach((cycle) => {
-    const cropName = cycle.crop || 'Sin cultivo';
+    const cropName = cycle.crop || "Sin cultivo";
 
     totalsKgs.set(
       cropName,
-      (totalsKgs.get(cropName) ?? 0) + (cycle.totalKgs || 0)
+      (totalsKgs.get(cropName) ?? 0) + (cycle.totalKgs || 0),
     );
 
     const y = cycle.actualYield;
-    if (typeof y === 'number' && y > 0) {
+    if (typeof y === "number" && y > 0) {
       yieldSum.set(cropName, (yieldSum.get(cropName) ?? 0) + y);
       yieldCount.set(cropName, (yieldCount.get(cropName) ?? 0) + 1);
     }
@@ -178,8 +178,8 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
       new Set(
         cycles
           .map((cycle) => normalizePeriod(cycle.period))
-          .filter((period): period is string => Boolean(period))
-      )
+          .filter((period): period is string => Boolean(period)),
+      ),
     );
 
     const sorted = unique.sort((a, b) => {
@@ -212,7 +212,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
     const prioritized =
       sorted.find((period) => preferentialPeriods.has(period)) ??
       sorted[0] ??
-      '';
+      "";
 
     return {
       periodOptions: sorted,
@@ -225,7 +225,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
 
   React.useEffect(() => {
     setSelectedPeriod((current) => {
-      if (!periodOptions.length) return '';
+      if (!periodOptions.length) return "";
       if (current && periodOptions.includes(current)) {
         return current;
       }
@@ -238,14 +238,14 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
   };
 
   const handleFieldActivityFilterChange = (
-    event: SelectChangeEvent<string>
+    event: SelectChangeEvent<string>,
   ) => {
-    const value = event.target.value as 'all' | 'active' | 'inactive';
+    const value = event.target.value as "all" | "active" | "inactive";
     setFieldActivityFilter(value);
   };
 
   const renderFieldLocationLink = React.useCallback((location?: string) => {
-    const normalized = (location ?? '').trim();
+    const normalized = (location ?? "").trim();
 
     if (!normalized) {
       return (
@@ -272,14 +272,14 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
         target="_blank"
         rel="noopener noreferrer"
         sx={(theme) => ({
-          display: 'inline-flex',
-          alignItems: 'center',
+          display: "inline-flex",
+          alignItems: "center",
           gap: 0.5,
           color: theme.palette.primary.main,
-          textDecoration: 'none',
+          textDecoration: "none",
           fontWeight: 600,
-          '&:hover': {
-            textDecoration: 'underline',
+          "&:hover": {
+            textDecoration: "underline",
           },
         })}
       >
@@ -304,7 +304,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
 
       const candidates = cycles.filter(
         (cycle) =>
-          cycle.period === selectedPeriod && cycle.lotIds.includes(lotId)
+          cycle.period === selectedPeriod && cycle.lotIds.includes(lotId),
       );
 
       if (!candidates.length) return null;
@@ -326,7 +326,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
         })
         .at(0)!;
     },
-    [cycles, selectedPeriod]
+    [cycles, selectedPeriod],
   );
 
   const lotsById = React.useMemo(() => {
@@ -360,7 +360,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
       const fallbackKey = field.name.trim().toLowerCase();
       const fallbackLots = fallbackKey
         ? (lotsByFieldName.get(fallbackKey) ?? []).filter(
-            (lot) => !lotIdSet.has(lot.id)
+            (lot) => !lotIdSet.has(lot.id),
           )
         : [];
 
@@ -396,25 +396,25 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
         return a.hasActiveCycle ? -1 : 1;
       }
       return a.field.name.localeCompare(b.field.name, undefined, {
-        sensitivity: 'base',
+        sensitivity: "base",
       });
     });
   }, [fieldsWithLots]);
 
   const [selectedFieldId, setSelectedFieldId] = React.useState<number | null>(
-    () => sortedFields[0]?.field.id ?? null
+    () => sortedFields[0]?.field.id ?? null,
   );
   const [expandedFieldId, setExpandedFieldId] = React.useState<number | null>(
-    () => sortedFields[0]?.field.id ?? null
+    () => sortedFields[0]?.field.id ?? null,
   );
   const [fieldActivityFilter, setFieldActivityFilter] = React.useState<
-    'all' | 'active' | 'inactive'
-  >('all');
+    "all" | "active" | "inactive"
+  >("all");
   const [fieldDialogOpen, setFieldDialogOpen] = React.useState(false);
   const [fieldDialogMode, setFieldDialogMode] =
-    React.useState<FieldFormDialogMode>('create');
+    React.useState<FieldFormDialogMode>("create");
   const [editingFieldId, setEditingFieldId] = React.useState<number | null>(
-    null
+    null,
   );
 
   React.useEffect(() => {
@@ -441,10 +441,10 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
   }, [sortedFields]);
 
   const filteredFields = React.useMemo(() => {
-    if (fieldActivityFilter === 'all') return sortedFields;
-    const shouldBeActive = fieldActivityFilter === 'active';
+    if (fieldActivityFilter === "all") return sortedFields;
+    const shouldBeActive = fieldActivityFilter === "active";
     return sortedFields.filter(
-      (item) => item.hasActiveCycle === shouldBeActive
+      (item) => item.hasActiveCycle === shouldBeActive,
     );
   }, [sortedFields, fieldActivityFilter]);
 
@@ -476,20 +476,20 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
   const selectedField = React.useMemo(
     () =>
       selectedFieldId
-        ? filteredFields.find((item) => item.field.id === selectedFieldId) ??
-          null
+        ? (filteredFields.find((item) => item.field.id === selectedFieldId) ??
+          null)
         : null,
-    [filteredFields, selectedFieldId]
+    [filteredFields, selectedFieldId],
   );
 
   const selectedFieldProduction = React.useMemo(
     () => buildProductionSummary(selectedField),
-    [selectedField]
+    [selectedField],
   );
 
   const lotsWithCurrentCycle = selectedField?.lotsWithCycle ?? [];
   const lotsWithActiveCycle = lotsWithCurrentCycle.filter((item) =>
-    Boolean(item.currentCycle)
+    Boolean(item.currentCycle),
   );
 
   const selectedFieldActiveArea = selectedField?.activeAreaHa ?? 0;
@@ -503,7 +503,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
   }, []);
 
   const handleOpenCreateFieldDialog = React.useCallback(() => {
-    setFieldDialogMode('create');
+    setFieldDialogMode("create");
     setEditingFieldId(null);
     setFieldDialogOpen(true);
   }, []);
@@ -514,39 +514,38 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
   }, []);
 
   const handleOpenEditFieldDialog = React.useCallback((fieldId: number) => {
-    setFieldDialogMode('edit');
+    setFieldDialogMode("edit");
     setEditingFieldId(fieldId);
     setFieldDialogOpen(true);
   }, []);
 
-  const fieldDialogInitialValues =
-    React.useMemo<FieldFormDialogInitialValues | undefined>(() => {
-      if (fieldDialogMode === 'edit' && editingFieldId) {
-        const targetField = fields.find(
-          (item) => item.id === editingFieldId
-        );
-        if (!targetField) return undefined;
+  const fieldDialogInitialValues = React.useMemo<
+    FieldFormDialogInitialValues | undefined
+  >(() => {
+    if (fieldDialogMode === "edit" && editingFieldId) {
+      const targetField = fields.find((item) => item.id === editingFieldId);
+      if (!targetField) return undefined;
 
-        const linkedLots = targetField.lotIds
-          .map((lotId) => lotsById.get(lotId))
-          .filter((lot): lot is LotDto => Boolean(lot));
+      const linkedLots = targetField.lotIds
+        .map((lotId) => lotsById.get(lotId))
+        .filter((lot): lot is LotDto => Boolean(lot));
 
-        return {
-          name: targetField.name,
-          totalAreaHa: targetField.totalAreaHa,
-          location: targetField.location,
-          isRented: targetField.isRented,
-          notes: targetField.notes,
-          lots: linkedLots.map((lot) => ({
-            id: lot.id,
-            code: lot.code,
-            areaHa: lot.areaHa,
-          })),
-        };
-      }
+      return {
+        name: targetField.name,
+        totalAreaHa: targetField.totalAreaHa,
+        location: targetField.location,
+        isRented: targetField.isRented,
+        notes: targetField.notes,
+        lots: linkedLots.map((lot) => ({
+          id: lot.id,
+          code: lot.code,
+          areaHa: lot.areaHa,
+        })),
+      };
+    }
 
-      return undefined;
-    }, [fieldDialogMode, editingFieldId, fields, lotsById]);
+    return undefined;
+  }, [fieldDialogMode, editingFieldId, fields, lotsById]);
 
   return (
     <PageContainer
@@ -559,9 +558,9 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
             variant="h2"
             component="h1"
             sx={{
-              background: 'linear-gradient(135deg, #3A3184 0%, #6962A2 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              background: "linear-gradient(135deg, #3A3184 0%, #6962A2 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
               fontWeight: 700,
               mb: 1,
             }}
@@ -586,15 +585,15 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                 borderRadius: 2,
                 background: `linear-gradient(135deg, ${alpha(
                   theme.palette.primary.main,
-                  0.03
+                  0.03,
                 )} 0%, ${alpha(theme.palette.primary.light, 0.03)} 100%)`,
                 border: `1px solid ${theme.palette.divider}`,
               })}
             >
               <Stack
-                direction={{ xs: 'column', md: 'row' }}
+                direction={{ xs: "column", md: "row" }}
                 spacing={2}
-                alignItems={{ xs: 'stretch', md: 'center' }}
+                alignItems={{ xs: "stretch", md: "center" }}
               >
                 <FormControl
                   fullWidth
@@ -607,7 +606,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                     label="Período"
                     value={selectedPeriod}
                     onChange={handleChangePeriod}
-                    sx={{ bgcolor: 'background.paper' }}
+                    sx={{ bgcolor: "background.paper" }}
                   >
                     {!periodOptions.length && (
                       <MenuItem value="" disabled>
@@ -631,7 +630,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                     label="Actividad"
                     value={fieldActivityFilter}
                     onChange={handleFieldActivityFilterChange}
-                    sx={{ bgcolor: 'background.paper' }}
+                    sx={{ bgcolor: "background.paper" }}
                   >
                     <MenuItem value="all">Todos los campos</MenuItem>
                     <MenuItem value="active">Solo activos</MenuItem>
@@ -644,8 +643,8 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
               direction="row"
               spacing={2}
               sx={{
-                width: { xs: '100%', md: 'auto' },
-                justifyContent: { xs: 'space-between', md: 'flex-end' },
+                width: { xs: "100%", md: "auto" },
+                justifyContent: { xs: "space-between", md: "flex-end" },
               }}
             >
               <Button
@@ -656,12 +655,12 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                 sx={{
                   flexGrow: { xs: 1, md: 0 },
                   borderRadius: 2,
-                  textTransform: 'none',
+                  textTransform: "none",
                   fontWeight: 700,
                   px: 3,
                   boxShadow: (theme) =>
                     `0 4px 12px ${alpha(theme.palette.primary.main, 0.25)}`,
-                  '&:hover': {
+                  "&:hover": {
                     boxShadow: (theme) =>
                       `0 6px 16px ${alpha(theme.palette.primary.main, 0.35)}`,
                   },
@@ -683,24 +682,24 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
             </Stack>
 
             <Typography variant="h5" fontWeight={700}>
-              {selectedPeriod ? `Campaña ${selectedPeriod}` : 'Campos y lotes'}
+              {selectedPeriod ? `Campaña ${selectedPeriod}` : "Campos y lotes"}
             </Typography>
 
             <Stack
               direction="row"
               spacing={3}
-              sx={{ display: { xs: 'none', md: 'flex' } }}
+              sx={{ display: { xs: "none", md: "flex" } }}
               alignItems="stretch"
             >
               <Box
                 sx={(theme) => ({
-                  flexBasis: '33%',
+                  flexBasis: "33%",
                   borderRadius: 2,
                   border: `1px solid ${theme.palette.divider}`,
                   background: alpha(theme.palette.background.paper, 0.9),
                   p: 2,
                   maxHeight: 640,
-                  overflowY: 'auto',
+                  overflowY: "auto",
                 })}
               >
                 <Stack spacing={1.5}>
@@ -708,8 +707,8 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                     <Box
                       sx={{
                         py: 6,
-                        textAlign: 'center',
-                        color: 'text.secondary',
+                        textAlign: "center",
+                        color: "text.secondary",
                       }}
                     >
                       No hay campos para los filtros seleccionados.
@@ -720,14 +719,14 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                       const isSelected = selectedFieldId === field.id;
                       const statusChip = hasActiveCycle
                         ? {
-                            label: 'Activo',
-                            color: 'success' as const,
-                            variant: 'filled' as const,
+                            label: "Activo",
+                            color: "success" as const,
+                            variant: "filled" as const,
                           }
                         : {
-                            label: 'Sin actividad',
-                            color: 'default' as const,
-                            variant: 'filled' as const,
+                            label: "Sin actividad",
+                            color: "default" as const,
+                            variant: "filled" as const,
                           };
                       return (
                         <Box
@@ -741,17 +740,17 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                                 ? alpha(theme.palette.primary.main, 0.6)
                                 : theme.palette.divider
                             }`,
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
+                            cursor: "pointer",
+                            transition: "all 0.2s ease",
                             background: isSelected
                               ? alpha(theme.palette.primary.light, 0.12)
                               : alpha(theme.palette.background.default, 0.6),
                             boxShadow: isSelected
                               ? `0 6px 16px ${alpha(
                                   theme.palette.primary.main,
-                                  0.15
+                                  0.15,
                                 )}`
-                              : 'none',
+                              : "none",
                           })}
                         >
                           <Stack spacing={2}>
@@ -763,7 +762,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                                 flexWrap="wrap"
                               >
                                 <Typography fontWeight={700}>
-                                  {field.name || 'Sin nombre'}
+                                  {field.name || "Sin nombre"}
                                 </Typography>
                                 <Stack
                                   direction="row"
@@ -774,10 +773,10 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                                     size="small"
                                     variant="outlined"
                                     label={
-                                      field.isRented ? 'Alquiler' : 'Propio'
+                                      field.isRented ? "Alquiler" : "Propio"
                                     }
                                     color={
-                                      field.isRented ? 'secondary' : 'primary'
+                                      field.isRented ? "secondary" : "primary"
                                     }
                                   />
                                   <Chip size="small" {...statusChip} />
@@ -787,7 +786,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                           </Stack>
                         </Box>
                       );
-                    }
+                    },
                   )}
                 </Stack>
               </Box>
@@ -805,11 +804,11 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                   <Box
                     sx={(theme) => ({
                       p: 4,
-                      textAlign: 'center',
+                      textAlign: "center",
                       borderRadius: 2,
                       border: `1px dashed ${alpha(
                         theme.palette.text.primary,
-                        0.2
+                        0.2,
                       )}`,
                     })}
                   >
@@ -821,15 +820,15 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                   <Stack spacing={3}>
                     <Box>
                       <Stack
-                        direction={{ xs: 'column', md: 'row' }}
+                        direction={{ xs: "column", md: "row" }}
                         spacing={1.5}
                         justifyContent="space-between"
-                        alignItems={{ xs: 'flex-start', md: 'center' }}
+                        alignItems={{ xs: "flex-start", md: "center" }}
                       >
                         <Stack
-                          direction={{ xs: 'column', sm: 'row' }}
+                          direction={{ xs: "column", sm: "row" }}
                           spacing={1}
-                          alignItems={{ xs: 'flex-start', sm: 'center' }}
+                          alignItems={{ xs: "flex-start", sm: "center" }}
                           flexWrap="wrap"
                         >
                           <Stack
@@ -839,24 +838,23 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                             flexWrap="wrap"
                           >
                             <Typography variant="h4" fontWeight={700}>
-                              {selectedField.field.name || 'Campo sin nombre'} -
+                              {selectedField.field.name || "Campo sin nombre"} -
                             </Typography>
                             {renderFieldLocationLink(
-                              selectedField.field.location
+                              selectedField.field.location,
                             )}
                           </Stack>
                           <Chip
-                            size="small"
                             variant="outlined"
                             label={
                               selectedField.field.isRented
-                                ? 'Alquiler'
-                                : 'Propio'
+                                ? "Alquiler"
+                                : "Propio"
                             }
                             color={
                               selectedField.field.isRented
-                                ? 'secondary'
-                                : 'primary'
+                                ? "secondary"
+                                : "primary"
                             }
                             sx={{ fontWeight: 600 }}
                           />
@@ -868,7 +866,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                             handleOpenEditFieldDialog(selectedField.field.id)
                           }
                           sx={{
-                            textTransform: 'none',
+                            textTransform: "none",
                             borderRadius: 2,
                             fontWeight: 600,
                           }}
@@ -878,7 +876,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                       </Stack>
                     </Box>
 
-                    <Stack direction={{ xs: 'column', lg: 'row' }} spacing={2}>
+                    <Stack direction={{ xs: "column", lg: "row" }} spacing={2}>
                       <Box
                         sx={(theme) => ({
                           flex: 1,
@@ -887,7 +885,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                           borderRadius: 1.5,
                           border: `1px solid ${alpha(
                             theme.palette.primary.main,
-                            0.2
+                            0.2,
                           )}`,
                         })}
                       >
@@ -906,16 +904,16 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                           borderRadius: 1.5,
                           border: `1px solid ${alpha(
                             theme.palette.success.main,
-                            0.2
+                            0.2,
                           )}`,
                           backgroundColor: alpha(
                             theme.palette.success.main,
-                            0.05
+                            0.05,
                           ),
                         })}
                       >
                         <Typography variant="subtitle2" color="text.secondary">
-                          SUPERFICIE ACTIVA{' '}
+                          SUPERFICIE ACTIVA{" "}
                           {selectedPeriod && `(${selectedPeriod})`}
                         </Typography>
                         <Typography
@@ -962,19 +960,19 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                             maxWidth: 350,
                             backgroundColor: alpha(
                               theme.palette.primary.light,
-                              0.04
+                              0.04,
                             ),
                           })}
                         >
                           <Table size="small">
                             <TableHead
                               sx={(theme) => ({
-                                '& .MuiTableCell-root': {
+                                "& .MuiTableCell-root": {
                                   fontSize: theme.typography.subtitle2,
                                   fontWeight: 700,
                                   borderBottom: `1px solid ${alpha(
                                     theme.palette.divider,
-                                    0.6
+                                    0.6,
                                   )}`,
                                 },
                               })}
@@ -990,13 +988,13 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
 
                             <TableBody
                               sx={(theme) => ({
-                                '.MuiTableCell-root': {
+                                ".MuiTableCell-root": {
                                   borderBottom: `1px solid ${alpha(
                                     theme.palette.divider,
-                                    0.25
+                                    0.25,
                                   )}`,
                                   fontSize: theme.typography.body1.fontSize,
-                                  paddingY: '1rem',
+                                  paddingY: "1rem",
                                 },
                               })}
                             >
@@ -1014,7 +1012,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                                     })}
                                   >
                                     {item.avgYield === null
-                                      ? '—'
+                                      ? "—"
                                       : item.avgYield.toFixed(1)}
                                   </TableCell>
                                 </TableRow>
@@ -1036,10 +1034,10 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                         variant="outlined"
                         sx={(theme) => ({
                           borderRadius: 2,
-                          overflow: 'hidden',
+                          overflow: "hidden",
                           boxShadow: `0 2px 8px ${alpha(
                             theme.palette.grey[500],
-                            0.08
+                            0.08,
                           )}`,
                         })}
                       >
@@ -1048,19 +1046,19 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                             sx={(theme) => ({
                               background: `linear-gradient(135deg, ${alpha(
                                 theme.palette.primary.main,
-                                0.06
+                                0.06,
                               )} 0%, ${alpha(
                                 theme.palette.primary.light,
-                                0.06
+                                0.06,
                               )} 100%)`,
-                              '& .MuiTableCell-root': {
+                              "& .MuiTableCell-root": {
                                 fontWeight: 700,
                                 color: theme.palette.primary.main,
                                 borderBottom: `2px solid ${theme.palette.primary.main}`,
                                 py: 1.25,
-                                fontSize: '0.85rem',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.5px',
+                                fontSize: "0.85rem",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.5px",
                               },
                             })}
                           >
@@ -1078,7 +1076,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                                 <TableRow
                                   key={lot.id}
                                   sx={(theme) => ({
-                                    '& .MuiTableCell-root': {
+                                    "& .MuiTableCell-root": {
                                       borderBottom: `1px solid ${theme.palette.divider}`,
                                       py: 1.5,
                                     },
@@ -1112,7 +1110,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                                         href={`/ciclos/${currentCycle.id}`}
                                         color="primary"
                                         sx={{
-                                          textDecoration: 'none',
+                                          textDecoration: "none",
                                           fontWeight: 700,
                                         }}
                                         onClick={(e) => e.stopPropagation()}
@@ -1120,7 +1118,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                                         {currentCycle.cycleId}
                                       </Typography>
                                     ) : (
-                                      '—'
+                                      "—"
                                     )}
                                   </TableCell>
                                   <TableCell>
@@ -1131,10 +1129,10 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                                           size="small"
                                         />
                                       ) : (
-                                        '—'
+                                        "—"
                                       )
                                     ) : (
-                                      '—'
+                                      "—"
                                     )}
                                   </TableCell>
                                   <TableCell>
@@ -1151,7 +1149,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                                     )}
                                   </TableCell>
                                 </TableRow>
-                              )
+                              ),
                             )}
                           </TableBody>
                         </Table>
@@ -1162,12 +1160,12 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
               </Box>
             </Stack>
 
-            <Stack spacing={2} sx={{ display: { xs: 'flex', md: 'none' } }}>
+            <Stack spacing={2} sx={{ display: { xs: "flex", md: "none" } }}>
               {filteredFields.length === 0 && (
                 <Box
                   sx={{
                     py: 4,
-                    textAlign: 'center',
+                    textAlign: "center",
                     borderRadius: 2,
                     border: (theme) =>
                       `1px dashed ${alpha(theme.palette.text.primary, 0.2)}`,
@@ -1183,20 +1181,20 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                   fieldItem;
                 const lotsWithCycleCount = lotsWithCycle.length;
                 const lotsWithActive = lotsWithCycle.filter((item) =>
-                  Boolean(item.currentCycle)
+                  Boolean(item.currentCycle),
                 );
                 const isExpanded = expandedFieldId === field.id;
                 const productionSummary = buildProductionSummary(fieldItem);
                 const statusChip = hasActiveCycle
                   ? {
-                      label: 'Activo',
-                      color: 'success' as const,
-                      variant: 'filled' as const,
+                      label: "Activo",
+                      color: "success" as const,
+                      variant: "filled" as const,
                     }
                   : {
-                      label: 'Sin actividad',
-                      color: 'default' as const,
-                      variant: 'outlined' as const,
+                      label: "Sin actividad",
+                      color: "default" as const,
+                      variant: "outlined" as const,
                     };
 
                 return (
@@ -1205,7 +1203,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                     variant="outlined"
                     sx={{
                       borderRadius: 2,
-                      borderColor: isExpanded ? 'primary.main' : 'divider',
+                      borderColor: isExpanded ? "primary.main" : "divider",
                       backgroundColor: isExpanded
                         ? (theme) => alpha(theme.palette.primary.light, 0.08)
                         : undefined,
@@ -1218,7 +1216,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                           onClick={() => toggleFieldExpansion(field.id)}
                           aria-expanded={isExpanded}
                           sx={{
-                            cursor: 'pointer',
+                            cursor: "pointer",
                           }}
                         >
                           <Stack
@@ -1229,7 +1227,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                             alignItems="center"
                           >
                             <Typography variant="body1" fontWeight={700}>
-                              {field.name || 'Sin nombre'}
+                              {field.name || "Sin nombre"}
                             </Typography>
                             <Stack
                               direction="row"
@@ -1239,21 +1237,23 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                             >
                               <Chip
                                 size="small"
-                                label={field.isRented ? 'Alquiler' : 'Propio'}
-                                color={field.isRented ? 'secondary' : 'primary'}
+                                label={field.isRented ? "Alquiler" : "Propio"}
+                                color={field.isRented ? "secondary" : "primary"}
                                 variant="outlined"
                               />
                               <Chip size="small" {...statusChip} />
                               <Button
                                 size="small"
                                 variant="outlined"
-                                startIcon={<EditOutlinedIcon fontSize="small" />}
+                                startIcon={
+                                  <EditOutlinedIcon fontSize="small" />
+                                }
                                 onClick={(event) => {
                                   event.stopPropagation();
                                   handleOpenEditFieldDialog(field.id);
                                 }}
                                 sx={{
-                                  textTransform: 'none',
+                                  textTransform: "none",
                                   borderRadius: 2,
                                   fontWeight: 600,
                                 }}
@@ -1275,7 +1275,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                               color="primary"
                               fontWeight={600}
                             >
-                              {isExpanded ? 'Ocultar lotes' : 'Ver lotes'}
+                              {isExpanded ? "Ocultar lotes" : "Ver lotes"}
                             </Typography>
                             <Box>{renderFieldLocationLink(field.location)}</Box>
                           </Stack>
@@ -1283,7 +1283,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                         <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                           <Divider sx={{ my: 2 }} />
                           <Stack
-                            direction={{ xs: 'column', sm: 'row' }}
+                            direction={{ xs: "column", sm: "row" }}
                             spacing={2}
                           >
                             <Stack
@@ -1396,7 +1396,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                                             color="primary"
                                           >
                                             {item.avgYield === null
-                                              ? '—'
+                                              ? "—"
                                               : item.avgYield.toFixed(1)}
                                           </Typography>
                                         </Box>
@@ -1450,7 +1450,7 @@ const CamposPageClient: React.FC<CamposPageClientProps> = ({
                                             href={`/ciclos/${currentCycle.id}`}
                                             color="primary"
                                             sx={{
-                                              textDecoration: 'none',
+                                              textDecoration: "none",
                                               fontWeight: 700,
                                             }}
                                             onClick={(e) => e.stopPropagation()}
