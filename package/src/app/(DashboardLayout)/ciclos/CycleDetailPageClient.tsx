@@ -1217,6 +1217,7 @@ const CycleDetailPageClient = ({
                         >
                           <TableRow>
                             {[
+                              "Cosecha",
                               "Fecha",
                               "Lotes",
                               "Kgs cosechados",
@@ -1255,6 +1256,11 @@ const CycleDetailPageClient = ({
                                   },
                                 }}
                               >
+                                <TableCell>
+                                  <Typography variant="body1" fontWeight={700}>
+                                    {h.harvestId}
+                                  </Typography>
+                                </TableCell>
                                 <TableCell>
                                   <Typography variant="body1" fontWeight={700}>
                                     {formatDate(h.date)}
@@ -1648,6 +1654,7 @@ const CycleDetailPageClient = ({
                         >
                           <TableRow>
                             {[
+                              "ID viaje",
                               "Fecha",
                               "Estado",
                               "Camión",
@@ -1694,6 +1701,11 @@ const CycleDetailPageClient = ({
                                   },
                                 }}
                               >
+                                <TableCell>
+                                  <Typography variant="body1" fontWeight={700}>
+                                    {t.tripId}
+                                  </Typography>
+                                </TableCell>
                                 <TableCell>
                                   <Typography variant="body1" fontWeight={700}>
                                     {formatDate(t.date)}
