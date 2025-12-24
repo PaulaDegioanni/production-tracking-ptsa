@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getFieldsDto } from '@/lib/baserow/fields';
 import { getLotsByFieldId } from '@/lib/baserow/lots';
 import { getCycleSingleSelectOptions } from '@/lib/baserow/cycles';
 
@@ -21,18 +20,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ lots });
     }
 
-    const [fields, selectOptions] = await Promise.all([
-      getFieldsDto(),
-      getCycleSingleSelectOptions(),
-    ]);
+    const selectOptions = await getCycleSingleSelectOptions();
 
     return NextResponse.json({
-      fields: fields
-        .map((field) => ({
-          id: field.id,
-          label: field.name || `Campo #${field.id}`,
-        }))
-        .sort((a, b) => a.label.localeCompare(b.label)),
+      fields: selectOptions.fields,
       cropOptions: selectOptions.cropOptions,
       statusOptions: selectOptions.statusOptions,
       cropDefaultId: selectOptions.cropDefaultId,

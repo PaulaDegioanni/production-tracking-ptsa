@@ -43,7 +43,6 @@ import DateRangeIcon from "@mui/icons-material/DateRange";
 import EditIcon from "@mui/icons-material/Edit";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
-import InventoryIcon from "@mui/icons-material/Inventory";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import PageContainer from "@/app/(DashboardLayout)/components/container/PageContainer";
@@ -51,6 +50,13 @@ import StatusChip, {
   type PaletteKey,
   type StatusChipOption,
 } from "@/app/(DashboardLayout)/components/shared/StatusChip";
+import StockDialog, {
+  type StockFormValues,
+} from "@/app/(DashboardLayout)/components/stock/StockDialog";
+import TruckTripDialog, {
+  type TruckTripFormValues,
+} from "@/app/(DashboardLayout)/components/truckTrips/TruckTripDialog";
+
 import type { CycleDetailDto } from "@/lib/baserow/cycleDetail";
 import type { CycleStatus } from "@/lib/baserow/cycles";
 import type { Theme } from "@mui/material/styles";
@@ -105,6 +111,29 @@ const CycleDetailPageClient = ({
   initialDetail,
 }: CycleDetailPageClientProps) => {
   const { cycle, lots, harvests, stockUnits, truckTrips } = initialDetail;
+  const resolvedFieldId = React.useMemo(() => {
+    const normalizeFieldId = (value: number | null | undefined) =>
+      typeof value === "number" && !Number.isNaN(value) ? value : null;
+
+    const fromCycle = normalizeFieldId(cycle.fieldId);
+    if (fromCycle !== null) return fromCycle;
+
+    const fromLots = lots
+      .map((lot) => normalizeFieldId(lot.fieldId))
+      .find((value): value is number => value !== null);
+    if (fromLots !== undefined) {
+      return fromLots;
+    }
+
+    const fromStock = stockUnits
+      .map((unit) => normalizeFieldId(unit.fieldId))
+      .find((value): value is number => value !== null);
+    if (fromStock !== undefined) {
+      return fromStock;
+    }
+
+    return null;
+  }, [cycle.fieldId, lots, stockUnits]);
 
   const formatDate = (value?: string | null) => {
     if (!value) return "Sin fecha";
@@ -196,6 +225,84 @@ const CycleDetailPageClient = ({
   const [isHarvestsOpen, setIsHarvestsOpen] = React.useState(true);
   const [isStockOpen, setIsStockOpen] = React.useState(true);
   const [isTripsOpen, setIsTripsOpen] = React.useState(true);
+
+  const [isCreateStockOpen, setIsCreateStockOpen] = React.useState(false);
+  const [isCreateTripOpen, setIsCreateTripOpen] = React.useState(false);
+  const [createStockInitialValues, setCreateStockInitialValues] =
+    React.useState<StockFormValues | null>(null);
+
+  const [createTripInitialValues, setCreateTripInitialValues] =
+    React.useState<TruckTripFormValues | null>(null);
+
+  const pad2 = (n: number) => String(n).padStart(2, "0");
+
+  const getTodayDateString = (): string => {
+    const d = new Date();
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  };
+
+  const getCurrentTimeString = (): string => {
+    const d = new Date();
+    return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  };
+
+  const buildCreateStockInitialValues =
+    React.useCallback((): StockFormValues => {
+      return {
+        "Tipo unidad": "",
+        Campo: resolvedFieldId ?? "",
+        "Ciclo de siembra": cycle.id ?? "", // row id del ciclo (Baserow)
+        Cultivo: cycle.crop ?? "",
+        "Fecha de creación": getTodayDateString(),
+        Estado: "",
+        Notas: "",
+        ID: "",
+        "Kgs actuales": "",
+        "Total kgs ingresados": "",
+        "Total kgs egresados": "",
+        "Cosechas asociadas": [],
+        "Viajes de camión desde stock": [],
+      };
+    }, [cycle, resolvedFieldId]);
+
+  const buildCreateTripInitialValues =
+    React.useCallback((): TruckTripFormValues => {
+      return {
+        Camión: "",
+        CTG: "",
+        Estado: "", // TruckTripDialog tiene defaults internos; si querés, lo dejamos vacío y que el dialog lo setee
+        "Fecha de salida - Fecha": getTodayDateString(),
+        "Fecha de salida - Hora": getCurrentTimeString(),
+        "Campo origen": resolvedFieldId ?? "",
+        "Tipo origen": "harvest",
+        Origen: "",
+        "Ciclo de siembra": cycle.cycleId ?? "", // label. se recalcula cuando elijas Origen
+        "Kg carga origen": "",
+        "Tipo destino": "",
+        Proveedor: "",
+        "Detalle Destino": "",
+        "Kg carga destino": "",
+        Notas: "",
+      };
+    }, [cycle, resolvedFieldId]);
+
+  const handleOpenCreateStock = React.useCallback(() => {
+    setCreateStockInitialValues(buildCreateStockInitialValues());
+    setIsCreateStockOpen(true);
+  }, [buildCreateStockInitialValues]);
+
+  const handleCloseCreateStock = React.useCallback(() => {
+    setIsCreateStockOpen(false);
+  }, []);
+
+  const handleOpenCreateTrip = React.useCallback(() => {
+    setCreateTripInitialValues(buildCreateTripInitialValues());
+    setIsCreateTripOpen(true);
+  }, [buildCreateTripInitialValues]);
+
+  const handleCloseCreateTrip = React.useCallback(() => {
+    setIsCreateTripOpen(false);
+  }, []);
 
   React.useEffect(() => {
     if (isDesktop) {
@@ -1279,6 +1386,17 @@ const CycleDetailPageClient = ({
                 count={stockUnits.length}
                 isOpen={isStockOpen}
                 onToggle={() => setIsStockOpen((prev) => !prev)}
+                actions={
+                  <Button
+                    variant="text"
+                    size="small"
+                    onClick={handleOpenCreateStock}
+                    sx={{ textTransform: "none", fontWeight: 700 }}
+                    disabled={resolvedFieldId === null}
+                  >
+                    + Nuevo stock
+                  </Button>
+                }
               />
 
               <Collapse in={isStockOpen} timeout={250} unmountOnExit>
@@ -1494,6 +1612,17 @@ const CycleDetailPageClient = ({
                 count={truckTrips.length}
                 isOpen={isTripsOpen}
                 onToggle={() => setIsTripsOpen((prev) => !prev)}
+                actions={
+                  <Button
+                    variant="text"
+                    size="small"
+                    onClick={handleOpenCreateTrip}
+                    sx={{ textTransform: "none", fontWeight: 700 }}
+                    disabled={resolvedFieldId === null}
+                  >
+                    + Nuevo viaje
+                  </Button>
+                }
               />
 
               <Collapse in={isTripsOpen} timeout={250} unmountOnExit>
@@ -1734,6 +1863,30 @@ const CycleDetailPageClient = ({
           </Stack>
         </Box>
       </Box>
+      {createStockInitialValues && (
+        <StockDialog
+          open={isCreateStockOpen}
+          mode="create"
+          activeStock={null}
+          initialValues={createStockInitialValues}
+          // ⚠️ por ahora: si no tenés estas options en este page, el dialog queda sin opciones
+          unitTypeOptions={[]}
+          statusOptions={[]}
+          onClose={handleCloseCreateStock}
+          onSuccess={() => setIsCreateStockOpen(false)}
+        />
+      )}
+
+      {createTripInitialValues && (
+        <TruckTripDialog
+          open={isCreateTripOpen}
+          mode="create"
+          activeTrip={null}
+          initialValues={createTripInitialValues}
+          onClose={handleCloseCreateTrip}
+          onSuccess={() => setIsCreateTripOpen(false)}
+        />
+      )}
 
       <Snackbar
         open={statusSnackbarOpen}

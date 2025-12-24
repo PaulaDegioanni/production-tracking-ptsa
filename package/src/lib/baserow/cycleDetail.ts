@@ -34,8 +34,22 @@ export async function getCycleDetailDto(
     stockIds,
   });
 
+  const inferredFieldId =
+    cycle.fieldId ??
+    lots.find((lot) => typeof lot.fieldId === 'number' && !Number.isNaN(lot.fieldId))
+      ?.fieldId ??
+    stockUnits.find(
+      (unit) => typeof unit.fieldId === 'number' && !Number.isNaN(unit.fieldId)
+    )?.fieldId ??
+    null;
+
+  const normalizedCycle =
+    inferredFieldId !== null && inferredFieldId !== cycle.fieldId
+      ? { ...cycle, fieldId: inferredFieldId }
+      : cycle;
+
   return {
-    cycle,
+    cycle: normalizedCycle,
     lots,
     harvests,
     stockUnits,

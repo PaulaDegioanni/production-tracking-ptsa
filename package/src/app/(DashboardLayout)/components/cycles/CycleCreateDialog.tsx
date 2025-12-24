@@ -173,6 +173,7 @@ const CycleCreateDialog = ({
       if (data.statusDefaultId) {
         defaultsPatch.Estado = data.statusDefaultId;
       }
+
       if (Object.keys(defaultsPatch).length) {
         applyDialogValuePatch(defaultsPatch);
       }
