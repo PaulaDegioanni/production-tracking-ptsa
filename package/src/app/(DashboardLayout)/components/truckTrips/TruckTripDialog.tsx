@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import * as React from 'react';
+import * as React from "react";
 import {
   Alert,
   Button,
@@ -12,21 +12,21 @@ import {
   Snackbar,
   Stack,
   Typography,
-} from '@mui/material';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import { useRouter } from 'next/navigation';
+} from "@mui/material";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import { useRouter } from "next/navigation";
 
 import SimpleEntityDialogForm, {
   type DialogFieldOption,
   type SimpleEntityDialogFieldConfig,
   type SimpleEntityDialogSection,
-} from '@/components/forms/SimpleEntityDialogForm';
-import type { TruckTripDto } from '@/lib/baserow/truckTrips';
+} from "@/components/forms/SimpleEntityDialogForm";
+import type { TruckTripDto } from "@/lib/baserow/truckTrips";
 import {
   normalizeTruckTripDtoToBaserowPayload,
   normalizeTruckTripFormToBaserowPayload,
-} from '@/lib/truckTrips/formPayload';
-import { splitIsoToDateAndTimeLocal } from '@/lib/forms/datetime';
+} from "@/lib/truckTrips/formPayload";
+import { splitIsoToDateAndTimeLocal } from "@/lib/forms/datetime";
 
 type Option = {
   id: number;
@@ -51,20 +51,20 @@ type OriginApiOption = {
 };
 
 export type TruckTripFormValues = {
-  Camión: number | '';
+  Camión: number | "";
   CTG: string;
-  Estado: number | '';
-  'Fecha de salida - Fecha': string;
-  'Fecha de salida - Hora': string;
-  'Campo origen': number | '';
-  'Tipo origen': 'harvest' | 'stock';
-  Origen: number | '';
-  'Ciclo de siembra': string;
-  'Kg carga origen': string;
-  'Tipo destino': number | '';
-  Proveedor: number | '';
-  'Detalle Destino': string;
-  'Kg carga destino': string;
+  Estado: number | "";
+  "Fecha de salida - Fecha": string;
+  "Fecha de salida - Hora": string;
+  "Campo origen": number | "";
+  "Tipo origen": "harvest" | "stock";
+  Origen: number | "";
+  "Ciclo de siembra": string;
+  "Kg carga origen": string;
+  "Tipo destino": number | "";
+  Proveedor: number | "";
+  "Detalle Destino": string;
+  "Kg carga destino": string;
   Notas: string;
 };
 
@@ -73,10 +73,10 @@ type SelectedFieldState = { id?: number; label?: string } | null;
 type SnackbarState = {
   open: boolean;
   message: string;
-  severity: 'success' | 'error' | 'info';
+  severity: "success" | "error" | "info";
 };
 
-export type TruckTripDialogMode = 'create' | 'edit';
+export type TruckTripDialogMode = "create" | "edit";
 
 export type TruckTripDialogProps = {
   open: boolean;
@@ -87,7 +87,7 @@ export type TruckTripDialogProps = {
   onSuccess?: (result: { mode: TruckTripDialogMode; tripId?: number }) => void;
 };
 
-const pad = (value: number): string => String(value).padStart(2, '0');
+const pad = (value: number): string => String(value).padStart(2, "0");
 
 const getTodayDateString = (): string => {
   const now = new Date();
@@ -100,46 +100,49 @@ const getCurrentTimeString = (): string => {
 };
 
 const normalizeLabel = (value?: string | null): string =>
-  value?.trim().toLowerCase() ?? '';
+  value?.trim().toLowerCase() ?? "";
 
 const ORIGIN_TYPE_SELECT_OPTIONS: Array<{
   label: string;
-  value: 'harvest' | 'stock';
+  value: "harvest" | "stock";
 }> = [
-  { label: 'Cosecha', value: 'harvest' },
-  { label: 'Stock', value: 'stock' },
+  { label: "Cosecha", value: "harvest" },
+  { label: "Stock", value: "stock" },
 ];
 
 export const TRUCK_TRIP_FORM_SECTIONS: SimpleEntityDialogSection[] = [
   {
-    title: 'Datos del viaje',
+    title: "Datos del viaje",
     fields: [
-      'Camión',
-      'CTG',
-      'Estado',
-      'Fecha de salida - Fecha',
-      'Fecha de salida - Hora',
+      "Camión",
+      "CTG",
+      "Estado",
+      "Fecha de salida - Fecha",
+      "Fecha de salida - Hora",
     ],
   },
   {
-    title: 'Origen',
+    title: "Origen",
     fields: [
-      'Campo origen',
-      'Tipo origen',
-      'Origen',
-      'Ciclo de siembra',
-      'Kg carga origen',
+      "Campo origen",
+      "Tipo origen",
+      "Origen",
+      "Ciclo de siembra",
+      "Kg carga origen",
     ],
   },
   {
-    title: 'Destino y notas',
+    title: "Destino",
     fields: [
-      'Tipo destino',
-      'Proveedor',
-      'Detalle Destino',
-      'Kg carga destino',
-      'Notas',
+      "Tipo destino",
+      "Proveedor",
+      "Detalle Destino",
+      "Kg carga destino",
     ],
+  },
+  {
+    title: "Notas",
+    fields: ["Notas"],
   },
 ];
 
@@ -150,25 +153,25 @@ export const getDefaultTruckTripFormValues = (
   const destinationTypes = options?.destinationTypes ?? [];
 
   const deliveredStatus =
-    statuses.find((option) => normalizeLabel(option.label) === 'entregado') ??
+    statuses.find((option) => normalizeLabel(option.label) === "entregado") ??
     statuses[0];
 
   return {
-    Camión: '',
-    CTG: '',
-    Estado: deliveredStatus?.id ?? '',
-    'Fecha de salida - Fecha': getTodayDateString(),
-    'Fecha de salida - Hora': getCurrentTimeString(),
-    'Campo origen': '',
-    'Tipo origen': 'harvest',
-    Origen: '',
-    'Ciclo de siembra': '',
-    'Kg carga origen': '',
-    'Tipo destino': destinationTypes[0]?.id ?? '',
-    Proveedor: '',
-    'Detalle Destino': '',
-    'Kg carga destino': '',
-    Notas: '',
+    Camión: "",
+    CTG: "",
+    Estado: deliveredStatus?.id ?? "",
+    "Fecha de salida - Fecha": getTodayDateString(),
+    "Fecha de salida - Hora": getCurrentTimeString(),
+    "Campo origen": "",
+    "Tipo origen": "harvest",
+    Origen: "",
+    "Ciclo de siembra": "",
+    "Kg carga origen": "",
+    "Tipo destino": destinationTypes[0]?.id ?? "",
+    Proveedor: "",
+    "Detalle Destino": "",
+    "Kg carga destino": "",
+    Notas: "",
   };
 };
 
@@ -212,17 +215,17 @@ export const buildTruckTripInitialValues = (params: {
     collection: Option[],
     label: string | null | string | undefined,
   ) => {
-    if (!label) return '';
+    if (!label) return "";
     const normalized = normalizeLabel(label);
     const match = collection.find(
       (option) => normalizeLabel(option.label) === normalized,
     );
-    return match?.id ?? '';
+    return match?.id ?? "";
   };
 
   const truckId = trip.truckId ?? findOptionId(trucks, trip.truckPlate);
   const statusId =
-    trip.statusId ?? findOptionId(statuses, trip.status || 'Entregado');
+    trip.statusId ?? findOptionId(statuses, trip.status || "Entregado");
   const destinationTypeId =
     trip.destinationTypeId ??
     findOptionId(destinationTypes, trip.destinationType);
@@ -231,42 +234,42 @@ export const buildTruckTripInitialValues = (params: {
     findOptionId(providers, trip.provider || trip.destinationDetail);
 
   const fieldOption = findFieldOptionForTrip(trip, fields);
-  const originTypeValue: 'harvest' | 'stock' =
-    trip.originType === 'stock' ? 'stock' : 'harvest';
+  const originTypeValue: "harvest" | "stock" =
+    trip.originType === "stock" ? "stock" : "harvest";
   const originId =
-    originTypeValue === 'stock'
-      ? (trip.stockOriginIds[0] ?? '')
-      : (trip.harvestOriginIds[0] ?? '');
+    originTypeValue === "stock"
+      ? (trip.stockOriginIds[0] ?? "")
+      : (trip.harvestOriginIds[0] ?? "");
 
   return {
-    Camión: truckId || '',
-    CTG: trip.ctg ? String(trip.ctg) : '',
-    Estado: statusId || '',
-    'Fecha de salida - Fecha': date || getTodayDateString(),
-    'Fecha de salida - Hora': time || getCurrentTimeString(),
-    'Campo origen': fieldOption?.id ?? '',
-    'Tipo origen': originTypeValue,
-    Origen: originId || '',
-    'Ciclo de siembra': trip.cycleLabel || '',
-    'Kg carga origen': trip.totalKgsOrigin ? String(trip.totalKgsOrigin) : '',
-    'Tipo destino': destinationTypeId || '',
-    Proveedor: providerId || '',
-    'Detalle Destino': trip.destinationDetail || '',
-    'Kg carga destino': trip.totalKgsDestination
+    Camión: truckId || "",
+    CTG: trip.ctg ? String(trip.ctg) : "",
+    Estado: statusId || "",
+    "Fecha de salida - Fecha": date || getTodayDateString(),
+    "Fecha de salida - Hora": time || getCurrentTimeString(),
+    "Campo origen": fieldOption?.id ?? "",
+    "Tipo origen": originTypeValue,
+    Origen: originId || "",
+    "Ciclo de siembra": trip.cycleLabel || "",
+    "Kg carga origen": trip.totalKgsOrigin ? String(trip.totalKgsOrigin) : "",
+    "Tipo destino": destinationTypeId || "",
+    Proveedor: providerId || "",
+    "Detalle Destino": trip.destinationDetail || "",
+    "Kg carga destino": trip.totalKgsDestination
       ? String(trip.totalKgsDestination)
-      : '',
-    Notas: trip.notes || '',
+      : "",
+    Notas: trip.notes || "",
   };
 };
 
 const normalizeArrayForComparison = (arr: unknown[]): unknown[] => {
   if (!arr.length) return [];
 
-  if (arr.every((value) => typeof value === 'number')) {
+  if (arr.every((value) => typeof value === "number")) {
     return [...arr].sort((a, b) => (Number(a) || 0) - (Number(b) || 0));
   }
 
-  if (arr.every((value) => typeof value === 'string')) {
+  if (arr.every((value) => typeof value === "string")) {
     return [...arr]
       .map((value) => String(value))
       .sort((a, b) => a.localeCompare(b));
@@ -312,8 +315,8 @@ const TruckTripDialog = ({
   const router = useRouter();
   const [snackbarState, setSnackbarState] = React.useState<SnackbarState>({
     open: false,
-    message: '',
-    severity: 'success',
+    message: "",
+    severity: "success",
   });
   const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
   const [deleteLoading, setDeleteLoading] = React.useState(false);
@@ -324,14 +327,15 @@ const TruckTripDialog = ({
 
   const [dialogInitialValues, setDialogInitialValues] =
     React.useState<TruckTripFormValues>(
-      initialValues ?? getDefaultTruckTripFormValues()
+      initialValues ?? getDefaultTruckTripFormValues(),
     );
   const [initialValuesKey, setInitialValuesKey] = React.useState(0);
 
   const [selectedField, setSelectedField] =
     React.useState<SelectedFieldState>(null);
-  const [selectedOriginType, setSelectedOriginType] =
-    React.useState<'harvest' | 'stock'>('harvest');
+  const [selectedOriginType, setSelectedOriginType] = React.useState<
+    "harvest" | "stock"
+  >("harvest");
   const [originSelectOptions, setOriginSelectOptions] = React.useState<
     DialogFieldOption[]
   >([]);
@@ -344,7 +348,7 @@ const TruckTripDialog = ({
   >(null);
 
   const showToast = React.useCallback(
-    (message: string, severity: SnackbarState['severity']) => {
+    (message: string, severity: SnackbarState["severity"]) => {
       setSnackbarState({ open: true, message, severity });
     },
     [],
@@ -354,13 +358,13 @@ const TruckTripDialog = ({
     _event?: React.SyntheticEvent | Event,
     reason?: string,
   ) => {
-    if (reason === 'clickaway') return;
+    if (reason === "clickaway") return;
     setSnackbarState((prev) => ({ ...prev, open: false }));
   };
 
   const resetDialogState = React.useCallback(() => {
     setSelectedField(null);
-    setSelectedOriginType('harvest');
+    setSelectedOriginType("harvest");
     setOriginSelectOptions([]);
     setOriginOptionsError(null);
   }, []);
@@ -368,11 +372,11 @@ const TruckTripDialog = ({
   const fetchFormOptions = React.useCallback(async () => {
     try {
       setFormOptionsLoading(true);
-      const response = await fetch('/api/truck-trips/options');
+      const response = await fetch("/api/truck-trips/options");
       if (!response.ok) {
         const errorBody = await response.text();
         throw new Error(
-          errorBody || 'No se pudieron cargar las opciones del formulario',
+          errorBody || "No se pudieron cargar las opciones del formulario",
         );
       }
       const data = (await response.json()) as TruckTripFormOptions;
@@ -382,8 +386,8 @@ const TruckTripDialog = ({
       const message =
         error instanceof Error
           ? error.message
-          : 'No se pudieron cargar las opciones del formulario';
-      showToast(message, 'error');
+          : "No se pudieron cargar las opciones del formulario";
+      showToast(message, "error");
       throw error;
     } finally {
       setFormOptionsLoading(false);
@@ -399,7 +403,7 @@ const TruckTripDialog = ({
     async (params: {
       campoId?: number;
       campoName?: string;
-      originType: 'harvest' | 'stock';
+      originType: "harvest" | "stock";
       originId?: number;
     }) => {
       const { campoId, campoName, originType, originId } = params;
@@ -408,7 +412,7 @@ const TruckTripDialog = ({
         return null;
       }
 
-      const cacheKey = `${originType}-${campoId ?? campoName ?? 'unknown'}`;
+      const cacheKey = `${originType}-${campoId ?? campoName ?? "unknown"}`;
       const shouldBypassCache = Boolean(originId);
       if (!shouldBypassCache && originOptionsCache.current[cacheKey]) {
         setOriginSelectOptions(originOptionsCache.current[cacheKey]);
@@ -419,10 +423,10 @@ const TruckTripDialog = ({
       setOriginOptionsError(null);
       try {
         const searchParams = new URLSearchParams();
-        if (campoId) searchParams.set('campoId', String(campoId));
-        else if (campoName) searchParams.set('campoName', campoName);
-        searchParams.set('originType', originType);
-        if (originId) searchParams.set('originId', String(originId));
+        if (campoId) searchParams.set("campoId", String(campoId));
+        else if (campoName) searchParams.set("campoName", campoName);
+        searchParams.set("originType", originType);
+        if (originId) searchParams.set("originId", String(originId));
 
         const response = await fetch(
           `/api/truck-trips/options?${searchParams.toString()}`,
@@ -430,7 +434,7 @@ const TruckTripDialog = ({
         if (!response.ok) {
           const errorBody = await response.text();
           throw new Error(
-            errorBody || 'No se pudieron cargar los orígenes disponibles',
+            errorBody || "No se pudieron cargar los orígenes disponibles",
           );
         }
 
@@ -472,7 +476,7 @@ const TruckTripDialog = ({
         const message =
           error instanceof Error
             ? error.message
-            : 'No se pudieron cargar los orígenes disponibles';
+            : "No se pudieron cargar los orígenes disponibles";
         setOriginOptionsError(message);
         setOriginSelectOptions([]);
         return null;
@@ -501,13 +505,13 @@ const TruckTripDialog = ({
       setDialogInitialValues(initialValues);
       setInitialValuesKey((prev) => prev + 1);
       const fieldId =
-        typeof initialValues['Campo origen'] === 'number'
-          ? initialValues['Campo origen']
-          : Number(initialValues['Campo origen'] || '');
+        typeof initialValues["Campo origen"] === "number"
+          ? initialValues["Campo origen"]
+          : Number(initialValues["Campo origen"] || "");
       const fieldOption =
         formOptions.fields.find((field) => field.id === fieldId) ?? null;
       setSelectedField(fieldOption);
-      const originTypeValue = initialValues['Tipo origen'];
+      const originTypeValue = initialValues["Tipo origen"];
       setSelectedOriginType(originTypeValue);
       setOriginOptionsError(null);
       if (fieldOption) {
@@ -515,7 +519,9 @@ const TruckTripDialog = ({
           campoId: fieldOption.id,
           campoName: fieldOption.label,
           originType: originTypeValue,
-          originId: initialValues.Origen ? Number(initialValues.Origen) : undefined,
+          originId: initialValues.Origen
+            ? Number(initialValues.Origen)
+            : undefined,
         });
       } else {
         setOriginSelectOptions([]);
@@ -523,14 +529,17 @@ const TruckTripDialog = ({
       return;
     }
 
-    if (mode === 'edit' && activeTrip) {
+    if (mode === "edit" && activeTrip) {
       const values = buildTruckTripInitialValues({
         trip: activeTrip,
         options: formOptions,
       });
       setDialogInitialValues(values);
       setInitialValuesKey((prev) => prev + 1);
-      const fieldOption = findFieldOptionForTrip(activeTrip, formOptions.fields);
+      const fieldOption = findFieldOptionForTrip(
+        activeTrip,
+        formOptions.fields,
+      );
       const fieldNameFallback =
         fieldOption?.label ||
         activeTrip.originField ||
@@ -541,8 +550,8 @@ const TruckTripDialog = ({
         fieldOption ??
           (fieldNameFallback ? { label: fieldNameFallback } : null),
       );
-      const originTypeValue: 'harvest' | 'stock' =
-        activeTrip.originType === 'stock' ? 'stock' : 'harvest';
+      const originTypeValue: "harvest" | "stock" =
+        activeTrip.originType === "stock" ? "stock" : "harvest";
       setSelectedOriginType(originTypeValue);
       setOriginOptionsError(null);
       if (fieldOption || fieldNameFallback) {
@@ -551,7 +560,7 @@ const TruckTripDialog = ({
           campoName: fieldNameFallback,
           originType: originTypeValue,
           originId:
-            originTypeValue === 'stock'
+            originTypeValue === "stock"
               ? activeTrip.stockOriginIds[0]
               : activeTrip.harvestOriginIds[0],
         });
@@ -577,7 +586,7 @@ const TruckTripDialog = ({
 
   const handleDialogFieldChange = React.useCallback(
     (key: string, value: any) => {
-      if (key === 'Campo origen') {
+      if (key === "Campo origen") {
         if (!value) {
           setSelectedField(null);
           setOriginSelectOptions([]);
@@ -603,8 +612,8 @@ const TruckTripDialog = ({
           campoName: matchedField?.label,
           originType: selectedOriginType,
         });
-      } else if (key === 'Tipo origen') {
-        const normalizedType = value === 'stock' ? 'stock' : 'harvest';
+      } else if (key === "Tipo origen") {
+        const normalizedType = value === "stock" ? "stock" : "harvest";
         setSelectedOriginType(normalizedType);
         setOriginOptionsError(null);
         if (selectedField?.id || selectedField?.label) {
@@ -621,7 +630,7 @@ const TruckTripDialog = ({
 
   const originHelperText = React.useMemo(() => {
     if (!selectedField) {
-      return 'Seleccionar un campo para ver los orígenes disponibles';
+      return "Selecciona un campo para ver los orígenes disponibles";
     }
     return originOptionsError ?? undefined;
   }, [originOptionsError, selectedField]);
@@ -659,7 +668,7 @@ const TruckTripDialog = ({
         label: provider.label,
         value: provider.id,
       })) ?? [];
-    return [{ label: 'Sin proveedor', value: '' }, ...base];
+    return [{ label: "Sin proveedor", value: "" }, ...base];
   }, [formOptions?.providers]);
 
   const fieldSelectOptions = React.useMemo<DialogFieldOption[]>(
@@ -674,66 +683,66 @@ const TruckTripDialog = ({
   const tripFormFields = React.useMemo<SimpleEntityDialogFieldConfig[]>(
     () => [
       {
-        key: 'Camión',
-        label: 'Camión',
-        type: 'select',
+        key: "Camión",
+        label: "Camión",
+        type: "select",
         required: true,
         options: truckSelectOptions,
         loading: formOptionsLoading && !formOptions,
       },
       {
-        key: 'CTG',
-        label: 'CTG',
-        type: 'number',
+        key: "CTG",
+        label: "CTG",
+        type: "number",
         step: 1,
       },
       {
-        key: 'Estado',
-        label: 'Estado',
-        type: 'select',
+        key: "Estado",
+        label: "Estado",
+        type: "select",
         required: true,
         options: statusSelectOptions,
         loading: formOptionsLoading && !formOptions,
       },
       {
-        key: 'Fecha de salida - Fecha',
-        label: 'Fecha de salida',
-        type: 'date',
+        key: "Fecha de salida - Fecha",
+        label: "Fecha de salida",
+        type: "date",
         required: true,
       },
       {
-        key: 'Fecha de salida - Hora',
-        label: 'Hora de salida',
-        type: 'time',
+        key: "Fecha de salida - Hora",
+        label: "Hora de salida",
+        type: "time",
         required: true,
       },
       {
-        key: 'Campo origen',
-        label: 'Campo origen',
-        type: 'select',
+        key: "Campo origen",
+        label: "Campo origen",
+        type: "select",
         required: true,
         options: fieldSelectOptions,
         loading: formOptionsLoading && !formOptions,
         onValueChange: () => ({
-          Origen: '',
-          'Ciclo de siembra': '',
+          Origen: "",
+          "Ciclo de siembra": "",
         }),
       },
       {
-        key: 'Tipo origen',
-        label: 'Tipo de origen',
-        type: 'select',
+        key: "Tipo origen",
+        label: "Tipo de origen",
+        type: "select",
         required: true,
         options: ORIGIN_TYPE_SELECT_OPTIONS,
         onValueChange: () => ({
-          Origen: '',
-          'Ciclo de siembra': '',
+          Origen: "",
+          "Ciclo de siembra": "",
         }),
       },
       {
-        key: 'Origen',
-        label: 'Origen',
-        type: 'select',
+        key: "Origen",
+        label: "Origen",
+        type: "select",
         required: true,
         options: originSelectOptions,
         loading: originOptionsLoading,
@@ -744,55 +753,55 @@ const TruckTripDialog = ({
             (candidate) => candidate.value === value,
           );
           return {
-            'Ciclo de siembra': option?.meta?.cycleLabel ?? '',
+            "Ciclo de siembra": option?.meta?.cycleLabel ?? "",
           };
         },
       },
       {
-        key: 'Ciclo de siembra',
-        label: 'Ciclo de siembra',
-        type: 'readonly',
-        helperText: 'Se completa automáticamente al seleccionar un origen',
+        key: "Ciclo de siembra",
+        label: "Ciclo de siembra",
+        type: "readonly",
+        helperText: "Se completa automáticamente al seleccionar un origen",
       },
       {
-        key: 'Kg carga origen',
-        label: 'Kg carga origen',
-        type: 'number',
+        key: "Kg carga origen",
+        label: "Kg carga origen",
+        type: "number",
         required: true,
         step: 0.01,
       },
       {
-        key: 'Tipo destino',
-        label: 'Tipo de destino',
-        type: 'select',
+        key: "Tipo destino",
+        label: "Tipo de destino",
+        type: "select",
         required: true,
         options: destinationSelectOptions,
         loading: formOptionsLoading && !formOptions,
       },
       {
-        key: 'Proveedor',
-        label: 'Proveedor',
-        type: 'select',
+        key: "Proveedor",
+        label: "Proveedor",
+        type: "select",
         options: providerSelectOptions,
         loading: formOptionsLoading && !formOptions,
       },
       {
-        key: 'Detalle Destino',
-        label: 'Detalle del destino',
-        type: 'text',
-        placeholder: 'Ej: Puerto Rosario, silo, etc.',
+        key: "Detalle Destino",
+        label: "Detalle del destino",
+        type: "text",
+        placeholder: "Ej: Puerto Rosario, silo, etc.",
       },
       {
-        key: 'Kg carga destino',
-        label: 'Kg carga destino',
-        type: 'number',
+        key: "Kg carga destino",
+        label: "Kg carga destino",
+        type: "number",
         step: 0.01,
       },
       {
-        key: 'Notas',
-        label: 'Notas',
-        type: 'textarea',
-        placeholder: 'Agregá comentarios adicionales…',
+        key: "Notas",
+        label: "Notas",
+        type: "textarea",
+        placeholder: "Agregá comentarios adicionales…",
       },
     ],
     [
@@ -821,17 +830,17 @@ const TruckTripDialog = ({
     async (formValues: Record<string, any>) => {
       try {
         const payload = normalizeTruckTripFormToBaserowPayload(formValues);
-        const response = await fetch('/api/truck-trips', {
-          method: 'POST',
+        const response = await fetch("/api/truck-trips", {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({ payload }),
         });
 
         if (!response.ok) {
           const errorBody = await response.text();
-          let message = 'No se pudo registrar el viaje';
+          let message = "No se pudo registrar el viaje";
           if (errorBody) {
             try {
               const parsed = JSON.parse(errorBody);
@@ -843,20 +852,20 @@ const TruckTripDialog = ({
           throw new Error(message);
         }
 
-        const data = (await response.json().catch(() => null)) as
-          | { id?: number }
-          | null;
+        const data = (await response.json().catch(() => null)) as {
+          id?: number;
+        } | null;
 
-        showToast('Viaje registrado correctamente', 'success');
+        showToast("Viaje registrado correctamente", "success");
         handleDialogClose();
         router.refresh();
-        onSuccess?.({ mode: 'create', tripId: data?.id });
+        onSuccess?.({ mode: "create", tripId: data?.id });
       } catch (error) {
         const message =
           error instanceof Error
             ? error.message
-            : 'No se pudo registrar el viaje';
-        showToast(message, 'error');
+            : "No se pudo registrar el viaje";
+        showToast(message, "error");
         throw error;
       }
     },
@@ -866,7 +875,7 @@ const TruckTripDialog = ({
   const handleEditSubmit = React.useCallback(
     async (formValues: Record<string, any>) => {
       if (!activeTrip) {
-        showToast('No se encontró el viaje a editar', 'error');
+        showToast("No se encontró el viaje a editar", "error");
         return;
       }
 
@@ -877,21 +886,21 @@ const TruckTripDialog = ({
       const diffPayload = computeDiffPayload(prevPayload, nextPayload);
 
       if (!Object.keys(diffPayload).length) {
-        showToast('No hay cambios para guardar', 'info');
+        showToast("No hay cambios para guardar", "info");
         return;
       }
 
       const response = await fetch(`/api/truck-trips/${activeTrip.id}`, {
-        method: 'PATCH',
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ payload: diffPayload }),
       });
 
       if (!response.ok) {
         const errorBody = await response.text();
-        let message = 'No se pudo actualizar el viaje';
+        let message = "No se pudo actualizar el viaje";
         if (errorBody) {
           try {
             const parsed = JSON.parse(errorBody);
@@ -900,20 +909,20 @@ const TruckTripDialog = ({
             message = errorBody;
           }
         }
-        showToast(message, 'error');
+        showToast(message, "error");
         throw new Error(message);
       }
 
-      showToast('Viaje actualizado correctamente', 'success');
+      showToast("Viaje actualizado correctamente", "success");
       handleDialogClose();
       router.refresh();
-      onSuccess?.({ mode: 'edit', tripId: activeTrip.id });
+      onSuccess?.({ mode: "edit", tripId: activeTrip.id });
     },
     [activeTrip, handleDialogClose, onSuccess, router, showToast],
   );
 
   const dialogSubmitHandler =
-    mode === 'create' ? handleCreateSubmit : handleEditSubmit;
+    mode === "create" ? handleCreateSubmit : handleEditSubmit;
 
   const openDeleteConfirm = React.useCallback(() => {
     if (!activeTrip) return;
@@ -927,19 +936,19 @@ const TruckTripDialog = ({
 
   const handleDeleteConfirmed = React.useCallback(async () => {
     if (!activeTrip) {
-      showToast('No se encontró el viaje a borrar', 'error');
+      showToast("No se encontró el viaje a borrar", "error");
       return;
     }
 
     try {
       setDeleteLoading(true);
       const response = await fetch(`/api/truck-trips/${activeTrip.id}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       if (!response.ok) {
         const errorBody = await response.text();
-        let message = 'No se pudo borrar el viaje';
+        let message = "No se pudo borrar el viaje";
         if (errorBody) {
           try {
             const parsed = JSON.parse(errorBody);
@@ -951,17 +960,17 @@ const TruckTripDialog = ({
         throw new Error(message);
       }
 
-      showToast('Viaje borrado correctamente', 'success');
+      showToast("Viaje borrado correctamente", "success");
       setDeleteConfirmOpen(false);
       handleDialogClose();
       router.refresh();
-      onSuccess?.({ mode: 'edit', tripId: activeTrip.id });
+      onSuccess?.({ mode: "edit", tripId: activeTrip.id });
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
-          : 'Ocurrió un error al borrar el viaje';
-      showToast(message, 'error');
+          : "Ocurrió un error al borrar el viaje";
+      showToast(message, "error");
     } finally {
       setDeleteLoading(false);
     }
@@ -972,11 +981,11 @@ const TruckTripDialog = ({
       <SimpleEntityDialogForm
         open={open}
         title={
-          mode === 'create'
-            ? 'Registrar nuevo viaje de camión'
+          mode === "create"
+            ? "Registrar nuevo viaje de camión"
             : activeTrip?.tripId
-            ? `Editar viaje ${activeTrip.tripId}`
-            : 'Editar viaje de camión'
+              ? `Editar viaje ${activeTrip.tripId}`
+              : "Editar viaje de camión"
         }
         onClose={handleDialogClose}
         onSubmit={dialogSubmitHandler}
@@ -985,7 +994,7 @@ const TruckTripDialog = ({
         initialValues={dialogInitialValues}
         onFieldChange={handleDialogFieldChange}
         extraActions={
-          mode === 'edit' ? (
+          mode === "edit" ? (
             <Button
               color="error"
               variant="outlined"
@@ -993,7 +1002,7 @@ const TruckTripDialog = ({
               startIcon={<DeleteOutlineIcon />}
               sx={{
                 borderRadius: 2,
-                textTransform: 'none',
+                textTransform: "none",
                 fontWeight: 600,
                 px: 2.5,
               }}
@@ -1020,7 +1029,7 @@ const TruckTripDialog = ({
           <Button
             onClick={handleCloseDeleteConfirm}
             disabled={deleteLoading}
-            sx={{ textTransform: 'none' }}
+            sx={{ textTransform: "none" }}
           >
             Cancelar
           </Button>
@@ -1034,9 +1043,9 @@ const TruckTripDialog = ({
                 <CircularProgress color="inherit" size={18} />
               ) : null
             }
-            sx={{ textTransform: 'none' }}
+            sx={{ textTransform: "none" }}
           >
-            {deleteLoading ? 'Borrando...' : 'Borrar'}
+            {deleteLoading ? "Borrando..." : "Borrar"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1044,13 +1053,13 @@ const TruckTripDialog = ({
         open={snackbarState.open}
         autoHideDuration={5000}
         onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
       >
         <Alert
           onClose={handleSnackbarClose}
           severity={snackbarState.severity}
           variant="filled"
-          sx={{ width: '100%' }}
+          sx={{ width: "100%" }}
         >
           {snackbarState.message}
         </Alert>

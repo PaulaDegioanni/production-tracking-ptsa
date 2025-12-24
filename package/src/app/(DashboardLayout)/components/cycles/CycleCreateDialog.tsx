@@ -302,8 +302,11 @@ const CycleCreateDialog = ({
           "Estado",
           "Semilla",
           "Rendimiento esperado (qq/ha)",
-          "Notas",
         ],
+      },
+      {
+        title: "Notas",
+        fields: ["Notas"],
       },
     ],
     [],

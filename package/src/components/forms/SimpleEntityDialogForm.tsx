@@ -111,6 +111,7 @@ export type SimpleEntityDialogFormProps = {
   extraActions?: React.ReactNode;
   externalValues?: Record<string, any> | null;
   externalValuesKey?: string | number | null;
+  topContent?: React.ReactNode;
 };
 
 const cloneInitialValues = (initials?: Record<string, any>) => {
@@ -141,6 +142,7 @@ const SimpleEntityDialogForm = ({
   extraActions,
   externalValues,
   externalValuesKey,
+  topContent,
 }: SimpleEntityDialogFormProps) => {
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
@@ -713,40 +715,17 @@ const SimpleEntityDialogForm = ({
   };
 
 const chunkFields = (
-  sectionFields: SimpleEntityDialogFieldConfig[],
-  sectionIndex: number
+  sectionFields: SimpleEntityDialogFieldConfig[]
 ): SimpleEntityDialogFieldConfig[][] => {
-  if (sectionIndex === 0) {
-    const firstRow = sectionFields.slice(0, 3);
-    const rest = sectionFields.slice(3);
-    const rowList: SimpleEntityDialogFieldConfig[][] = [];
-    if (firstRow.length) {
-      rowList.push(firstRow);
-    }
-    for (let i = 0; i < rest.length; i += 2) {
-      rowList.push(rest.slice(i, i + 2));
-    }
-    return rowList;
+  if (sectionFields.length <= 3) {
+    return [sectionFields];
   }
 
-  if (sectionIndex === 1) {
-    const firstGroup = sectionFields.slice(0, 3);
-    const rest = sectionFields.slice(3);
-    const rows: SimpleEntityDialogFieldConfig[][] = [];
-    if (firstGroup.length) {
-      rows.push(firstGroup);
-    }
-    for (let i = 0; i < rest.length; i += 2) {
-      rows.push(rest.slice(i, i + 2));
-    }
-    return rows;
-  }
-
-  const rows: SimpleEntityDialogFieldConfig[][] = [];
-  for (let i = 0; i < sectionFields.length; i += 2) {
-    rows.push(sectionFields.slice(i, i + 2));
-  }
-  return rows;
+  const midpoint = Math.ceil(sectionFields.length / 2);
+  return [
+    sectionFields.slice(0, midpoint),
+    sectionFields.slice(midpoint),
+  ];
 };
 
   return (
@@ -825,10 +804,15 @@ const chunkFields = (
               overflowY: 'auto',
             }}
           >
+            {topContent ? (
+              <Box mb={3} sx={{ width: '100%' }}>
+                {topContent}
+              </Box>
+            ) : null}
             <Stack spacing={4}>
               {resolvedSections.map((section, sectionIndex) => {
                 if (!section.fields.length) return null;
-                const rows = chunkFields(section.fields, sectionIndex);
+                const rows = chunkFields(section.fields);
                 const showMeta = Boolean(
                   section.title || section.description || section.icon
                 );
@@ -853,153 +837,31 @@ const chunkFields = (
 
                     <Stack spacing={2.5}>
                       {rows.map((row, rowIndex) => {
-                        const isFirstSectionFirstRow =
-                          sectionIndex === 0 && rowIndex === 0;
-                        const isOriginFirstRow =
-                          sectionIndex === 1 && rowIndex === 0;
-
-                        if (isFirstSectionFirstRow) {
-                          const isCampoLotesRow =
-                            row.some((field) => field.key === 'Campo') &&
-                            row.some((field) => field.key === 'Lotes');
-                          const areaMap: Record<string, string> = isCampoLotesRow
-                            ? {
-                                Campo: 'campo',
-                                Lotes: 'lotes',
-                              }
-                            : {
-                                Fecha_fecha: 'fecha',
-                                Fecha_hora: 'hora',
-                                'KG Cosechados': 'kgs',
-                              };
-                          const gridTemplateColumns = isCampoLotesRow
-                            ? {
-                                xs: 'minmax(0, 1fr)',
-                                md: '1fr 2fr',
-                              }
-                            : {
-                                xs: 'repeat(2, minmax(0, 1fr))',
-                                md: 'repeat(3, minmax(0, 1fr))',
-                              };
-                          const gridTemplateAreas = isCampoLotesRow
-                            ? {
-                                xs: '"campo" "lotes"',
-                                md: '"campo lotes"',
-                              }
-                            : {
-                                xs: '"fecha hora" "kgs kgs"',
-                                md: '"fecha hora kgs"',
-                              };
-                          return (
-                            <Box
-                              key={
-                                row.map((field) => field.key).join('-') ||
-                                `row-${rowIndex}`
-                              }
-                              sx={{
-                                display: 'grid',
-                                gap: 2,
-                                gridTemplateColumns,
-                                gridTemplateAreas,
-                              }}
-                            >
-                              {row.map((field) => (
-                                <Box
-                                  key={field.key}
-                                  sx={{
-                                    minWidth: 0,
-                                    gridArea: areaMap[field.key] ?? 'auto',
-                                  }}
-                                >
-                                  {renderField(field)}
-                                </Box>
-                              ))}
-                            </Box>
-                          );
-                        }
-
-                        if (isOriginFirstRow) {
-                          const isTruckOriginRow = row.some(
-                            (field) => field.key === 'Campo origen'
-                          );
-                          const areaMap: Record<string, string> = isTruckOriginRow
-                            ? {
-                                'Campo origen': 'campo',
-                                'Tipo origen': 'tipo',
-                                Origen: 'origen',
-                              }
-                            : {
-                                Campo: 'campo',
-                                'Ciclo de siembra': 'ciclo',
-                                Cultivo: 'cultivo',
-                              };
-                          const gridTemplateColumns = isTruckOriginRow
-                            ? {
-                                xs: 'repeat(2, minmax(0, 1fr))',
-                                md: '1.2fr 0.8fr 1.9fr',
-                              }
-                            : {
-                                xs: 'repeat(2, minmax(0, 1fr))',
-                                md: '1.1fr 1.8fr 0.9fr',
-                              };
-                          const gridTemplateAreas = isTruckOriginRow
-                            ? {
-                                xs: '"campo campo" "tipo origen"',
-                                md: '"campo tipo origen"',
-                              }
-                            : {
-                                xs: '"campo campo" "ciclo cultivo"',
-                                md: '"campo ciclo cultivo"',
-                              };
-                          return (
-                            <Box
-                              key={
-                                row.map((field) => field.key).join('-') ||
-                                `row-${rowIndex}`
-                              }
-                              sx={{
-                                display: 'grid',
-                                gap: 2,
-                                gridTemplateColumns,
-                                gridTemplateAreas,
-                              }}
-                            >
-                              {row.map((field) => (
-                                <Box
-                                  key={field.key}
-                                  sx={{
-                                    minWidth: 0,
-                                    gridArea: areaMap[field.key] ?? 'auto',
-                                  }}
-                                >
-                                  {renderField(field)}
-                                </Box>
-                              ))}
-                            </Box>
-                          );
-                        }
+                        const key =
+                          row.map((field) => field.key).join('-') ||
+                          `row-${rowIndex}`;
+                        const columns = Math.max(1, row.length);
+                        const tabletColumns = Math.min(columns, 2);
 
                         return (
-                          <Stack
-                            key={
-                              row.map((field) => field.key).join('-') ||
-                              rowIndex
-                            }
-                            direction={{
-                              xs: 'column',
-                              sm: row.length > 1 ? 'row' : 'column',
+                          <Box
+                            key={key}
+                            sx={{
+                              display: 'grid',
+                              gap: 2,
+                              gridTemplateColumns: {
+                                xs: 'repeat(1, minmax(0, 1fr))',
+                                sm: `repeat(${tabletColumns}, minmax(0, 1fr))`,
+                                md: `repeat(${columns}, minmax(0, 1fr))`,
+                              },
                             }}
-                            spacing={2}
                           >
                             {row.map((field) => (
-                              <Box
-                                key={field.key}
-                                sx={{ flex: 1, minWidth: 0 }}
-                              >
+                              <Box key={field.key} sx={{ minWidth: 0 }}>
                                 {renderField(field)}
                               </Box>
                             ))}
-                          </Stack>
+                          </Box>
                         );
                       })}
                     </Stack>

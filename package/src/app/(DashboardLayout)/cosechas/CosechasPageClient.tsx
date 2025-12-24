@@ -892,7 +892,12 @@ const CosechasPageClient = ({
         });
       })();
     },
-    [applyDialogValuePatch, fetchFieldDependencies, selectedField, setDependenciesCache],
+    [
+      applyDialogValuePatch,
+      fetchFieldDependencies,
+      selectedField,
+      setDependenciesCache,
+    ],
   );
 
   const harvestFormSections = React.useMemo<SimpleEntityDialogSection[]>(
@@ -900,25 +905,25 @@ const CosechasPageClient = ({
       {
         title: "Información básica",
         description: "Fecha y cantidad total cosechada",
-        icon: <CalendarTodayIcon />,
+
         fields: ["Fecha_fecha", "Fecha_hora", "KG Cosechados"],
       },
       {
         title: "Ubicación y origen",
         description: "Campo, lotes y ciclo de donde proviene la cosecha",
-        icon: <LandscapeIcon />,
+
         fields: ["Campo", "Lotes", "Ciclo de siembra", "Cultivo"],
       },
       {
         title: "Distribución",
         description: "Stock y viajes directos asociados (opcional)",
-        icon: <LocalShippingIcon />,
+
         fields: ["Stock", "Viajes camión directos"],
       },
       {
-        title: "Notas adicionales",
+        title: "Notas",
         description: "Observaciones y detalles extras",
-        icon: <AgricultureIcon />,
+
         fields: ["Notas"],
       },
     ],
@@ -1113,9 +1118,8 @@ const CosechasPageClient = ({
       },
       {
         key: "Notas",
-        label: "Notas y observaciones",
+        label: "Notas",
         type: "textarea",
-        placeholder: "Escribí aquí tus observaciones...",
       },
     ];
   }, [
