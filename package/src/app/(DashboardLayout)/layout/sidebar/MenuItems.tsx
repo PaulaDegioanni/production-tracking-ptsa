@@ -3,71 +3,93 @@ import {
   IconFreezeRowColumn,
   IconSeedling,
   IconTruck,
+  IconTruckFilled,
+  IconUsers,
   IconTractor,
   IconLogin,
   IconUserPlus,
   IconMoneybag,
-} from '@tabler/icons-react';
+} from "@tabler/icons-react";
 
-import { uniqueId } from 'lodash';
+import { uniqueId } from "lodash";
 
 const Menuitems = [
   {
-    navlabel: true,
-    subheader: 'PRODUCCIÓN',
+    id: uniqueId(),
+    title: "Dashboard",
+    icon: IconLayoutDashboard,
+    href: "/",
   },
 
   {
-    id: uniqueId(),
-    title: 'Dashboard',
-    icon: IconLayoutDashboard,
-    href: '/',
+    navlabel: true,
+    subheader: "PRODUCCIÓN",
   },
   {
     id: uniqueId(),
-    title: 'Campos',
-    icon: IconFreezeRowColumn,
-    href: '/campos',
-  },
-  {
-    id: uniqueId(),
-    title: 'Ciclos de siembra',
+    title: "Ciclos de siembra",
     icon: IconSeedling,
-    href: '/ciclos',
+    href: "/ciclos",
   },
   {
     id: uniqueId(),
-    title: 'Cosechas',
+    title: "Cosechas",
     icon: IconTractor,
-    href: '/cosechas',
-  },
-  {
-    id: uniqueId(),
-    title: 'Stock',
-    icon: IconMoneybag,
-    href: '/stock',
-  },
-  {
-    id: uniqueId(),
-    title: 'Viajes de camión',
-    icon: IconTruck,
-    href: '/viajes-de-camion',
+    href: "/cosechas",
   },
   {
     navlabel: true,
-    subheader: 'AUTH',
+    subheader: "DISTRIBUCIÓN",
   },
   {
     id: uniqueId(),
-    title: 'Login',
+    title: "Stock",
+    icon: IconMoneybag,
+    href: "/stock",
+  },
+  {
+    id: uniqueId(),
+    title: "Viajes de camión",
+    icon: IconTruck,
+    href: "/viajes-de-camion",
+  },
+  {
+    id: uniqueId(),
+    title: "Proveedores",
+    icon: IconUsers,
+    href: "/proveedores",
+  },
+  {
+    navlabel: true,
+    subheader: "RECURSOS",
+  },
+  {
+    id: uniqueId(),
+    title: "Campos",
+    icon: IconFreezeRowColumn,
+    href: "/campos",
+  },
+  {
+    id: uniqueId(),
+    title: "Camiones",
+    icon: IconTruckFilled,
+    href: "/camiones",
+  },
+  {
+    navlabel: true,
+    subheader: "AUTH",
+  },
+  {
+    id: uniqueId(),
+    title: "Login",
     icon: IconLogin,
-    href: '/authentication/login',
+    href: "/authentication/login",
   },
   {
     id: uniqueId(),
-    title: 'Register',
+    title: "Register",
     icon: IconUserPlus,
-    href: '/authentication/register',
+    href: "/authentication/register",
   },
 ];
 

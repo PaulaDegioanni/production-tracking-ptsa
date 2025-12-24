@@ -1,5 +1,4 @@
 // src/lib/baserow/truckTrips.ts
-import { getTableRows } from './client';
 import { getCycleRowIdByLabel } from './cycles';
 import {
   extractLinkRowIds,
@@ -138,7 +137,18 @@ function mapTruckTripRawToDto(row: TruckTripRaw): TruckTripDto {
 
 // ---- Public API ----
 
+type ClientModule = typeof import('./client');
+let truckTripsClientPromise: Promise<ClientModule> | null = null;
+
+const loadTruckTripsClient = () => {
+  if (!truckTripsClientPromise) {
+    truckTripsClientPromise = import('./client');
+  }
+  return truckTripsClientPromise;
+};
+
 export async function getTruckTripsRaw(): Promise<TruckTripRaw[]> {
+  const { getTableRows } = await loadTruckTripsClient();
   return getTableRows<TruckTripRaw>(TRUCK_TRIPS_TABLE_ID);
 }
 
@@ -193,4 +203,23 @@ export async function getTruckTripsWithCycleIdsDto(): Promise<TruckTripDto[]> {
   );
 
   return enriched;
+}
+
+export async function getTruckTripIdMap(
+  tripIds: number[]
+): Promise<Map<number, string>> {
+  if (!tripIds.length) return new Map();
+
+  const lookupIds = new Set(tripIds);
+  const rows = await getTruckTripsRaw();
+
+  const map = new Map<number, string>();
+  rows.forEach((row) => {
+    if (lookupIds.has(row.id)) {
+      const tripId = normalizeField(row.ID) || `#${row.id}`;
+      map.set(row.id, tripId);
+    }
+  });
+
+  return map;
 }
