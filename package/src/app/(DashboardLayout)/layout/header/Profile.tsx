@@ -89,7 +89,7 @@ const Profile = () => {
             component={Link}
             fullWidth
           >
-            Logout
+            Cerrar sesión
           </Button>
         </Box>
       </Menu>

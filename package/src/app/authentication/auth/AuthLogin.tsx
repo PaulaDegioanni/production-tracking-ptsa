@@ -37,7 +37,7 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => (
           htmlFor="username"
           mb="5px"
         >
-          Username
+          Usuario
         </Typography>
         <CustomTextField variant="outlined" fullWidth />
       </Box>
@@ -49,7 +49,7 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => (
           htmlFor="password"
           mb="5px"
         >
-          Password
+          Contraseña
         </Typography>
         <CustomTextField type="password" variant="outlined" fullWidth />
       </Box>
@@ -74,7 +74,7 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => (
             color: "primary.main",
           }}
         >
-          Forgot Password ?
+          Resetear contraseña
         </Typography>
       </Stack>
     </Stack>

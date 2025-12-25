@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Box,
   AppBar,
@@ -7,17 +7,17 @@ import {
   Stack,
   IconButton,
   Button,
-} from '@mui/material';
-import PropTypes from 'prop-types';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+} from "@mui/material";
+import PropTypes from "prop-types";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 // components
-import Profile from './Profile';
+import Profile from "./Profile";
 import {
   IconLayoutSidebar,
   IconMenu,
   IconArrowLeft,
-} from '@tabler/icons-react';
+} from "@tabler/icons-react";
 
 interface HeaderProps {
   toggleMobileSidebar: () => void;
@@ -31,20 +31,20 @@ const Header = ({ toggleMobileSidebar, toggleSidebar }: HeaderProps) => {
   const router = useRouter();
   const pathname = usePathname();
 
-  const isCycleDetailPage = /^\/ciclos\/[^/]+$/.test(pathname || '');
+  const isCycleDetailPage = /^\/ciclos\/[^/]+$/.test(pathname || "");
   const showBackButton = isCycleDetailPage;
 
   const AppBarStyled = styled(AppBar)(({ theme }) => ({
-    boxShadow: 'none',
+    boxShadow: "none",
     background: theme.palette.background.paper,
-    justifyContent: 'center',
-    backdropFilter: 'blur(4px)',
-    [theme.breakpoints.up('lg')]: {
-      minHeight: '70px',
+    justifyContent: "center",
+    backdropFilter: "blur(4px)",
+    [theme.breakpoints.up("lg")]: {
+      minHeight: "70px",
     },
   }));
   const ToolbarStyled = styled(Toolbar)(({ theme }) => ({
-    width: '100%',
+    width: "100%",
     color: theme.palette.text.secondary,
   }));
 
@@ -62,8 +62,8 @@ const Header = ({ toggleMobileSidebar, toggleSidebar }: HeaderProps) => {
           onClick={toggleMobileSidebar}
           sx={{
             display: {
-              md: 'none',
-              xs: 'inline-flex',
+              md: "none",
+              xs: "inline-flex",
             },
             mr: 1,
           }}
@@ -78,8 +78,8 @@ const Header = ({ toggleMobileSidebar, toggleSidebar }: HeaderProps) => {
           onClick={toggleSidebar}
           sx={{
             display: {
-              xs: 'none',
-              md: 'inline-flex',
+              xs: "none",
+              md: "inline-flex",
             },
             mr: 1,
           }}
@@ -104,15 +104,6 @@ const Header = ({ toggleMobileSidebar, toggleSidebar }: HeaderProps) => {
         <Box flexGrow={1} />
 
         <Stack spacing={1} direction="row" alignItems="center">
-          <Button
-            variant="contained"
-            component={Link}
-            href="/authentication/login"
-            disableElevation
-            color="primary"
-          >
-            Login
-          </Button>
           <Profile />
         </Stack>
       </ToolbarStyled>
