@@ -1,4 +1,5 @@
 // src/lib/baserow/client.ts
+import 'server-only';
 
 const BASEROW_URL = process.env.NEXT_PUBLIC_BASEROW_URL;
 const BASEROW_TOKEN = process.env.BASEROW_TOKEN;

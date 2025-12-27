@@ -1,60 +1,158 @@
-import React, { useState } from "react";
-import Link from "next/link";
+'use client';
+
+import React from "react";
 import {
   Avatar,
   Box,
-  Menu,
-  Button,
+  Divider,
   IconButton,
-  MenuItem,
   ListItemIcon,
   ListItemText,
+  Menu,
+  MenuItem,
+  Typography,
 } from "@mui/material";
+import { useRouter } from "next/navigation";
 
-import { IconListCheck, IconMail, IconUser } from "@tabler/icons-react";
+import { IconLogout, IconUser } from "@tabler/icons-react";
 
 const Profile = () => {
-  const [anchorEl2, setAnchorEl2] = useState(null);
-  const handleClick2 = (event: any) => {
-    setAnchorEl2(event.currentTarget);
+  const router = useRouter();
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const [logoutLoading, setLogoutLoading] = React.useState(false);
+  const [session, setSession] = React.useState<{
+    authenticated: boolean;
+    username?: string;
+    name?: string | null;
+    role?: string;
+  } | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const authenticated = Boolean(session?.authenticated && session?.username);
+
+  React.useEffect(() => {
+    const fetchSession = async () => {
+      try {
+        const response = await fetch("/api/auth/me", {
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          setSession({ authenticated: false });
+          return;
+        }
+        const data = (await response.json()) as {
+          authenticated: boolean;
+          username?: string;
+          name?: string | null;
+          role?: string;
+        };
+        setSession(data);
+      } catch (error) {
+        console.error("Error loading session", error);
+        setSession({ authenticated: false });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSession();
+  }, []);
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    if (loading) return;
+    if (!authenticated) {
+      router.push("/authentication/login");
+      return;
+    }
+    setAnchorEl(event.currentTarget);
   };
-  const handleClose2 = () => {
-    setAnchorEl2(null);
+
+  const avatarInitial = React.useMemo(() => {
+    if (!session?.username) return "?";
+    return session.username.charAt(0).toUpperCase();
+  }, [session]);
+
+  const displayName = React.useMemo(() => {
+    if (loading) return "Cargando…";
+    if (session?.name) return session.name;
+    if (session?.username) return session.username;
+    return "Usuario";
+  }, [loading, session]);
+
+  const secondaryText = React.useMemo(() => {
+    if (loading) return "Obteniendo sesión…";
+    if (session?.username) return `@${session.username}`;
+    return "Sin sesión activa";
+  }, [loading, session]);
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleLogout = async () => {
+    try {
+      setLogoutLoading(true);
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("No se pudo cerrar sesión");
+      }
+
+      setAnchorEl(null);
+      router.push("/authentication/login");
+      router.refresh();
+    } catch (error) {
+      console.error("Error al cerrar sesión", error);
+    } finally {
+      setLogoutLoading(false);
+    }
   };
 
   return (
-    <Box>
+    <Box display="flex" alignItems="center">
       <IconButton
         size="large"
-        aria-label="show 11 new notifications"
         color="inherit"
-        aria-controls="msgs-menu"
+        aria-controls="profile-menu"
         aria-haspopup="true"
+        onClick={handleMenuOpen}
+        disabled={loading}
         sx={{
-          ...(typeof anchorEl2 === "object" && {
+          ...(Boolean(anchorEl) && {
             color: "primary.main",
           }),
         }}
-        onClick={handleClick2}
       >
         <Avatar
-          src="/images/profile/user-1.jpg"
-          alt="image"
+          alt={session?.username || "Usuario"}
           sx={{
             width: 35,
             height: 35,
+            fontWeight: 600,
           }}
-        />
+        >
+          {avatarInitial}
+        </Avatar>
       </IconButton>
-      {/* ------------------------------------------- */}
-      {/* Message Dropdown */}
-      {/* ------------------------------------------- */}
+      <Typography
+        variant="body2"
+        color="text.primary"
+        sx={{
+          display: { xs: "none", md: "inline" },
+          ml: 1,
+          fontWeight: 500,
+        }}
+      >
+        {session?.username || ""}
+      </Typography>
+
       <Menu
-        id="msgs-menu"
-        anchorEl={anchorEl2}
+        id="profile-menu"
+        anchorEl={anchorEl}
         keepMounted
-        open={Boolean(anchorEl2)}
-        onClose={handleClose2}
+        open={Boolean(anchorEl) && authenticated}
+        onClose={handleMenuClose}
         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
         transformOrigin={{ horizontal: "right", vertical: "top" }}
         sx={{
@@ -63,35 +161,29 @@ const Profile = () => {
           },
         }}
       >
-        <MenuItem>
+        <MenuItem disabled sx={{ opacity: 1, cursor: "default" }}>
           <ListItemIcon>
             <IconUser width={20} />
           </ListItemIcon>
-          <ListItemText>My Profile</ListItemText>
+          <ListItemText
+            primary={
+              <Typography fontWeight={600}>
+                {displayName}
+              </Typography>
+            }
+            secondary={secondaryText}
+          />
         </MenuItem>
-        <MenuItem>
+        <Divider />
+        <MenuItem
+          onClick={handleLogout}
+          disabled={logoutLoading || !authenticated}
+        >
           <ListItemIcon>
-            <IconMail width={20} />
+            <IconLogout width={20} />
           </ListItemIcon>
-          <ListItemText>My Account</ListItemText>
+          <ListItemText primary="Cerrar sesión" />
         </MenuItem>
-        <MenuItem>
-          <ListItemIcon>
-            <IconListCheck width={20} />
-          </ListItemIcon>
-          <ListItemText>My Tasks</ListItemText>
-        </MenuItem>
-        <Box mt={1} py={1} px={2}>
-          <Button
-            href="/authentication/login"
-            variant="outlined"
-            color="primary"
-            component={Link}
-            fullWidth
-          >
-            Cerrar sesión
-          </Button>
-        </Box>
       </Menu>
     </Box>
   );

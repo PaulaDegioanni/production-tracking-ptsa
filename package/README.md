@@ -1,5 +1,16 @@
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
+## Environment variables
+
+Authentication and the Baserow connectors require the following variables in `.env.local`:
+
+- `NEXT_PUBLIC_BASEROW_URL` – Base URL for the Baserow instance.
+- `BASEROW_TOKEN` – Server token used for Baserow API calls (never exposed to the browser).
+- `NEXT_PUBLIC_BASEROW_USERS_TABLE_ID` – Numeric table id for the `Users` table.
+- `JWT_SECRET` – Random string used to sign JWT session cookies.
+
+Session cookies are httpOnly and last 8 hours by default or 14 days when the login form's “Recordar este dispositivo” option is enabled.
+
 ## Getting Started
 
 First, run the development server:
