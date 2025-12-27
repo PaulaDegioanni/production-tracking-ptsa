@@ -1,4 +1,5 @@
 // src/lib/baserow/truckFormOptions.ts
+import 'server-only';
 import { getTableFields } from './client';
 import { TRUCKS_TABLE_ID } from './trucks';
 

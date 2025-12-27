@@ -1,4 +1,5 @@
 // src/lib/baserow/truckTripFormOptions.ts
+import 'server-only';
 import { getTableFields } from './client';
 import { getFieldsDto } from './fields';
 import { getHarvestsDto, HarvestDto } from './harvests';

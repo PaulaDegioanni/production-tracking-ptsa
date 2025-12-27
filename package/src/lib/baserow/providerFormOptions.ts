@@ -1,4 +1,5 @@
 // src/lib/baserow/providerFormOptions.ts
+import 'server-only';
 import { getTableFields } from './client';
 import { PROVIDERS_TABLE_ID } from './providers';
 

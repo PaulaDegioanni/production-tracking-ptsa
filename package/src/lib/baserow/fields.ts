@@ -1,4 +1,5 @@
 // src/lib/baserow/fields.ts
+import 'server-only';
 import { getTableRows, patchTableRow, deleteTableRow } from './client';
 import { createTableRow } from './rowsCrud';
 import {

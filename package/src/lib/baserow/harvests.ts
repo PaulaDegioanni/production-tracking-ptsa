@@ -1,4 +1,5 @@
 // src/lib/baserow/harvests.ts
+import 'server-only';
 import { getTableRows } from './client';
 import {
   extractLinkRowIds,

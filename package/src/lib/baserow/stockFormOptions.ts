@@ -1,4 +1,5 @@
 // src/lib/baserow/stockFormOptions.ts
+import 'server-only';
 import { getFieldsDto } from './fields';
 import { getTableFields } from './client';
 import { STOCK_TABLE_ID } from './stocks';
