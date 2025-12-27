@@ -13,7 +13,7 @@ import {
 
 import { uniqueId } from "lodash";
 
-const Menuitems = [
+const baseMenuItems = [
   {
     id: uniqueId(),
     title: "Dashboard",
@@ -93,4 +93,19 @@ const Menuitems = [
   },
 ];
 
-export default Menuitems;
+const getCosechasItem = () => ({
+  id: uniqueId(),
+  title: "Cosechas",
+  icon: IconTractor,
+  href: "/cosechas",
+});
+
+export const getMenuItemsForRole = (role?: string) => {
+  if (role === "Operador") {
+    return [getCosechasItem()];
+  }
+  return baseMenuItems;
+};
+
+export default baseMenuItems;
+

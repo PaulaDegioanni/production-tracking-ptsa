@@ -1,5 +1,5 @@
 import React from "react";
-import Menuitems from "./MenuItems";
+import Menuitems, { getMenuItemsForRole } from "./MenuItems";
 import { Box } from "@mui/material";
 import {
   Sidebar as MUI_Sidebar,
@@ -11,6 +11,7 @@ import Logo from '@/app/(DashboardLayout)/layout/shared/logo/Logo';
 import { IconPoint } from '@tabler/icons-react';
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "@/hooks/useSession";
 
 
 const renderMenuItems = (items: any, pathDirect: any) => {
@@ -69,14 +70,28 @@ const renderMenuItems = (items: any, pathDirect: any) => {
 const SidebarItems = () => {
   const pathname = usePathname();
   const pathDirect = pathname;
+  const { user, loading } = useSession();
+  const [menuItems, setMenuItems] = React.useState(Menuitems);
+
+  React.useEffect(() => {
+    const items = getMenuItemsForRole(user?.role);
+    setMenuItems(items);
+  }, [user?.role]);
 
   return (
     < >
       <MUI_Sidebar width={"100%"} showProfile={false} themeColor={"#3A3180"} themeSecondaryColor={'#CF2C1B'} >
-<Box sx={{ width: 130 }}>
-        <Logo></Logo>
-</Box>
-        {renderMenuItems(Menuitems, pathDirect)}
+        <Box
+          sx={{
+            width: 130,
+            pointerEvents: "none",
+            mx: "auto",
+            my: 2,
+          }}
+        >
+          <Logo />
+        </Box>
+        {renderMenuItems(menuItems, pathDirect)}
       </MUI_Sidebar>
 
     </>

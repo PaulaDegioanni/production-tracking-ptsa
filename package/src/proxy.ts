@@ -11,9 +11,15 @@ const isPublicPath = (pathname: string) =>
   PUBLIC_PATHS.some((publicPath) => pathname === publicPath) ||
   pathname.startsWith(AUTH_API_PREFIX);
 
-const isNextAsset = (pathname: string) =>
+const STATIC_EXTENSIONS = /\.(css|js|json|ico|png|jpg|jpeg|gif|svg|webp|avif)$/i;
+
+const isAssetPath = (pathname: string) =>
   pathname.startsWith('/_next') ||
-  pathname === '/favicon.ico';
+  pathname === '/favicon.ico' ||
+  pathname.startsWith('/images') ||
+  pathname.startsWith('/fonts') ||
+  pathname.startsWith('/public') ||
+  STATIC_EXTENSIONS.test(pathname);
 
 const isOperatorAllowedPath = (pathname: string) =>
   pathname === '/cosechas' || pathname.startsWith('/cosechas/');
@@ -27,7 +33,7 @@ const redirectToLogin = (request: NextRequest) => {
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (isNextAsset(pathname) || pathname === '/') {
+  if (isAssetPath(pathname) || pathname === '/') {
     return NextResponse.next();
   }
 
