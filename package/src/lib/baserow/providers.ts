@@ -1,4 +1,5 @@
 // src/lib/baserow/providers.ts
+import 'server-only';
 import {
   extractLinkRowIds,
   normalizeField,

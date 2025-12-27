@@ -37,8 +37,7 @@ import SimpleEntityDialogForm, {
   type SimpleEntityDialogFieldConfig,
   type SimpleEntityDialogSection,
 } from "@/components/forms/SimpleEntityDialogForm";
-import type { ProviderDto, ProviderRaw } from "@/lib/baserow/providers";
-import { mapProviderRawToDto } from "@/lib/baserow/providers";
+import type { ProviderDto } from "@/lib/baserow/providers";
 
 type ProveedoresPageClientProps = {
   initialProviders: ProviderDto[];
@@ -252,8 +251,7 @@ const ProveedoresPageClient = ({
         throw new Error(message);
       }
 
-      const result = (await response.json()) as ProviderRaw;
-      const mapped = mapProviderRawToDto(result);
+      const mapped = (await response.json()) as ProviderDto;
 
       setProviders((prev) => {
         if (dialogMode === "create") {

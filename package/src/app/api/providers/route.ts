@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 
-import { PROVIDERS_TABLE_ID } from '@/lib/baserow/providers';
+import {
+  PROVIDERS_TABLE_ID,
+  mapProviderRawToDto,
+} from '@/lib/baserow/providers';
+import type { ProviderRaw } from '@/lib/baserow/providers';
 import { createTableRow } from '@/lib/baserow/rowsCrud';
 
 export async function POST(request: Request) {
@@ -22,8 +26,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = await createTableRow(PROVIDERS_TABLE_ID, payload);
-    return NextResponse.json(result);
+    const result = await createTableRow<ProviderRaw>(PROVIDERS_TABLE_ID, payload);
+    const dto = mapProviderRawToDto(result);
+    return NextResponse.json(dto);
   } catch (error) {
     console.error('Error al crear proveedor en Baserow', error);
     const message =

@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server';
 
-import { PROVIDERS_TABLE_ID } from '@/lib/baserow/providers';
+import {
+  PROVIDERS_TABLE_ID,
+  mapProviderRawToDto,
+} from '@/lib/baserow/providers';
 import {
   BaserowRequestError,
   deleteTableRow,
   patchTableRow,
 } from '@/lib/baserow/client';
+import type { ProviderRaw } from '@/lib/baserow/providers';
 
 type RouteParams = {
   params: Promise<{
@@ -43,13 +47,13 @@ export async function PATCH(request: Request, context: RouteParams) {
       return NextResponse.json({ error: 'Empty payload' }, { status: 400 });
     }
 
-    const updatedRow = await patchTableRow(
+    const updatedRow = await patchTableRow<ProviderRaw>(
       PROVIDERS_TABLE_ID,
       rowId,
       payload as Record<string, any>
     );
 
-    return NextResponse.json(updatedRow);
+    return NextResponse.json(mapProviderRawToDto(updatedRow));
   } catch (error) {
     if (error instanceof BaserowRequestError) {
       return NextResponse.json(
