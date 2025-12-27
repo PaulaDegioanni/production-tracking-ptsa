@@ -24,7 +24,7 @@ const redirectToLogin = (request: NextRequest) => {
   return NextResponse.redirect(loginUrl);
 };
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (isNextAsset(pathname) || pathname === '/') {
