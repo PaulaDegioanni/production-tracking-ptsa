@@ -31,6 +31,8 @@ interface AuthLoginProps {
   nextPath?: string | null;
 }
 
+export type loginType = AuthLoginProps;
+
 const resolveRedirectPath = (nextPath: string | null, role: AppRole) => {
   const defaultPath = role === "Operador" ? "/cosechas" : "/";
 
