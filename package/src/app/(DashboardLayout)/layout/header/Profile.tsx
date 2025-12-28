@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import React from "react";
 import {
@@ -135,17 +135,6 @@ const Profile = () => {
           {avatarInitial}
         </Avatar>
       </IconButton>
-      <Typography
-        variant="body2"
-        color="text.primary"
-        sx={{
-          display: { xs: "none", md: "inline" },
-          ml: 1,
-          fontWeight: 500,
-        }}
-      >
-        {session?.username || ""}
-      </Typography>
 
       <Menu
         id="profile-menu"
@@ -166,11 +155,7 @@ const Profile = () => {
             <IconUser width={20} />
           </ListItemIcon>
           <ListItemText
-            primary={
-              <Typography fontWeight={600}>
-                {displayName}
-              </Typography>
-            }
+            primary={<Typography fontWeight={600}>{displayName}</Typography>}
             secondary={secondaryText}
           />
         </MenuItem>

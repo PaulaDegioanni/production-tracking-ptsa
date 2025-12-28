@@ -4,8 +4,14 @@ import {
   getHarvestFieldDependencies,
   getHarvestFieldOptions,
 } from '@/lib/baserow/harvestFormOptions';
+import { getServerSession } from '@/lib/auth/serverSession';
 
 export async function GET(request: NextRequest) {
+  const session = await getServerSession();
+  if (!session) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  }
+
   try {
     const campoId = request.nextUrl.searchParams.get('campoId');
     const campoName = request.nextUrl.searchParams.get('campoName') ?? undefined;

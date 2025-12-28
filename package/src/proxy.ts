@@ -21,8 +21,37 @@ const isAssetPath = (pathname: string) =>
   pathname.startsWith('/public') ||
   STATIC_EXTENSIONS.test(pathname);
 
-const isOperatorAllowedPath = (pathname: string) =>
-  pathname === '/cosechas' || pathname.startsWith('/cosechas/');
+const OPERATOR_READONLY_API_PREFIXES = [
+  '/api/harvests/options',
+  '/api/fields',
+  '/api/lotes',
+  '/api/cycles',
+  '/api/stock',
+  '/api/stocks',
+  '/api/truck-trips',
+];
+
+const isOperatorAllowedPath = (pathname: string, method: string) => {
+  const normalize = (prefix: string) =>
+    pathname === prefix || pathname.startsWith(`${prefix}/`);
+
+  if (pathname === '/cosechas' || pathname.startsWith('/cosechas/')) {
+    return true;
+  }
+
+  if (normalize('/api/harvests')) {
+    return true;
+  }
+
+  if (
+    method === 'GET' &&
+    OPERATOR_READONLY_API_PREFIXES.some((prefix) => normalize(prefix))
+  ) {
+    return true;
+  }
+
+  return false;
+};
 
 const redirectToLogin = (request: NextRequest) => {
   const loginUrl = new URL('/authentication/login', request.url);
@@ -48,7 +77,10 @@ export function proxy(request: NextRequest) {
     return redirectToLogin(request);
   }
 
-  if (session.role === 'operador' && !isOperatorAllowedPath(pathname)) {
+  if (
+    session.role === 'operador' &&
+    !isOperatorAllowedPath(pathname, request.method || 'GET')
+  ) {
     return NextResponse.redirect(new URL('/cosechas', request.url));
   }
 
