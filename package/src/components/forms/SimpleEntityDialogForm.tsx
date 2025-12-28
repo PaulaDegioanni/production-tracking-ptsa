@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import * as React from 'react';
+import * as React from "react";
 import {
   Alert,
   alpha,
@@ -23,20 +23,20 @@ import {
   Typography,
   useMediaQuery,
   useTheme,
-} from '@mui/material';
-import 'dayjs/locale/es';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { TimePicker } from '@mui/x-date-pickers/TimePicker';
-import customParseFormat from 'dayjs/plugin/customParseFormat';
-import dayjs, { type Dayjs } from 'dayjs';
+} from "@mui/material";
+import "dayjs/locale/es";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { TimePicker } from "@mui/x-date-pickers/TimePicker";
+import customParseFormat from "dayjs/plugin/customParseFormat";
+import dayjs, { type Dayjs } from "dayjs";
 dayjs.extend(customParseFormat);
-dayjs.locale('es');
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+dayjs.locale("es");
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 
-import CloseIcon from '@mui/icons-material/Close';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import CloseIcon from "@mui/icons-material/Close";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 
 export type DialogFieldOption = {
   label: string | React.ReactNode;
@@ -50,25 +50,26 @@ export type SimpleEntityDialogFieldConfig = {
   label: string;
   labelNode?: React.ReactNode;
   type:
-    | 'text'
-    | 'textarea'
-    | 'number'
-    | 'datetime'
-    | 'date'
-    | 'time'
-    | 'select'
-    | 'multi-select'
-    | 'readonly';
+    | "text"
+    | "textarea"
+    | "number"
+    | "datetime"
+    | "date"
+    | "time"
+    | "select"
+    | "multi-select"
+    | "readonly";
   required?: boolean;
   step?: number;
   options?: DialogFieldOption[];
   loading?: boolean;
   disabled?: boolean;
   helperText?: string;
+  helperContent?: React.ReactNode;
   placeholder?: string;
   onValueChange?: (
     value: any,
-    values: Record<string, any>
+    values: Record<string, any>,
   ) => Record<string, any> | void;
   actionOptions?: Array<{
     key: string;
@@ -106,7 +107,7 @@ export type SimpleEntityDialogFormProps = {
   onFieldChange?: (
     key: string,
     value: any,
-    values: Record<string, any>
+    values: Record<string, any>,
   ) => void;
   extraActions?: React.ReactNode;
   externalValues?: Record<string, any> | null;
@@ -120,13 +121,25 @@ const cloneInitialValues = (initials?: Record<string, any>) => {
     (acc, [key, value]) => {
       acc[key] = Array.isArray(value)
         ? [...value]
-        : value && typeof value === 'object'
-        ? { ...value }
-        : value;
+        : value && typeof value === "object"
+          ? { ...value }
+          : value;
       return acc;
     },
-    {}
+    {},
   );
+};
+
+const isSelectField = (field: SimpleEntityDialogFieldConfig) =>
+  field.type === "select" || field.type === "multi-select";
+
+const normalizeSelectableValue = (value: unknown): string | null => {
+  if (value === undefined || value === null) return null;
+  if (Array.isArray(value)) return null;
+  if (value === "") return null;
+  return typeof value === "number"
+    ? `number:${value}`
+    : `string:${String(value)}`;
 };
 
 const SimpleEntityDialogForm = ({
@@ -145,26 +158,36 @@ const SimpleEntityDialogForm = ({
   topContent,
 }: SimpleEntityDialogFormProps) => {
   const theme = useTheme();
-  const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
+  const fullScreen = useMediaQuery(theme.breakpoints.down("md"));
 
   const resolvedInitialValues = React.useMemo(
     () => cloneInitialValues(initialValues),
-    [initialValues]
+    [initialValues],
   );
 
   const [values, setValues] = React.useState<Record<string, any>>(
-    resolvedInitialValues
+    resolvedInitialValues,
   );
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [formError, setFormError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [touched, setTouched] = React.useState<Record<string, boolean>>({});
   const lastExternalValuesKey = React.useRef<string | number | null>(null);
+  const pendingFieldChangesRef = React.useRef<
+    Array<{
+      key: string;
+      value: any;
+      values: Record<string, any>;
+    }>
+  >([]);
+  const selectOptionsSignatureRef = React.useRef<Map<string, string | null>>(
+    new Map(),
+  );
 
   const setCustomFieldError = React.useCallback(
     (fieldKey: string, message?: string | null) => {
       setErrors((prev) => {
-        if (!message || message === '') {
+        if (!message || message === "") {
           if (!prev[fieldKey]) return prev;
           const { [fieldKey]: _removed, ...rest } = prev;
           return rest;
@@ -173,14 +196,14 @@ const SimpleEntityDialogForm = ({
         return { ...prev, [fieldKey]: message };
       });
     },
-    []
+    [],
   );
 
   const setCustomFieldTouched = React.useCallback(
     (fieldKey: string, value = true) => {
       setTouched((prev) => ({ ...prev, [fieldKey]: value }));
     },
-    []
+    [],
   );
 
   const resetForm = React.useCallback(() => {
@@ -188,6 +211,7 @@ const SimpleEntityDialogForm = ({
     setErrors({});
     setFormError(null);
     setTouched({});
+    lastExternalValuesKey.current = null;
   }, [resolvedInitialValues]);
 
   React.useEffect(() => {
@@ -230,10 +254,10 @@ const SimpleEntityDialogForm = ({
       const value = values[field.key];
       const isEmpty = Array.isArray(value)
         ? value.length === 0
-        : value === undefined || value === null || String(value).trim() === '';
+        : value === undefined || value === null || String(value).trim() === "";
 
       if (isEmpty) {
-        validationErrors[field.key] = 'Este campo es obligatorio';
+        validationErrors[field.key] = "Este campo es obligatorio";
       }
     });
 
@@ -242,12 +266,15 @@ const SimpleEntityDialogForm = ({
 
   const handleFieldValueChange = React.useCallback(
     (field: SimpleEntityDialogFieldConfig, newValue: any) => {
-      let mergedValues: Record<string, any> | null = null;
-
       setValues((prev) => {
         const next = { ...prev, [field.key]: newValue };
         const overrides = field.onValueChange?.(newValue, next);
-        mergedValues = overrides ? { ...next, ...overrides } : next;
+        const mergedValues = overrides ? { ...next, ...overrides } : next;
+        pendingFieldChangesRef.current.push({
+          key: field.key,
+          value: newValue,
+          values: mergedValues,
+        });
         return mergedValues;
       });
 
@@ -256,17 +283,78 @@ const SimpleEntityDialogForm = ({
         const { [field.key]: _removed, ...rest } = prev;
         return rest;
       });
-
-      if (mergedValues) {
-        onFieldChange?.(field.key, newValue, mergedValues);
-      }
     },
-    [onFieldChange]
+    [],
   );
 
   const handleFieldBlur = (fieldKey: string) => {
     setTouched((prev) => ({ ...prev, [fieldKey]: true }));
   };
+
+  React.useEffect(() => {
+    if (!pendingFieldChangesRef.current.length) return;
+    const pendingChanges = pendingFieldChangesRef.current.splice(0);
+    pendingChanges.forEach((change) => {
+      onFieldChange?.(change.key, change.value, change.values);
+    });
+  }, [onFieldChange, values]);
+
+  React.useEffect(() => {
+    const signatureMap = selectOptionsSignatureRef.current;
+    const activeSelectKeys = new Set<string>();
+
+    fields.forEach((field) => {
+      if (!isSelectField(field)) return;
+      activeSelectKeys.add(field.key);
+      const allowedValues = new Set<string>();
+      (field.options ?? []).forEach((option) => {
+        const normalized = normalizeSelectableValue(option.value);
+        if (normalized) {
+          allowedValues.add(normalized);
+        }
+      });
+
+      const normalizedSignature = Array.from(allowedValues).sort().join("|");
+      const previousSignature = signatureMap.get(field.key) ?? null;
+      const currentSignature = field.loading ? null : normalizedSignature;
+      signatureMap.set(field.key, currentSignature);
+
+      if (field.loading || currentSignature === previousSignature) {
+        return;
+      }
+
+      if (field.type === "multi-select") {
+        const currentValue = values[field.key];
+        if (!Array.isArray(currentValue) || currentValue.length === 0) {
+          return;
+        }
+        const filteredValues: Array<string | number> = [];
+        currentValue.forEach((item) => {
+          const normalizedItem = normalizeSelectableValue(item);
+          if (normalizedItem && allowedValues.has(normalizedItem)) {
+            filteredValues.push(item);
+          }
+        });
+        if (filteredValues.length !== currentValue.length) {
+          handleFieldValueChange(field, filteredValues);
+        }
+        return;
+      }
+
+      const normalizedCurrentValue = normalizeSelectableValue(
+        values[field.key],
+      );
+      if (normalizedCurrentValue && !allowedValues.has(normalizedCurrentValue)) {
+        handleFieldValueChange(field, "");
+      }
+    });
+
+    Array.from(signatureMap.keys()).forEach((key) => {
+      if (!activeSelectKeys.has(key)) {
+        signatureMap.delete(key);
+      }
+    });
+  }, [fields, handleFieldValueChange, values]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -295,7 +383,7 @@ const SimpleEntityDialogForm = ({
       const message =
         error instanceof Error
           ? error.message
-          : 'Ocurrió un error al guardar los datos';
+          : "Ocurrió un error al guardar los datos";
       setFormError(message);
     } finally {
       setLoading(false);
@@ -306,7 +394,7 @@ const SimpleEntityDialogForm = ({
     if (!sections || !sections.length) {
       return [
         {
-          title: '',
+          title: "",
           description: undefined,
           icon: undefined,
           fields,
@@ -338,7 +426,7 @@ const SimpleEntityDialogForm = ({
 
     if (remainingFields.length) {
       mappedSections.push({
-        title: '',
+        title: "",
         description: undefined,
         icon: undefined,
         fields: remainingFields,
@@ -351,56 +439,70 @@ const SimpleEntityDialogForm = ({
   const summarizeMultiSelect = (
     selectedValues: Array<string | number>,
     options?: DialogFieldOption[],
-    placeholder?: string
+    placeholder?: string,
   ) => {
-    if (!selectedValues.length) return placeholder || 'Seleccioná una opción';
+    if (!selectedValues.length) return placeholder || "Seleccioná una opción";
     const labels = selectedValues
-      .map((val) => options?.find((opt) => opt.value === val)?.label ?? val)
+      .map(
+        (val) =>
+          options?.find((opt) => String(opt.value) === String(val))?.label ??
+          val,
+      )
       .filter(Boolean)
       .map((label) => String(label));
 
-    if (labels.length <= 2) return labels.join(', ');
+    if (labels.length <= 2) return labels.join(", ");
     const remaining = labels.length - 2;
-    return `${labels.slice(0, 2).join(', ')} +${remaining}`;
+    return `${labels.slice(0, 2).join(", ")} +${remaining}`;
   };
 
   const renderSelectField = (
     field: SimpleEntityDialogFieldConfig,
-    multiple: boolean
+    multiple: boolean,
   ) => {
+    const wrapWithHelperContent = (element: React.ReactElement) => {
+      if (!field.helperContent) return element;
+      return (
+        <Box sx={{ width: "100%" }}>
+          {element}
+          <Box sx={{ mt: 1 }}>{field.helperContent}</Box>
+        </Box>
+      );
+    };
+
     const rawValue = values[field.key];
     const value = multiple
       ? Array.isArray(rawValue)
         ? rawValue
         : []
-      : rawValue ?? '';
+      : (rawValue ?? "");
     const fieldError = errors[field.key];
     const isTouched = touched[field.key];
-    const helper = fieldError || field.helperText || '';
+    const helper = fieldError || field.helperText || "";
 
     const selectedChips =
       multiple && Array.isArray(value)
         ? value.map((val) => ({
             value: val,
             label:
-              field.options?.find((opt) => opt.value === val)?.label ??
-              String(val),
+              field.options?.find((opt) => String(opt.value) === String(val))
+                ?.label ?? String(val),
           }))
         : [];
 
     const handleSelectChange = (
-      event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+      event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
     ) => {
       const targetValue = event.target.value as unknown;
 
       if (
         !multiple &&
-        typeof targetValue === 'string' &&
-        targetValue.startsWith('__action__:')
+        typeof targetValue === "string" &&
+        targetValue.startsWith("__action__:")
       ) {
-        const actionKey = targetValue.replace('__action__:', '');
+        const actionKey = targetValue.replace("__action__:", "");
         const action = field.actionOptions?.find(
-          (opt) => opt.key === actionKey
+          (opt) => opt.key === actionKey,
         );
         if (action) {
           action.onClick({ values });
@@ -410,16 +512,25 @@ const SimpleEntityDialogForm = ({
 
       let nextValue: any = targetValue;
       if (multiple) {
-        nextValue = Array.isArray(targetValue)
+        const rawArr = Array.isArray(targetValue)
           ? targetValue
-          : typeof targetValue === 'string'
-          ? targetValue.split(',').filter((v) => v !== '')
-          : [];
+          : typeof targetValue === "string"
+            ? targetValue.split(",").filter((v) => v !== "")
+            : [];
+
+        const hasNumericOptions = (field.options ?? []).some(
+          (opt) => typeof opt.value === "number",
+        );
+
+        nextValue = hasNumericOptions
+          ? rawArr.map((v) => Number(v)).filter((n) => !Number.isNaN(n))
+          : rawArr;
       }
+
       handleFieldValueChange(field, nextValue);
     };
 
-    return (
+    const selectField = (
       <Box>
         <TextField
           key={field.key}
@@ -443,7 +554,7 @@ const SimpleEntityDialogForm = ({
                   return summarizeMultiSelect(
                     selectedValues,
                     field.options,
-                    field.placeholder
+                    field.placeholder,
                   );
                 }
               : undefined,
@@ -455,21 +566,21 @@ const SimpleEntityDialogForm = ({
             ) : undefined,
           }}
           sx={{
-            '& .MuiOutlinedInput-root': {
-              transition: 'all 0.2s ease',
-              '&:hover': {
+            "& .MuiOutlinedInput-root": {
+              transition: "all 0.2s ease",
+              "&:hover": {
                 backgroundColor: alpha(theme.palette.primary.main, 0.02),
               },
-              '&.Mui-focused': {
+              "&.Mui-focused": {
                 backgroundColor: alpha(theme.palette.primary.main, 0.04),
               },
             },
             ...(multiple
               ? {
-                  '& .MuiSelect-select': {
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
+                  "& .MuiSelect-select": {
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
                   },
                 }
               : {}),
@@ -491,8 +602,8 @@ const SimpleEntityDialogForm = ({
           ) : (
             <MenuItem disabled value="">
               {field.loading
-                ? 'Cargando opciones...'
-                : 'Sin opciones disponibles'}
+                ? "Cargando opciones..."
+                : "Sin opciones disponibles"}
             </MenuItem>
           )}
           {field.actionOptions?.length ? (
@@ -505,7 +616,7 @@ const SimpleEntityDialogForm = ({
                   sx={{
                     color: theme.palette.primary.main,
                     fontWeight: 600,
-                    fontStyle: 'italic',
+                    fontStyle: "italic",
                   }}
                 >
                   {action.label}
@@ -517,8 +628,8 @@ const SimpleEntityDialogForm = ({
         {multiple && selectedChips.length > 0 && (
           <Box
             sx={{
-              display: 'flex',
-              flexWrap: 'wrap',
+              display: "flex",
+              flexWrap: "wrap",
               gap: 0.5,
               mt: 1,
             }}
@@ -538,17 +649,30 @@ const SimpleEntityDialogForm = ({
         )}
       </Box>
     );
+
+    return wrapWithHelperContent(selectField);
   };
 
   const renderField = (field: SimpleEntityDialogFieldConfig) => {
-    if (field.renderValue) {
+    const wrapWithHelperContent = (element: React.ReactElement) => {
+      if (!field.helperContent) return element;
       return (
-        <Box key={field.key} sx={{ width: '100%' }}>
+        <Box sx={{ width: "100%" }}>
+          {element}
+          <Box sx={{ mt: 1 }}>{field.helperContent}</Box>
+        </Box>
+      );
+    };
+
+    if (field.renderValue) {
+      const customField = (
+        <Box key={field.key} sx={{ width: "100%" }}>
           {field.renderValue({
             value: values[field.key],
             values,
             field,
-            onChange: (nextValue: any) => handleFieldValueChange(field, nextValue),
+            onChange: (nextValue: any) =>
+              handleFieldValueChange(field, nextValue),
             error: errors[field.key],
             touched: touched[field.key],
             setError: (message) => setCustomFieldError(field.key, message),
@@ -557,20 +681,21 @@ const SimpleEntityDialogForm = ({
           })}
         </Box>
       );
+      return wrapWithHelperContent(customField);
     }
 
-    if (field.type === 'select') {
+    if (field.type === "select") {
       return renderSelectField(field, false);
     }
 
-    if (field.type === 'multi-select') {
+    if (field.type === "multi-select") {
       return renderSelectField(field, true);
     }
 
-    const value = values[field.key] ?? '';
+    const value = values[field.key] ?? "";
     const fieldError = errors[field.key];
     const isTouched = touched[field.key];
-    const helper = fieldError || field.helperText || '';
+    const helper = fieldError || field.helperText || "";
 
     const commonProps = {
       fullWidth: true,
@@ -581,33 +706,33 @@ const SimpleEntityDialogForm = ({
       error: Boolean(fieldError && isTouched),
       helperText: helper,
       onChange: (
-        event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+        event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
       ) => {
         const nextValue = event.target.value;
         handleFieldValueChange(field, nextValue);
       },
       onBlur: () => handleFieldBlur(field.key),
       sx: {
-        '& .MuiOutlinedInput-root': {
-          transition: 'all 0.2s ease',
-          '&:hover': {
+        "& .MuiOutlinedInput-root": {
+          transition: "all 0.2s ease",
+          "&:hover": {
             backgroundColor: alpha(theme.palette.primary.main, 0.02),
           },
-          '&.Mui-focused': {
+          "&.Mui-focused": {
             backgroundColor: alpha(theme.palette.primary.main, 0.04),
           },
         },
       },
     };
 
-    if (field.type === 'textarea') {
-      return (
-        <TextField key={field.key} {...commonProps} multiline minRows={3} />
+    if (field.type === "textarea") {
+      return wrapWithHelperContent(
+        <TextField key={field.key} {...commonProps} multiline minRows={3} />,
       );
     }
 
-    if (field.type === 'number') {
-      return (
+    if (field.type === "number") {
+      return wrapWithHelperContent(
         <TextField
           key={field.key}
           {...commonProps}
@@ -617,12 +742,12 @@ const SimpleEntityDialogForm = ({
               step: field.step ?? 1,
             },
           }}
-        />
+        />,
       );
     }
 
-    if (field.type === 'datetime') {
-      return (
+    if (field.type === "datetime") {
+      return wrapWithHelperContent(
         <TextField
           key={field.key}
           {...commonProps}
@@ -630,20 +755,20 @@ const SimpleEntityDialogForm = ({
           slotProps={{
             inputLabel: { shrink: true },
           }}
-        />
+        />,
       );
     }
 
-    if (field.type === 'date') {
+    if (field.type === "date") {
       const {
         value: _ignoreValue,
         onChange: _ignoreOnChange,
         ...textFieldProps
       } = commonProps;
-      const raw = (values[field.key] ?? '') as string;
-      const pickerValue = raw ? dayjs(raw, 'YYYY-MM-DD', true) : null;
+      const raw = (values[field.key] ?? "") as string;
+      const pickerValue = raw ? dayjs(raw, "YYYY-MM-DD", true) : null;
 
-      return (
+      return wrapWithHelperContent(
         <DatePicker
           key={field.key}
           label={field.labelNode ?? field.label}
@@ -651,7 +776,7 @@ const SimpleEntityDialogForm = ({
           value={pickerValue && pickerValue.isValid() ? pickerValue : null}
           onChange={(newVal: Dayjs | null) => {
             const next =
-              newVal && newVal.isValid() ? newVal.format('YYYY-MM-DD') : '';
+              newVal && newVal.isValid() ? newVal.format("YYYY-MM-DD") : "";
             handleFieldValueChange(field, next);
           }}
           slotProps={{
@@ -659,27 +784,27 @@ const SimpleEntityDialogForm = ({
               ...textFieldProps,
             },
           }}
-        />
+        />,
       );
     }
 
-    if (field.type === 'time') {
+    if (field.type === "time") {
       const {
         value: _ignoreValue,
         onChange: _ignoreOnChange,
         ...textFieldProps
       } = commonProps;
-      const raw = (values[field.key] ?? '') as string;
-      const pickerValue = raw ? dayjs(raw, 'HH:mm', true) : null;
+      const raw = (values[field.key] ?? "") as string;
+      const pickerValue = raw ? dayjs(raw, "HH:mm", true) : null;
 
-      return (
+      return wrapWithHelperContent(
         <TimePicker
           key={field.key}
           label={field.labelNode ?? field.label}
           value={pickerValue && pickerValue.isValid() ? pickerValue : null}
           onChange={(newVal: Dayjs | null) => {
             const next =
-              newVal && newVal.isValid() ? newVal.format('HH:mm') : '';
+              newVal && newVal.isValid() ? newVal.format("HH:mm") : "";
             handleFieldValueChange(field, next);
           }}
           ampm={false}
@@ -689,12 +814,12 @@ const SimpleEntityDialogForm = ({
               ...textFieldProps,
             },
           }}
-        />
+        />,
       );
     }
 
-    if (field.type === 'readonly') {
-      return (
+    if (field.type === "readonly") {
+      return wrapWithHelperContent(
         <TextField
           key={field.key}
           {...commonProps}
@@ -703,30 +828,29 @@ const SimpleEntityDialogForm = ({
           }}
           sx={{
             ...commonProps.sx,
-            '& .MuiOutlinedInput-root': {
+            "& .MuiOutlinedInput-root": {
               backgroundColor: alpha(theme.palette.grey[500], 0.05),
             },
           }}
-        />
+        />,
       );
     }
 
-    return <TextField key={field.key} {...commonProps} type="text" />;
+    return wrapWithHelperContent(
+      <TextField key={field.key} {...commonProps} type="text" />,
+    );
   };
 
-const chunkFields = (
-  sectionFields: SimpleEntityDialogFieldConfig[]
-): SimpleEntityDialogFieldConfig[][] => {
-  if (sectionFields.length <= 3) {
-    return [sectionFields];
-  }
+  const chunkFields = (
+    sectionFields: SimpleEntityDialogFieldConfig[],
+  ): SimpleEntityDialogFieldConfig[][] => {
+    if (sectionFields.length <= 3) {
+      return [sectionFields];
+    }
 
-  const midpoint = Math.ceil(sectionFields.length / 2);
-  return [
-    sectionFields.slice(0, midpoint),
-    sectionFields.slice(midpoint),
-  ];
-};
+    const midpoint = Math.ceil(sectionFields.length / 2);
+    return [sectionFields.slice(0, midpoint), sectionFields.slice(midpoint)];
+  };
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
@@ -745,7 +869,7 @@ const chunkFields = (
         PaperProps={{
           sx: {
             borderRadius: { xs: 0, md: 3 },
-            overflow: 'hidden',
+            overflow: "hidden",
           },
         }}
       >
@@ -754,7 +878,7 @@ const chunkFields = (
             sx={{
               background: `linear-gradient(135deg, ${alpha(
                 theme.palette.primary.main,
-                0.08
+                0.08,
               )} 0%, ${alpha(theme.palette.primary.light, 0.08)} 100%)`,
               borderBottom: `1px solid ${theme.palette.divider}`,
               pb: 2,
@@ -779,10 +903,10 @@ const chunkFields = (
                 onClick={handleCancel}
                 disabled={loading}
                 sx={{
-                  color: 'text.secondary',
-                  '&:hover': {
+                  color: "text.secondary",
+                  "&:hover": {
                     backgroundColor: alpha(theme.palette.error.main, 0.1),
-                    color: 'error.main',
+                    color: "error.main",
                   },
                 }}
               >
@@ -798,14 +922,14 @@ const chunkFields = (
               py: 3,
               backgroundColor: alpha(theme.palette.grey[50], 0.3),
               maxHeight: {
-                xs: 'calc(100vh - 170px)',
-                md: '70vh',
+                xs: "calc(100vh - 170px)",
+                md: "70vh",
               },
-              overflowY: 'auto',
+              overflowY: "auto",
             }}
           >
             {topContent ? (
-              <Box mb={3} sx={{ width: '100%' }}>
+              <Box mb={3} sx={{ width: "100%" }}>
                 {topContent}
               </Box>
             ) : null}
@@ -814,7 +938,7 @@ const chunkFields = (
                 if (!section.fields.length) return null;
                 const rows = chunkFields(section.fields);
                 const showMeta = Boolean(
-                  section.title || section.description || section.icon
+                  section.title || section.description || section.icon,
                 );
 
                 return (
@@ -838,7 +962,7 @@ const chunkFields = (
                     <Stack spacing={2.5}>
                       {rows.map((row, rowIndex) => {
                         const key =
-                          row.map((field) => field.key).join('-') ||
+                          row.map((field) => field.key).join("-") ||
                           `row-${rowIndex}`;
                         const columns = Math.max(1, row.length);
                         const tabletColumns = Math.min(columns, 2);
@@ -847,10 +971,10 @@ const chunkFields = (
                           <Box
                             key={key}
                             sx={{
-                              display: 'grid',
+                              display: "grid",
                               gap: 2,
                               gridTemplateColumns: {
-                                xs: 'repeat(1, minmax(0, 1fr))',
+                                xs: "repeat(1, minmax(0, 1fr))",
                                 sm: `repeat(${tabletColumns}, minmax(0, 1fr))`,
                                 md: `repeat(${columns}, minmax(0, 1fr))`,
                               },
@@ -877,8 +1001,8 @@ const chunkFields = (
                 sx={{
                   mt: 3,
                   borderRadius: 2,
-                  '& .MuiAlert-message': {
-                    width: '100%',
+                  "& .MuiAlert-message": {
+                    width: "100%",
                   },
                 }}
                 onClose={() => setFormError(null)}
@@ -896,21 +1020,21 @@ const chunkFields = (
               py: 2.5,
               background: `linear-gradient(135deg, ${alpha(
                 theme.palette.grey[50],
-                0.5
+                0.5,
               )} 0%, ${alpha(theme.palette.grey[100], 0.5)} 100%)`,
               borderTop: `1px solid ${theme.palette.divider}`,
               gap: 1.5,
-              flexWrap: 'wrap',
+              flexWrap: "wrap",
             }}
           >
             {extraActions ? (
               <Box
                 sx={{
                   flexGrow: 1,
-                  display: 'flex',
-                  justifyContent: 'flex-start',
-                  alignItems: 'center',
-                  minWidth: { xs: '100%', sm: 'auto' },
+                  display: "flex",
+                  justifyContent: "flex-start",
+                  alignItems: "center",
+                  minWidth: { xs: "100%", sm: "auto" },
                   mb: { xs: 1.5, sm: 0 },
                 }}
               >
@@ -923,7 +1047,7 @@ const chunkFields = (
               variant="outlined"
               sx={{
                 borderRadius: 2,
-                textTransform: 'none',
+                textTransform: "none",
                 fontWeight: 600,
                 px: 3,
               }}
@@ -943,22 +1067,22 @@ const chunkFields = (
               }
               sx={{
                 borderRadius: 2,
-                textTransform: 'none',
+                textTransform: "none",
                 fontWeight: 700,
                 px: 4,
                 boxShadow: `0 4px 12px ${alpha(
                   theme.palette.primary.main,
-                  0.3
+                  0.3,
                 )}`,
-                '&:hover': {
+                "&:hover": {
                   boxShadow: `0 6px 16px ${alpha(
                     theme.palette.primary.main,
-                    0.4
+                    0.4,
                   )}`,
                 },
               }}
             >
-              {loading ? 'Guardando...' : 'Guardar'}
+              {loading ? "Guardando..." : "Guardar"}
             </Button>
           </DialogActions>
         </Box>

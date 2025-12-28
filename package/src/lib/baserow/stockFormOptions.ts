@@ -4,6 +4,7 @@ import { getFieldsDto } from './fields';
 import { getTableFields } from './client';
 import { STOCK_TABLE_ID } from './stocks';
 import { getCyclesDto } from './cycles';
+import { areFieldLabelsEquivalent } from '@/lib/fields/fieldMatching';
 
 export type Option = {
   id: number;
@@ -13,8 +14,6 @@ export type Option = {
 export type CycleOption = Option & {
   crop: string;
 };
-
-const normalize = (value: string): string => value.trim().toLowerCase();
 
 export async function getStockFieldOptions(): Promise<Option[]> {
   const fields = await getFieldsDto();
@@ -62,7 +61,6 @@ export async function getStockFieldDependencies(params: {
   cycles: CycleOption[];
 }> {
   const { fieldId, fieldName } = params;
-  const normalizedFieldName = fieldName ? normalize(fieldName) : '';
 
   const cycles = await getCyclesDto();
 
@@ -71,9 +69,9 @@ export async function getStockFieldDependencies(params: {
     fieldName?: string;
   }): boolean => {
     if (candidate.fieldId && candidate.fieldId === fieldId) return true;
-    if (!normalizedFieldName) return false;
+    if (!fieldName) return false;
     if (!candidate.fieldName) return false;
-    return normalize(candidate.fieldName) === normalizedFieldName;
+    return areFieldLabelsEquivalent(candidate.fieldName, fieldName);
   };
 
   const cycleOptions = cycles

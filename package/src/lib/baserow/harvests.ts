@@ -74,9 +74,7 @@ function mapHarvestRawToDto(row: HarvestRaw): HarvestDto {
   const stockIds = extractLinkRowIds(row.Stock);
   const stockLabels = extractLinkRowLabelsTrimmed(row.Stock);
   const directTruckTripIds = extractLinkRowIds(row['Viajes camión directos']);
-  const directTruckLabels = extractLinkRowLabelsTrimmed(
-    row['Viajes camión directos']
-  );
+  const directTruckLabels = extractLinkRowLabels(row['Viajes camión directos']);
   const fieldIds = extractLinkRowIds(row.Campo);
   const fieldId = fieldIds[0] ?? null;
   const normalizedHarvestId = normalizeField(row.ID);

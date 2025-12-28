@@ -21,12 +21,13 @@ import SimpleEntityDialogForm, {
   type SimpleEntityDialogFieldConfig,
   type SimpleEntityDialogSection,
 } from "@/components/forms/SimpleEntityDialogForm";
-import type { TruckTripDto } from "@/lib/baserow/truckTrips";
+import type { TruckTripDto, TruckTripRaw } from "@/lib/baserow/truckTrips";
 import {
   normalizeTruckTripDtoToBaserowPayload,
   normalizeTruckTripFormToBaserowPayload,
 } from "@/lib/truckTrips/formPayload";
 import { splitIsoToDateAndTimeLocal } from "@/lib/forms/datetime";
+import { normalizeField } from "@/lib/baserow/utils";
 
 type Option = {
   id: number;
@@ -59,6 +60,7 @@ export type TruckTripFormValues = {
   "Campo origen": number | "";
   "Tipo origen": "harvest" | "stock";
   Origen: number | "";
+  Origen_label?: string;
   "Ciclo de siembra": string;
   "Kg carga origen": string;
   "Tipo destino": number | "";
@@ -84,7 +86,11 @@ export type TruckTripDialogProps = {
   activeTrip: TruckTripDto | null;
   initialValues?: TruckTripFormValues;
   onClose: () => void;
-  onSuccess?: (result: { mode: TruckTripDialogMode; tripId?: number }) => void;
+  onSuccess?: (result: {
+    mode: TruckTripDialogMode;
+    tripId?: number;
+    tripLabel?: string;
+  }) => void;
 };
 
 const pad = (value: number): string => String(value).padStart(2, "0");
@@ -405,8 +411,9 @@ const TruckTripDialog = ({
       campoName?: string;
       originType: "harvest" | "stock";
       originId?: number;
+      originLabel?: string;
     }) => {
-      const { campoId, campoName, originType, originId } = params;
+      const { campoId, campoName, originType, originId, originLabel } = params;
       if (!campoId && !campoName) {
         setOriginSelectOptions([]);
         return null;
@@ -414,9 +421,10 @@ const TruckTripDialog = ({
 
       const cacheKey = `${originType}-${campoId ?? campoName ?? "unknown"}`;
       const shouldBypassCache = Boolean(originId);
-      if (!shouldBypassCache && originOptionsCache.current[cacheKey]) {
-        setOriginSelectOptions(originOptionsCache.current[cacheKey]);
-        return originOptionsCache.current[cacheKey];
+      const cached = originOptionsCache.current[cacheKey];
+      if (!shouldBypassCache && Array.isArray(cached) && cached.length > 0) {
+        setOriginSelectOptions(cached);
+        return cached;
       }
 
       setOriginOptionsLoading(true);
@@ -424,12 +432,13 @@ const TruckTripDialog = ({
       try {
         const searchParams = new URLSearchParams();
         if (campoId) searchParams.set("campoId", String(campoId));
-        else if (campoName) searchParams.set("campoName", campoName);
+        if (campoName) searchParams.set("campoName", campoName);
         searchParams.set("originType", originType);
         if (originId) searchParams.set("originId", String(originId));
 
         const response = await fetch(
           `/api/truck-trips/options?${searchParams.toString()}`,
+          { cache: "no-store" },
         );
         if (!response.ok) {
           const errorBody = await response.text();
@@ -458,7 +467,10 @@ const TruckTripDialog = ({
         ) {
           const selectedLabel =
             originOptions.find((option) => option.id === selectedOrigin.id)
-              ?.label ?? `Origen #${selectedOrigin.id}`;
+              ?.label ??
+            originLabel ??
+            `Origen #${selectedOrigin.id}`;
+
           mapped.push({
             label: selectedLabel,
             value: selectedOrigin.id,
@@ -469,7 +481,9 @@ const TruckTripDialog = ({
           });
         }
 
-        originOptionsCache.current[cacheKey] = mapped;
+        if (mapped.length > 0) {
+          originOptionsCache.current[cacheKey] = mapped;
+        }
         setOriginSelectOptions(mapped);
         return mapped;
       } catch (error) {
@@ -514,14 +528,17 @@ const TruckTripDialog = ({
       const originTypeValue = initialValues["Tipo origen"];
       setSelectedOriginType(originTypeValue);
       setOriginOptionsError(null);
+
       if (fieldOption) {
         void loadOriginOptions({
           campoId: fieldOption.id,
           campoName: fieldOption.label,
           originType: originTypeValue,
-          originId: initialValues.Origen
-            ? Number(initialValues.Origen)
-            : undefined,
+          originId:
+            typeof initialValues.Origen === "number"
+              ? initialValues.Origen
+              : undefined,
+          originLabel: initialValues.Origen_label,
         });
       } else {
         setOriginSelectOptions([]);
@@ -852,14 +869,19 @@ const TruckTripDialog = ({
           throw new Error(message);
         }
 
-        const data = (await response.json().catch(() => null)) as {
-          id?: number;
-        } | null;
+        const data = (await response.json().catch(() => null)) as
+          | (TruckTripRaw & { id?: number })
+          | null;
+        const createdTripLabel = data?.ID ? normalizeField(data.ID) : undefined;
 
         showToast("Viaje registrado correctamente", "success");
-        handleDialogClose();
         router.refresh();
-        onSuccess?.({ mode: "create", tripId: data?.id });
+        onSuccess?.({
+          mode: "create",
+          tripId: data?.id,
+          tripLabel: createdTripLabel,
+        });
+        handleDialogClose();
       } catch (error) {
         const message =
           error instanceof Error

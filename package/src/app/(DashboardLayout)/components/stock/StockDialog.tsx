@@ -23,6 +23,7 @@ import SimpleEntityDialogForm, {
 } from '@/components/forms/SimpleEntityDialogForm';
 import type { StockDto } from '@/lib/baserow/stocks';
 import { normalizeStockFormToBaserowPayload } from '@/lib/stocks/formPayload';
+import { findMatchingFieldOption } from '@/lib/fields/fieldMatching';
 
 export type Option = {
   id: number;
@@ -232,6 +233,22 @@ const StockDialog = ({
   >(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
   const [deleteLoading, setDeleteLoading] = React.useState(false);
+  const [formValuesPatch, setFormValuesPatch] = React.useState<{
+    data: Partial<StockFormValues>;
+    key: number;
+  } | null>(null);
+  const patchKeyRef = React.useRef(0);
+
+  const applyFormValuePatch = React.useCallback(
+    (data: Partial<StockFormValues>) => {
+      patchKeyRef.current += 1;
+      setFormValuesPatch({
+        data,
+        key: patchKeyRef.current,
+      });
+    },
+    []
+  );
 
   const currentDependencies = React.useMemo(() => {
     if (!selectedField) return emptyDependencies;
@@ -262,6 +279,8 @@ const StockDialog = ({
     setDependenciesError(null);
     setDeleteConfirmOpen(false);
     setDeleteLoading(false);
+    setFormValuesPatch(null);
+    patchKeyRef.current = 0;
     onClose();
   }, [onClose]);
 
@@ -362,27 +381,44 @@ const StockDialog = ({
 
   React.useEffect(() => {
     if (!open) return;
-    const campoValue = initialValues.Campo;
-    if (campoValue === '' || campoValue === null || campoValue === undefined) {
-      setSelectedField(null);
-      setDependenciesError(null);
-      return;
-    }
 
+    const campoValue = initialValues.Campo;
     const parsedCampoId =
       typeof campoValue === 'number' ? campoValue : Number(campoValue);
-    if (!parsedCampoId || Number.isNaN(parsedCampoId)) {
+
+    const matchedField =
+      findMatchingFieldOption(fieldOptions, {
+        id:
+          campoValue === '' ||
+          campoValue === null ||
+          campoValue === undefined
+            ? activeStock?.fieldId ?? null
+            : parsedCampoId,
+        label: activeStock?.field ?? null,
+      }) ?? null;
+
+    if (!matchedField) {
       setSelectedField(null);
       setDependenciesError(null);
       return;
     }
-
-    const matchedField =
-      fieldOptions.find((option) => option.id === parsedCampoId) ?? null;
 
     setSelectedField(matchedField);
 
-    if (matchedField && !dependenciesCache[matchedField.id]) {
+    const currentValueId =
+      typeof campoValue === 'number'
+        ? campoValue
+        : Number(campoValue || NaN);
+
+    if (
+      !currentValueId ||
+      Number.isNaN(currentValueId) ||
+      currentValueId !== matchedField.id
+    ) {
+      applyFormValuePatch({ Campo: matchedField.id });
+    }
+
+    if (!dependenciesCache[matchedField.id]) {
       void fetchFieldDependencies(matchedField);
     }
   }, [
@@ -391,6 +427,8 @@ const StockDialog = ({
     fieldOptions,
     dependenciesCache,
     fetchFieldDependencies,
+    activeStock,
+    applyFormValuePatch,
   ]);
 
   const handleDialogFieldChange = React.useCallback(
@@ -750,6 +788,8 @@ const StockDialog = ({
         sections={stockFormSections}
         initialValues={initialValues}
         onFieldChange={handleDialogFieldChange}
+        externalValues={formValuesPatch?.data ?? null}
+        externalValuesKey={formValuesPatch?.key ?? null}
         extraActions={
           mode === 'edit' ? (
             <Button

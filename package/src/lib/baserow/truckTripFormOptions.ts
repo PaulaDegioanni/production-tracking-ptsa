@@ -9,6 +9,7 @@ import { getTrucksDto } from './trucks';
 import { TRUCK_TRIPS_TABLE_ID } from './truckTrips';
 import { IdLabelOption, mapSelectOptions } from './utils';
 import { getCycleRowIdByLabel } from './cycles';
+import { normalizeFieldLabel } from '@/lib/fields/fieldMatching';
 
 export type TruckTripOriginType = 'harvest' | 'stock';
 
@@ -28,8 +29,6 @@ export type TruckTripOriginOption = {
     cycleRowId: number | null;
   };
 };
-
-const normalize = (value: string): string => value.trim().toLowerCase();
 
 const mapTruckOption = (truck: { id: number; plate: string }): IdLabelOption => ({
   id: truck.id,
@@ -51,9 +50,11 @@ function matchesField(
   filter: { fieldId?: number; normalizedFieldName?: string }
 ): boolean {
   const { fieldId, normalizedFieldName } = filter;
-  if (fieldId && candidate.fieldId && fieldId === candidate.fieldId) return true;
+  if (fieldId && candidate.fieldId && fieldId === candidate.fieldId) {
+    return true;
+  }
   if (normalizedFieldName && candidate.fieldName) {
-    return normalize(candidate.fieldName) === normalizedFieldName;
+    return normalizeFieldLabel(candidate.fieldName) === normalizedFieldName;
   }
   return false;
 }
@@ -131,7 +132,9 @@ export async function getTruckTripOriginOptions(params: {
   fieldName?: string;
 }): Promise<{ origins: TruckTripOriginOption[] }> {
   const { originType, fieldId, fieldName } = params;
-  const normalizedFieldName = fieldName ? normalize(fieldName) : undefined;
+  const normalizedFieldName = fieldName
+    ? normalizeFieldLabel(fieldName)
+    : undefined;
 
   const fieldFilter =
     fieldId || normalizedFieldName

@@ -4,6 +4,7 @@ import { getLotsDto } from './lots';
 import { getCyclesDto } from './cycles';
 import { getStockDto } from './stocks';
 import { getTruckTripsDto } from './truckTrips';
+import { areFieldLabelsEquivalent } from '@/lib/fields/fieldMatching';
 
 export type BasicOption = {
   id: number;
@@ -26,8 +27,6 @@ export type HarvestFieldDependenciesResponse = {
   truckTrips: BasicOption[];
 };
 
-const normalize = (value: string): string => value.trim().toLowerCase();
-
 export async function getHarvestFieldOptions(): Promise<BasicOption[]> {
   const fields = await getFieldsDto();
   return fields
@@ -43,7 +42,6 @@ export async function getHarvestFieldDependencies(params: {
   fieldName?: string;
 }): Promise<HarvestFieldDependenciesResponse> {
   const { fieldId, fieldName } = params;
-  const normalizedFieldName = fieldName ? normalize(fieldName) : '';
 
   const [lots, cycles, stocks, trips] = await Promise.all([
     getLotsDto(),
@@ -57,9 +55,9 @@ export async function getHarvestFieldDependencies(params: {
     fieldName?: string;
   }): boolean => {
     if (candidate.fieldId && candidate.fieldId === fieldId) return true;
-    if (!normalizedFieldName) return false;
+    if (!fieldName) return false;
     if (!candidate.fieldName) return false;
-    return normalize(candidate.fieldName) === normalizedFieldName;
+    return areFieldLabelsEquivalent(candidate.fieldName, fieldName);
   };
 
   const lotOptions = lots
@@ -107,13 +105,13 @@ export async function getHarvestFieldDependencies(params: {
 
   const truckTripOptions = trips
     .filter((trip) => {
-      if (!normalizedFieldName) return false;
+      if (!fieldName) return false;
       const origin =
         trip.originField ||
         trip.originFieldFromHarvest ||
         trip.originFieldFromStock ||
         '';
-      return normalize(origin) === normalizedFieldName;
+      return areFieldLabelsEquivalent(origin, fieldName);
     })
     .map((trip) => ({
       id: trip.id,

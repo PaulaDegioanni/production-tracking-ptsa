@@ -1,15 +1,15 @@
 // src/lib/baserow/client.ts
-import 'server-only';
+import "server-only";
 
 const BASEROW_URL = process.env.NEXT_PUBLIC_BASEROW_URL;
 const BASEROW_TOKEN = process.env.BASEROW_TOKEN;
 
 if (!BASEROW_URL) {
-  throw new Error('NEXT_PUBLIC_BASEROW_URL no está definido en el .env');
+  throw new Error("NEXT_PUBLIC_BASEROW_URL no está definido en el .env");
 }
 
 if (!BASEROW_TOKEN) {
-  throw new Error('BASEROW_TOKEN no está definido en el .env');
+  throw new Error("BASEROW_TOKEN no está definido en el .env");
 }
 
 type BaserowResponse<T> = {
@@ -27,21 +27,21 @@ export class BaserowRequestError extends Error {
     super(message);
     this.status = status;
     this.body = body;
-    this.name = 'BaserowRequestError';
+    this.name = "BaserowRequestError";
   }
 }
 
 function buildTableUrl(
   tableId: number,
-  params?: Record<string, string | number | boolean>
+  params?: Record<string, string | number | boolean>,
 ) {
   const url = new URL(`${BASEROW_URL}/api/database/rows/table/${tableId}/`);
 
-  url.searchParams.set('user_field_names', 'true');
+  url.searchParams.set("user_field_names", "true");
 
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
+      if (value !== undefined && value !== null && value !== "") {
         url.searchParams.set(key, String(value));
       }
     });
@@ -52,29 +52,62 @@ function buildTableUrl(
 
 export async function getTableRows<T>(
   tableId: number,
-  params?: Record<string, string | number | boolean>
+  params?: Record<string, string | number | boolean>,
 ): Promise<T[]> {
-  const url = buildTableUrl(tableId, params);
+  const all: T[] = [];
 
-  const res = await fetch(url, {
-    headers: {
-      Authorization: `Token ${BASEROW_TOKEN}`,
-    },
-    cache: 'no-store',
-  });
+  const pageSize = 200;
 
-  if (!res.ok) {
-    console.error('Error Baserow', res.status, await res.text());
-    throw new Error(`Error al cargar filas desde Baserow (tabla ${tableId})`);
+  const baseParams: Record<string, string | number | boolean> = {
+    size: params?.size ?? pageSize,
+    ...(params ?? {}),
+  };
+
+  if (baseParams.page === undefined) {
+    baseParams.page = 1;
   }
 
-  const data = (await res.json()) as BaserowResponse<T>;
-  return data.results;
+  const resolveNextUrl = (value: string): string => {
+    try {
+      return new URL(value, BASEROW_URL).toString();
+    } catch {
+      return buildTableUrl(tableId, { ...baseParams, page: Number(baseParams.page) + 1 });
+    }
+  };
+
+  let nextUrl: string | null = buildTableUrl(tableId, baseParams);
+
+  while (nextUrl) {
+    const url = nextUrl;
+
+    const res = await fetch(url, {
+      headers: { Authorization: `Token ${BASEROW_TOKEN}` },
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      console.error("Error Baserow", res.status, await res.text());
+      throw new Error(`Error al cargar filas desde Baserow (tabla ${tableId})`);
+    }
+
+    const data = (await res.json()) as BaserowResponse<T>;
+    const results = Array.isArray(data.results) ? data.results : [];
+
+    all.push(...results);
+
+    if (data.next) {
+      nextUrl = resolveNextUrl(data.next);
+    } else {
+      nextUrl = null;
+    }
+  }
+
+  return all;
 }
 
 export async function getTableRowById<T>(
   tableId: number,
-  rowId: number | string
+  rowId: number | string,
 ): Promise<T> {
   const url = `${BASEROW_URL}/api/database/rows/table/${tableId}/${rowId}/?user_field_names=true`;
 
@@ -82,13 +115,13 @@ export async function getTableRowById<T>(
     headers: {
       Authorization: `Token ${BASEROW_TOKEN}`,
     },
-    cache: 'no-store',
+    cache: "no-store",
   });
 
   if (!res.ok) {
-    console.error('Error Baserow', res.status, await res.text());
+    console.error("Error Baserow", res.status, await res.text());
     throw new Error(
-      `Error al cargar fila ${rowId} desde Baserow (tabla ${tableId})`
+      `Error al cargar fila ${rowId} desde Baserow (tabla ${tableId})`,
     );
   }
 
@@ -98,27 +131,27 @@ export async function getTableRowById<T>(
 export async function patchTableRow<T>(
   tableId: number,
   rowId: number | string,
-  payload: Record<string, any>
+  payload: Record<string, any>,
 ): Promise<T> {
   const url = `${BASEROW_URL}/api/database/rows/table/${tableId}/${rowId}/?user_field_names=true`;
 
   const res = await fetch(url, {
-    method: 'PATCH',
+    method: "PATCH",
     headers: {
       Authorization: `Token ${BASEROW_TOKEN}`,
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
-    cache: 'no-store',
+    cache: "no-store",
   });
 
   if (!res.ok) {
     const errorBody = await res.text();
-    console.error('Error Baserow', res.status, errorBody);
+    console.error("Error Baserow", res.status, errorBody);
     throw new BaserowRequestError(
       `Error al actualizar fila ${rowId} desde Baserow (tabla ${tableId})`,
       res.status,
-      errorBody || res.statusText
+      errorBody || res.statusText,
     );
   }
 
@@ -127,25 +160,25 @@ export async function patchTableRow<T>(
 
 export async function deleteTableRow(
   tableId: number,
-  rowId: number | string
+  rowId: number | string,
 ): Promise<void> {
   const url = `${BASEROW_URL}/api/database/rows/table/${tableId}/${rowId}/`;
 
   const res = await fetch(url, {
-    method: 'DELETE',
+    method: "DELETE",
     headers: {
       Authorization: `Token ${BASEROW_TOKEN}`,
     },
-    cache: 'no-store',
+    cache: "no-store",
   });
 
   if (!res.ok) {
     const errorBody = await res.text();
-    console.error('Error Baserow', res.status, errorBody);
+    console.error("Error Baserow", res.status, errorBody);
     throw new BaserowRequestError(
       `Error al eliminar fila ${rowId} desde Baserow (tabla ${tableId})`,
       res.status,
-      errorBody || res.statusText
+      errorBody || res.statusText,
     );
   }
 }
@@ -165,7 +198,7 @@ export type BaserowTableField = {
 };
 
 export async function getTableFields(
-  tableId: number
+  tableId: number,
 ): Promise<BaserowTableField[]> {
   const url = `${BASEROW_URL}/api/database/fields/table/${tableId}/`;
 
@@ -173,13 +206,13 @@ export async function getTableFields(
     headers: {
       Authorization: `Token ${BASEROW_TOKEN}`,
     },
-    cache: 'no-store',
+    cache: "no-store",
   });
 
   if (!res.ok) {
-    console.error('Error Baserow', res.status, await res.text());
+    console.error("Error Baserow", res.status, await res.text());
     throw new Error(
-      `Error al cargar definición de campos desde Baserow (tabla ${tableId})`
+      `Error al cargar definición de campos desde Baserow (tabla ${tableId})`,
     );
   }
 
