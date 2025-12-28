@@ -227,6 +227,9 @@ const StockDialog = ({
   const [dependenciesCache, setDependenciesCache] = React.useState<
     Record<number, FieldDependencies>
   >({});
+  const dependenciesCacheRef = React.useRef<Record<number, FieldDependencies>>(
+    {}
+  );
   const [dependenciesLoading, setDependenciesLoading] = React.useState(false);
   const [dependenciesError, setDependenciesError] = React.useState<
     string | null
@@ -320,7 +323,7 @@ const StockDialog = ({
   const fetchFieldDependencies = React.useCallback(
     async (field: Option) => {
       if (!field) return;
-      if (dependenciesCache[field.id]) return;
+      if (dependenciesCacheRef.current[field.id]) return;
 
       try {
         setDependenciesLoading(true);
@@ -370,8 +373,12 @@ const StockDialog = ({
         setDependenciesLoading(false);
       }
     },
-    [dependenciesCache, showToast]
+    [showToast]
   );
+
+  React.useEffect(() => {
+    dependenciesCacheRef.current = dependenciesCache;
+  }, [dependenciesCache]);
 
   React.useEffect(() => {
     if (open && !fieldOptions.length && !fieldOptionsLoading) {
@@ -383,23 +390,36 @@ const StockDialog = ({
     if (!open) return;
 
     const campoValue = initialValues.Campo;
+    const hasCampoValue =
+      campoValue !== '' && campoValue !== null && campoValue !== undefined;
     const parsedCampoId =
-      typeof campoValue === 'number' ? campoValue : Number(campoValue);
+      typeof campoValue === 'number'
+        ? campoValue
+        : hasCampoValue
+        ? Number(campoValue)
+        : NaN;
+
+    const candidateId =
+      !Number.isNaN(parsedCampoId) && parsedCampoId
+        ? parsedCampoId
+        : activeStock?.fieldId ?? null;
+
+    if (!candidateId) {
+      setDependenciesError(null);
+      return;
+    }
 
     const matchedField =
       findMatchingFieldOption(fieldOptions, {
-        id:
-          campoValue === '' ||
-          campoValue === null ||
-          campoValue === undefined
-            ? activeStock?.fieldId ?? null
-            : parsedCampoId,
+        id: candidateId,
         label: activeStock?.field ?? null,
       }) ?? null;
 
     if (!matchedField) {
-      setSelectedField(null);
-      setDependenciesError(null);
+      if (!selectedField || selectedField.id !== candidateId) {
+        const fallbackLabel = activeStock?.field ?? `Campo #${candidateId}`;
+        setSelectedField({ id: candidateId, label: fallbackLabel });
+      }
       return;
     }
 
@@ -418,16 +438,16 @@ const StockDialog = ({
       applyFormValuePatch({ Campo: matchedField.id });
     }
 
-    if (!dependenciesCache[matchedField.id]) {
+    if (!dependenciesCacheRef.current[matchedField.id]) {
       void fetchFieldDependencies(matchedField);
     }
   }, [
     open,
-    initialValues.Campo,
     fieldOptions,
-    dependenciesCache,
     fetchFieldDependencies,
     activeStock,
+    initialValues.Campo,
+    selectedField,
     applyFormValuePatch,
   ]);
 
@@ -450,7 +470,10 @@ const StockDialog = ({
       }
 
       const field =
-        fieldOptions.find((option) => option.id === parsedValue) ?? null;
+        fieldOptions.find((option) => option.id === parsedValue) ?? {
+          id: parsedValue,
+          label: `Campo #${parsedValue}`,
+        };
       setSelectedField(field);
       setDependenciesError(null);
 
