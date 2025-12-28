@@ -31,6 +31,8 @@ const OPERATOR_READONLY_API_PREFIXES = [
   '/api/truck-trips',
 ];
 
+const OPERATOR_CREATE_ALLOWED_PREFIXES = ['/api/stocks', '/api/truck-trips'];
+
 const isOperatorAllowedPath = (pathname: string, method: string) => {
   const normalize = (prefix: string) =>
     pathname === prefix || pathname.startsWith(`${prefix}/`);
@@ -46,6 +48,13 @@ const isOperatorAllowedPath = (pathname: string, method: string) => {
   if (
     method === 'GET' &&
     OPERATOR_READONLY_API_PREFIXES.some((prefix) => normalize(prefix))
+  ) {
+    return true;
+  }
+
+  if (
+    method === 'POST' &&
+    OPERATOR_CREATE_ALLOWED_PREFIXES.some((prefix) => pathname === prefix)
   ) {
     return true;
   }
