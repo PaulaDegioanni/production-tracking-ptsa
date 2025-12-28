@@ -1545,6 +1545,7 @@ const CosechasPageClient = ({
               >
                 <FormControl fullWidth size="small">
                   <TextField
+                    id="harvest-filter-period"
                     label="Período"
                     select
                     value={periodFilter}
@@ -1552,6 +1553,10 @@ const CosechasPageClient = ({
                     fullWidth
                     size="small"
                     sx={{ bgcolor: "background.paper" }}
+                    slotProps={{
+                      inputLabel: { id: "harvest-filter-period-label" },
+                      select: { labelId: "harvest-filter-period-label" },
+                    }}
                   >
                     <MenuItem value="all">Todos</MenuItem>
                     {uniquePeriods.map((period) => (
@@ -1563,6 +1568,7 @@ const CosechasPageClient = ({
                 </FormControl>
                 <FormControl fullWidth size="small">
                   <TextField
+                    id="harvest-filter-field"
                     label="Campo"
                     select
                     value={fieldFilter}
@@ -1570,6 +1576,10 @@ const CosechasPageClient = ({
                     fullWidth
                     size="small"
                     sx={{ bgcolor: "background.paper" }}
+                    slotProps={{
+                      inputLabel: { id: "harvest-filter-field-label" },
+                      select: { labelId: "harvest-filter-field-label" },
+                    }}
                   >
                     <MenuItem value="all">Todos</MenuItem>
                     {uniqueFields.map((field) => (
@@ -1581,6 +1591,7 @@ const CosechasPageClient = ({
                 </FormControl>
                 <FormControl fullWidth size="small">
                   <TextField
+                    id="harvest-filter-crop"
                     label="Cultivo"
                     select
                     value={cropFilter}
@@ -1588,6 +1599,10 @@ const CosechasPageClient = ({
                     fullWidth
                     size="small"
                     sx={{ bgcolor: "background.paper" }}
+                    slotProps={{
+                      inputLabel: { id: "harvest-filter-crop-label" },
+                      select: { labelId: "harvest-filter-crop-label" },
+                    }}
                   >
                     <MenuItem value="all">Todos</MenuItem>
                     {uniqueCrops.map((crop) => (
@@ -1599,6 +1614,7 @@ const CosechasPageClient = ({
                 </FormControl>
                 <FormControl fullWidth size="small">
                   <TextField
+                    id="harvest-filter-cycle"
                     label="Ciclo de siembra"
                     select
                     value={cycleFilter}
@@ -1606,6 +1622,10 @@ const CosechasPageClient = ({
                     fullWidth
                     size="small"
                     sx={{ bgcolor: "background.paper" }}
+                    slotProps={{
+                      inputLabel: { id: "harvest-filter-cycle-label" },
+                      select: { labelId: "harvest-filter-cycle-label" },
+                    }}
                   >
                     <MenuItem value="all">Todos</MenuItem>
                     {uniqueCycles.map((cycle) => (
@@ -2257,7 +2277,7 @@ const CosechasPageClient = ({
         </DashboardCard>
       </Stack>
       <SimpleEntityDialogForm
-        key={`${dialogMode}-${activeHarvest?.id ?? "new"}-${dialogValuesPatch?.key ?? 0}`}
+        key={`${dialogMode}-${activeHarvest?.id ?? "new"}`}
         open={dialogOpen}
         title={dialogTitle}
         onClose={handleDialogClose}
