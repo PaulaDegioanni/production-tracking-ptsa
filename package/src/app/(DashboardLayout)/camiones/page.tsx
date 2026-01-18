@@ -3,6 +3,8 @@ import { getTrucksDto } from '@/lib/baserow/trucks';
 import { getTruckSelectOptions } from '@/lib/baserow/truckFormOptions';
 import CamionesPageClient from './CamionesPageClient';
 
+export const dynamic = 'force-dynamic';
+
 const CamionesPage = async () => {
   const [trucks, selectOptions] = await Promise.all([
     getTrucksDto(),

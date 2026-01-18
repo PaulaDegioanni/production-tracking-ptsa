@@ -1,5 +1,6 @@
 // src/lib/baserow/trucks.ts
 import {
+  type BaserowOption,
   IdLabelOption,
   extractLinkRowIds,
   extractSingleSelectId,
@@ -98,7 +99,7 @@ export function mapTruckRawToDto(row: TruckRaw): TruckDto {
 }
 
 export const mapTruckTypeOptions = (options?: unknown) =>
-  mapSelectOptions(options);
+  mapSelectOptions(Array.isArray(options) ? (options as BaserowOption[]) : undefined);
 
 export async function getTrucksDto(): Promise<TruckDto[]> {
   const { getTableRows } = await loadBaserowClient();

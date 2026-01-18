@@ -47,7 +47,7 @@ const extractFieldIdFromLabel = (label?: string | null): number | null => {
 };
 
 const getCandidateId = (
-  search: { id?: number | null; label?: string | null }
+  search: { id?: number | string | null; label?: string | null }
 ): number | null => {
   if (typeof search.id === 'number' && Number.isFinite(search.id)) {
     return search.id;
@@ -77,7 +77,7 @@ export const areFieldLabelsEquivalent = (
 
 export const findMatchingFieldOption = <T extends FieldOptionLike>(
   options: T[],
-  search: { id?: number | null; label?: string | null }
+  search: { id?: number | string | null; label?: string | null }
 ): T | null => {
   const candidateId = getCandidateId(search);
   if (candidateId) {

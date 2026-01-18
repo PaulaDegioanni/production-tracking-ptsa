@@ -17,11 +17,15 @@ export type SessionPayload = {
   name?: string;
 };
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const requireEnv = (key: string): string => {
+  const value = process.env[key];
+  if (!value) {
+    throw new Error(`${key} is not defined in the environment`);
+  }
+  return value;
+};
 
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET is not defined in the environment');
-}
+const JWT_SECRET = requireEnv('JWT_SECRET');
 
 const isSessionPayload = (value: unknown): value is SessionPayload => {
   if (!value || typeof value !== 'object') return false;
@@ -70,4 +74,3 @@ export const getSessionCookieOptions = (remember: boolean) => ({
   path: '/' as const,
   maxAge: getMaxAge(remember),
 });
-

@@ -3,6 +3,8 @@ import { getProvidersDto } from '@/lib/baserow/providers';
 import { getProviderSelectOptions } from '@/lib/baserow/providerFormOptions';
 import ProveedoresPageClient from './ProveedoresPageClient';
 
+export const dynamic = 'force-dynamic';
+
 const ProveedoresPage = async () => {
   const [providers, selectOptions] = await Promise.all([
     getProvidersDto(),

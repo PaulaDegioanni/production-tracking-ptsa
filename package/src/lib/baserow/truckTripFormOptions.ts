@@ -172,20 +172,20 @@ export async function getTruckTripOriginOptions(params: {
 export async function getTruckTripOriginById(params: {
   originType: TruckTripOriginType;
   originId: number;
-}): Promise<TruckTripOriginOption | null> {
+}): Promise<TruckTripOriginOption | undefined> {
   const { originType, originId } = params;
 
   if (originType === 'harvest') {
     const harvests = await getHarvestsDto();
     const harvest = harvests.find((item) => item.id === originId);
-    if (!harvest) return null;
+    if (!harvest) return undefined;
     const [origin] = await hydrateCycleRowIds([mapHarvestToOrigin(harvest)]);
     return origin;
   }
 
   const stocks = await getStockDto();
   const stock = stocks.find((item) => item.id === originId);
-  if (!stock) return null;
+  if (!stock) return undefined;
   const [origin] = await hydrateCycleRowIds([mapStockToOrigin(stock)]);
   return origin;
 }
