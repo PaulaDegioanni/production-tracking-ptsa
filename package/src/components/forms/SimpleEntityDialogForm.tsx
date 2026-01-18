@@ -874,6 +874,9 @@ const SimpleEntityDialogForm = ({
           sx: {
             borderRadius: { xs: 0, md: 3 },
             overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            height: { xs: "100%", md: "auto" },
           },
         }}
       >
@@ -930,6 +933,7 @@ const SimpleEntityDialogForm = ({
                 md: "70vh",
               },
               overflowY: "auto",
+              flex: "1 1 auto",
             }}
           >
             {topContent ? (
@@ -1029,9 +1033,7 @@ const SimpleEntityDialogForm = ({
               borderTop: `1px solid ${theme.palette.divider}`,
               gap: 1.5,
               flexWrap: "wrap",
-              position: { xs: "sticky", md: "static" },
-              bottom: 0,
-              zIndex: 1,
+              flexShrink: 0,
             }}
           >
             {extraActions && !extraActionsInline ? (
