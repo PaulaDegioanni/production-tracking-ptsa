@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import * as React from 'react';
+import * as React from "react";
 import {
   Box,
   Button,
@@ -20,22 +20,22 @@ import {
   TextField,
   Typography,
   alpha,
-} from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import Link from 'next/link';
+} from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import Link from "next/link";
 
-import PageContainer from '@/app/(DashboardLayout)/components/container/PageContainer';
-import DashboardCard from '@/app/(DashboardLayout)/components/shared/DashboardCard';
+import PageContainer from "@/app/(DashboardLayout)/components/container/PageContainer";
+import DashboardCard from "@/app/(DashboardLayout)/components/shared/DashboardCard";
 import StockDialog, {
   type Option,
   type StockDialogMode,
   type StockFormValues,
-} from '@/app/(DashboardLayout)/components/stock/StockDialog';
+} from "@/app/(DashboardLayout)/components/stock/StockDialog";
 import StatusChip, {
   StatusChipOption,
-} from '@/app/(DashboardLayout)/components/shared/StatusChip';
-import CropChip from '@/app/(DashboardLayout)/components/shared/CropChip';
-import type { StockDto } from '@/lib/baserow/stocks';
+} from "@/app/(DashboardLayout)/components/shared/StatusChip";
+import CropChip from "@/app/(DashboardLayout)/components/shared/CropChip";
+import type { StockDto } from "@/lib/baserow/stocks";
 
 /* --------- Props --------- */
 
@@ -48,38 +48,38 @@ type StockPageClientProps = {
 /* --------- Helpers puros --------- */
 
 const formatDateParts = (
-  value: string | null
+  value: string | null,
 ): { date: string; time: string } => {
-  if (!value) return { date: '—', time: '' };
+  if (!value) return { date: "—", time: "" };
 
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return { date: value ?? '—', time: '' };
+  if (Number.isNaN(date.getTime())) return { date: value ?? "—", time: "" };
 
   return {
-    date: date.toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: '2-digit',
+    date: date.toLocaleDateString("es-ES", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
     }),
-    time: '',
+    time: "",
   };
 };
 
 const STOCK_STATUS_OPTIONS: StatusChipOption[] = [
-  { value: 'Nuevo', color: 'info' },
-  { value: 'Parcial', color: 'warning' },
-  { value: 'Completo', color: 'success' },
-  { value: 'Vacío', color: 'default' },
+  { value: "Nuevo", color: "info" },
+  { value: "Parcial", color: "warning" },
+  { value: "Completo", color: "success" },
+  { value: "Vacío", color: "default" },
 ];
 
 const formatKgs = (value: number): string =>
-  value.toLocaleString('es-ES', { maximumFractionDigits: 0 });
+  value.toLocaleString("es-ES", { maximumFractionDigits: 0 });
 
 const getTodayDateString = () => {
   const now = new Date();
   const yyyy = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-  const dd = String(now.getDate()).padStart(2, '0');
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 };
 
@@ -90,19 +90,19 @@ const getDefaultStockFormValues = (params: {
   const { unitTypeOptions, statusOptions } = params;
 
   return {
-    'Tipo unidad': unitTypeOptions[0]?.id ?? '',
-    Campo: '',
-    'Ciclo de siembra': '',
-    Cultivo: '',
-    'Fecha de creación': getTodayDateString(),
-    Estado: statusOptions[0]?.id ?? '',
-    Notas: '',
-    ID: '',
-    'Kgs actuales': '—',
-    'Total kgs ingresados': '—',
-    'Total kgs egresados': '—',
-    'Cosechas asociadas': [],
-    'Viajes de camión desde stock': [],
+    "Tipo unidad": unitTypeOptions[0]?.id ?? "",
+    Campo: "",
+    "Ciclo de siembra": "",
+    Cultivo: "",
+    "Fecha de creación": getTodayDateString(),
+    Estado: statusOptions[0]?.id ?? "",
+    Notas: "",
+    ID: "",
+    "Kgs actuales": "—",
+    "Total kgs ingresados": "—",
+    "Total kgs egresados": "—",
+    "Cosechas asociadas": [],
+    "Viajes de camión desde stock": [],
   };
 };
 
@@ -111,30 +111,30 @@ const formatReadonlyKg = (value: number): string => `${formatKgs(value)} kg`;
 const buildChipValues = (items?: string[]): string[] => {
   if (!Array.isArray(items)) return [];
   return items
-    .map((label) => (typeof label === 'string' ? label.trim() : ''))
+    .map((label) => (typeof label === "string" ? label.trim() : ""))
     .filter((label) => Boolean(label));
 };
 
 const buildStockInitialValues = (stock: StockDto): StockFormValues => {
-  const firstCycleId = stock.cycleIds?.[0] ?? '';
+  const firstCycleId = stock.cycleIds?.[0] ?? "";
   const createdDate = stock.createdAt
     ? stock.createdAt.slice(0, 10)
     : getTodayDateString();
 
   return {
-    'Tipo unidad': stock.unitTypeId ?? '',
-    Campo: stock.fieldId ?? '',
-    'Ciclo de siembra': firstCycleId,
-    Cultivo: stock.crop ?? '',
-    'Fecha de creación': createdDate,
-    Estado: stock.statusId ?? '',
-    Notas: stock.notes ?? '',
+    "Tipo unidad": stock.unitTypeId ?? "",
+    Campo: stock.fieldId ?? "",
+    "Ciclo de siembra": firstCycleId,
+    Cultivo: stock.crop ?? "",
+    "Fecha de creación": createdDate,
+    Estado: stock.statusId ?? "",
+    Notas: stock.notes ?? "",
     ID: stock.name || `#${stock.id}`,
-    'Kgs actuales': formatReadonlyKg(stock.currentKgs ?? 0),
-    'Total kgs ingresados': formatReadonlyKg(stock.totalInKgs ?? 0),
-    'Total kgs egresados': formatReadonlyKg(stock.totalOutFromHarvestKgs ?? 0),
-    'Cosechas asociadas': buildChipValues(stock.originHarvestsLabels),
-    'Viajes de camión desde stock': buildChipValues(stock.truckTripLabels),
+    "Kgs actuales": formatReadonlyKg(stock.currentKgs ?? 0),
+    "Total kgs ingresados": formatReadonlyKg(stock.totalInKgs ?? 0),
+    "Total kgs egresados": formatReadonlyKg(stock.totalOutFromHarvestKgs ?? 0),
+    "Cosechas asociadas": buildChipValues(stock.originHarvestsLabels),
+    "Viajes de camión desde stock": buildChipValues(stock.truckTripLabels),
   };
 };
 
@@ -151,17 +151,16 @@ const StockPageClient = ({
         unitTypeOptions,
         statusOptions,
       }),
-    [statusOptions, unitTypeOptions]
+    [statusOptions, unitTypeOptions],
   );
   const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [dialogMode, setDialogMode] =
-    React.useState<StockDialogMode>('create');
+  const [dialogMode, setDialogMode] = React.useState<StockDialogMode>("create");
   const [activeStock, setActiveStock] = React.useState<StockDto | null>(null);
   const [dialogInitialValues, setDialogInitialValues] =
     React.useState<StockFormValues>(buildDefaultFormValues);
-  const [fieldFilter, setFieldFilter] = React.useState<string>('all');
-  const [cycleFilter, setCycleFilter] = React.useState<string>('all');
-  const [statusFilter, setStatusFilter] = React.useState<string>('all');
+  const [fieldFilter, setFieldFilter] = React.useState<string>("all");
+  const [cycleFilter, setCycleFilter] = React.useState<string>("all");
+  const [statusFilter, setStatusFilter] = React.useState<string>("all");
 
   const uniqueFields = React.useMemo<string[]>(
     () =>
@@ -169,10 +168,10 @@ const StockPageClient = ({
         new Set(
           initialStock
             .map((s) => s.field)
-            .filter((v): v is string => Boolean(v))
-        )
+            .filter((v): v is string => Boolean(v)),
+        ),
       ).sort(),
-    [initialStock]
+    [initialStock],
   );
 
   const uniqueCycles = React.useMemo<string[]>(
@@ -181,10 +180,10 @@ const StockPageClient = ({
         new Set(
           initialStock
             .flatMap((s) => s.cycleLabels || [])
-            .filter((v): v is string => Boolean(v))
-        )
+            .filter((v): v is string => Boolean(v)),
+        ),
       ).sort(),
-    [initialStock]
+    [initialStock],
   );
 
   const uniqueStatuses = React.useMemo<string[]>(
@@ -193,21 +192,21 @@ const StockPageClient = ({
         new Set(
           initialStock
             .map((s) => s.status)
-            .filter((v): v is string => Boolean(v))
-        )
+            .filter((v): v is string => Boolean(v)),
+        ),
       ).sort(),
-    [initialStock]
+    [initialStock],
   );
 
   // Stock filtrado
   const filteredStock = React.useMemo<StockDto[]>(() => {
     return initialStock
       .filter((s) => {
-        if (fieldFilter !== 'all' && s.field !== fieldFilter) return false;
-        if (cycleFilter !== 'all') {
+        if (fieldFilter !== "all" && s.field !== fieldFilter) return false;
+        if (cycleFilter !== "all") {
           if (!s.cycleLabels.includes(cycleFilter)) return false;
         }
-        if (statusFilter !== 'all') {
+        if (statusFilter !== "all") {
           if (!s.status || s.status !== statusFilter) return false;
         }
         return true;
@@ -228,20 +227,20 @@ const StockPageClient = ({
           acc.balanceKgs += stock.currentKgs;
           return acc;
         },
-        { inKgs: 0, outKgs: 0, balanceKgs: 0 }
+        { inKgs: 0, outKgs: 0, balanceKgs: 0 },
       ),
-    [filteredStock]
+    [filteredStock],
   );
 
   const openEditDialog = React.useCallback((stock: StockDto) => {
-    setDialogMode('edit');
+    setDialogMode("edit");
     setActiveStock(stock);
     setDialogInitialValues(buildStockInitialValues(stock));
     setDialogOpen(true);
   }, []);
 
   const handleOpenCreateDialog = React.useCallback(() => {
-    setDialogMode('create');
+    setDialogMode("create");
     setActiveStock(null);
     setDialogInitialValues(buildDefaultFormValues());
     setDialogOpen(true);
@@ -249,7 +248,7 @@ const StockPageClient = ({
 
   const handleDialogClose = React.useCallback(() => {
     setDialogOpen(false);
-    setDialogMode('create');
+    setDialogMode("create");
     setActiveStock(null);
     setDialogInitialValues(buildDefaultFormValues());
   }, [buildDefaultFormValues]);
@@ -266,9 +265,9 @@ const StockPageClient = ({
             variant="h2"
             component="h1"
             sx={{
-              background: 'linear-gradient(135deg, #3A3184 0%, #6962A2 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              background: "linear-gradient(135deg, #3A3184 0%, #6962A2 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
               fontWeight: 700,
               mb: 1,
             }}
@@ -278,7 +277,7 @@ const StockPageClient = ({
           <Typography
             variant="h6"
             color="text.secondary"
-            sx={{ maxWidth: '800px' }}
+            sx={{ maxWidth: "800px" }}
           >
             Vista consolidada del stock en campo: bolsones, ciclos de siembra
             asociados y movimientos de entrada/salida.
@@ -295,15 +294,15 @@ const StockPageClient = ({
                 borderRadius: 2,
                 background: `linear-gradient(135deg, ${alpha(
                   theme.palette.primary.main,
-                  0.03
+                  0.03,
                 )} 0%, ${alpha(theme.palette.primary.light, 0.03)} 100%)`,
                 border: `1px solid ${theme.palette.divider}`,
               })}
             >
               <Stack
-                direction={{ xs: 'column', md: 'row' }}
+                direction={{ xs: "column", md: "row" }}
                 spacing={2}
-                sx={{ alignItems: { xs: 'stretch', md: 'center' } }}
+                sx={{ alignItems: { xs: "stretch", md: "center" } }}
               >
                 {/* Campo */}
                 <FormControl fullWidth size="small">
@@ -314,7 +313,7 @@ const StockPageClient = ({
                     onChange={(e) => setFieldFilter(e.target.value)}
                     fullWidth
                     size="small"
-                    sx={{ bgcolor: 'background.paper' }}
+                    sx={{ bgcolor: "background.paper" }}
                   >
                     <MenuItem value="all">Todos</MenuItem>
                     {uniqueFields.map((field) => (
@@ -334,7 +333,7 @@ const StockPageClient = ({
                     onChange={(e) => setCycleFilter(e.target.value)}
                     fullWidth
                     size="small"
-                    sx={{ bgcolor: 'background.paper' }}
+                    sx={{ bgcolor: "background.paper" }}
                   >
                     <MenuItem value="all">Todos</MenuItem>
                     {uniqueCycles.map((id) => (
@@ -354,7 +353,7 @@ const StockPageClient = ({
                     onChange={(e) => setStatusFilter(e.target.value)}
                     fullWidth
                     size="small"
-                    sx={{ bgcolor: 'background.paper' }}
+                    sx={{ bgcolor: "background.paper" }}
                   >
                     <MenuItem value="all">Todos</MenuItem>
                     {uniqueStatuses.map((status) => (
@@ -369,11 +368,11 @@ const StockPageClient = ({
 
             {/* Resumen + acciones */}
             <Stack
-              direction={{ xs: 'column', md: 'row' }}
+              direction={{ xs: "column", md: "row" }}
               spacing={2}
               sx={{
-                justifyContent: 'space-between',
-                alignItems: { xs: 'stretch', md: 'center' },
+                justifyContent: "space-between",
+                alignItems: { xs: "stretch", md: "center" },
                 mb: 2,
               }}
             >
@@ -385,7 +384,7 @@ const StockPageClient = ({
                   bgcolor: alpha(theme.palette.primary.main, 0.08),
                   border: `1px solid ${alpha(
                     theme.palette.primary.main,
-                    0.12
+                    0.12,
                   )}`,
                 })}
               >
@@ -395,9 +394,9 @@ const StockPageClient = ({
                   fontWeight={600}
                 >
                   {filteredStock.length} unidad
-                  {filteredStock.length !== 1 ? 'es' : ''}
-                  {filteredStock.length !== 1 ? '' : ''} encontrada
-                  {filteredStock.length !== 1 ? 's' : ''}
+                  {filteredStock.length !== 1 ? "es" : ""}
+                  {filteredStock.length !== 1 ? "" : ""} encontrada
+                  {filteredStock.length !== 1 ? "s" : ""}
                 </Typography>
               </Box>
 
@@ -405,8 +404,8 @@ const StockPageClient = ({
                 direction="row"
                 spacing={2}
                 sx={{
-                  width: { xs: '100%', md: 'auto' },
-                  justifyContent: { xs: 'space-between', md: 'flex-end' },
+                  width: { xs: "100%", md: "auto" },
+                  justifyContent: { xs: "space-between", md: "flex-end" },
                 }}
               >
                 <Button
@@ -417,12 +416,12 @@ const StockPageClient = ({
                   sx={{
                     flexGrow: { xs: 1, md: 0 },
                     borderRadius: 2,
-                    textTransform: 'none',
+                    textTransform: "none",
                     fontWeight: 700,
                     px: 3,
                     boxShadow: (theme) =>
                       `0 4px 12px ${alpha(theme.palette.primary.main, 0.25)}`,
-                    '&:hover': {
+                    "&:hover": {
                       boxShadow: (theme) =>
                         `0 6px 16px ${alpha(theme.palette.primary.main, 0.35)}`,
                     },
@@ -445,17 +444,17 @@ const StockPageClient = ({
             </Stack>
 
             {/* Tabla Desktop */}
-            <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+            <Box sx={{ display: { xs: "none", md: "block" } }}>
               <TableContainer
                 component={Paper}
                 variant="outlined"
                 sx={(theme) => ({
                   borderRadius: 2,
-                  width: '100%',
-                  overflowX: 'auto',
+                  width: "100%",
+                  overflowX: "auto",
                   boxShadow: `0 2px 8px ${alpha(
                     theme.palette.grey[500],
-                    0.08
+                    0.08,
                   )}`,
                 })}
               >
@@ -464,16 +463,16 @@ const StockPageClient = ({
                     sx={(theme) => ({
                       background: `linear-gradient(135deg, ${alpha(
                         theme.palette.primary.main,
-                        0.06
+                        0.06,
                       )} 0%, ${alpha(theme.palette.primary.light, 0.06)} 100%)`,
-                      '& .MuiTableCell-root': {
+                      "& .MuiTableCell-root": {
                         fontWeight: 700,
                         color: theme.palette.primary.main,
                         borderBottom: `2px solid ${theme.palette.primary.main}`,
                         py: 1.5,
-                        fontSize: '0.8rem',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px',
+                        fontSize: "0.8rem",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.5px",
                       },
                     })}
                   >
@@ -486,7 +485,7 @@ const StockPageClient = ({
                         sx={(theme) => ({
                           borderLeft: `2px solid ${alpha(
                             theme.palette.primary.main,
-                            0.15
+                            0.15,
                           )}`,
                         })}
                       />
@@ -497,7 +496,7 @@ const StockPageClient = ({
                         sx={(theme) => ({
                           borderLeft: `2px solid ${alpha(
                             theme.palette.primary.main,
-                            0.15
+                            0.15,
                           )}`,
                         })}
                       />
@@ -520,21 +519,21 @@ const StockPageClient = ({
                             void openEditDialog(s);
                           }}
                           sx={(theme) => ({
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
+                            cursor: "pointer",
+                            transition: "all 0.2s ease",
                             bgcolor:
                               index % 2 === 0
-                                ? 'transparent'
+                                ? "transparent"
                                 : alpha(theme.palette.grey[100], 0.4),
-                            '&:hover': {
+                            "&:hover": {
                               bgcolor: alpha(theme.palette.primary.main, 0.04),
-                              transform: 'scale(1.005)',
+                              transform: "scale(1.005)",
                               boxShadow: `0 2px 8px ${alpha(
                                 theme.palette.primary.main,
-                                0.1
+                                0.1,
                               )}`,
                             },
-                            '& .MuiTableCell-root': {
+                            "& .MuiTableCell-root": {
                               borderBottom: `1px solid ${theme.palette.divider}`,
                               py: 1.5,
                             },
@@ -552,12 +551,12 @@ const StockPageClient = ({
                             <Stack spacing={0.7} alignItems="center">
                               <Chip
                                 size="small"
-                                label={s.unitType || '—'}
+                                label={s.unitType || "—"}
                                 variant="outlined"
                                 sx={{
                                   fontWeight: 600,
-                                  fontSize: 'body1',
-                                  textTransform: 'capitalize',
+                                  fontSize: "body1",
+                                  textTransform: "capitalize",
                                 }}
                               />
                               {s.crop ? <CropChip crop={s.crop} /> : null}
@@ -584,7 +583,7 @@ const StockPageClient = ({
                             sx={(theme) => ({
                               borderLeft: `2px solid ${alpha(
                                 theme.palette.primary.main,
-                                0.08
+                                0.08,
                               )}`,
                             })}
                           />
@@ -597,14 +596,14 @@ const StockPageClient = ({
                                 href={`/ciclos/${firstCycleId}`}
                                 onClick={(event) => event.stopPropagation()}
                                 sx={(theme) => ({
-                                  fontSize: 'body2',
+                                  fontSize: "body2",
                                   fontWeight: 700,
                                   color: theme.palette.primary.main,
-                                  textDecoration: 'none',
-                                  display: 'block',
+                                  textDecoration: "none",
+                                  display: "block",
                                   mb: 0.5,
-                                  '&:hover': {
-                                    textDecoration: 'underline',
+                                  "&:hover": {
+                                    textDecoration: "underline",
                                   },
                                 })}
                               >
@@ -637,7 +636,7 @@ const StockPageClient = ({
                                     variant="outlined"
                                     label={`${s.originHarvestsLabels[i]}`}
                                     sx={{
-                                      fontSize: 'body2',
+                                      fontSize: "body2",
                                       fontWeight: 600,
                                       mb: 0.5,
                                     }}
@@ -671,7 +670,7 @@ const StockPageClient = ({
                                     size="small"
                                     label={`${s.truckTripLabels[i]}`}
                                     sx={{
-                                      fontSize: 'body2',
+                                      fontSize: "body2",
                                       fontWeight: 600,
                                       mb: 0.5,
                                     }}
@@ -693,7 +692,7 @@ const StockPageClient = ({
                             sx={(theme) => ({
                               borderLeft: `2px solid ${alpha(
                                 theme.palette.primary.main,
-                                0.08
+                                0.08,
                               )}`,
                             })}
                           />
@@ -727,8 +726,8 @@ const StockPageClient = ({
                               fontWeight={800}
                               color={
                                 s.currentKgs === 0
-                                  ? 'text.secondary'
-                                  : 'success'
+                                  ? "text.secondary"
+                                  : "success"
                               }
                             >
                               {formatKgs(s.currentKgs)}
@@ -741,21 +740,21 @@ const StockPageClient = ({
                     <TableRow
                       sx={(theme) => ({
                         background: theme.palette.grey.A100,
-                        '& .MuiTableCell-root': {
+                        "& .MuiTableCell-root": {
                           borderTop: `2px solid ${theme.palette.grey}`,
                           fontWeight: 800,
                           color: theme.palette.primary.main,
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.5px',
+                          textTransform: "uppercase",
+                          letterSpacing: "0.5px",
                           py: 1.5,
-                          fontSize: '1rem',
+                          fontSize: "1rem",
                         },
                       })}
                     >
                       <TableCell
                         colSpan={8}
                         align="right"
-                        sx={() => ({ paddingRight: '2.5rem' })}
+                        sx={() => ({ paddingRight: "2.5rem" })}
                       >
                         Total
                       </TableCell>
@@ -763,7 +762,7 @@ const StockPageClient = ({
                         sx={(theme) => ({
                           borderLeft: `2px solid ${alpha(
                             theme.palette.primary.main,
-                            0.08
+                            0.08,
                           )}`,
                         })}
                       />
@@ -783,18 +782,18 @@ const StockPageClient = ({
             </Box>
 
             {/* Mobile cards */}
-            <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+            <Box sx={{ display: { xs: "block", md: "none" } }}>
               <Stack spacing={2}>
                 <Card
                   sx={(theme) => ({
                     borderRadius: 2,
                     border: `1px solid ${alpha(
                       theme.palette.primary.main,
-                      0.2
+                      0.2,
                     )}`,
                     background: `linear-gradient(135deg, ${alpha(
                       theme.palette.primary.main,
-                      0.05
+                      0.05,
                     )} 0%, ${alpha(theme.palette.primary.light, 0.05)} 100%)`,
                   })}
                 >
@@ -810,43 +809,40 @@ const StockPageClient = ({
                     <Stack
                       direction="row"
                       justifyContent="space-between"
-                      alignItems="center"
-                      spacing={2}
+                      marginRight={3}
                     >
-                      <Stack spacing={0.3}>
-                        <Typography variant="caption" color="text.secondary">
-                          Ingresados
-                        </Typography>
-                        <Typography
-                          variant="body1"
-                          fontWeight={700}
-                          color="primary"
-                        >
-                          {formatKgs(filteredTotals.inKgs)} kg
-                        </Typography>
+                      <Stack spacing={2}>
+                        <Stack spacing={0.3}>
+                          <Typography variant="caption" color="text.secondary">
+                            ↑ Ingresados
+                          </Typography>
+                          <Typography variant="body1" fontWeight={700}>
+                            {formatKgs(filteredTotals.inKgs)} kg
+                          </Typography>
+                        </Stack>
+                        <Stack spacing={0.3}>
+                          <Typography variant="caption" color="text.secondary">
+                            Saldo
+                          </Typography>
+                          <Typography
+                            variant="body1"
+                            fontWeight={800}
+                            color={
+                              filteredTotals.balanceKgs === 0
+                                ? "text.secondary"
+                                : "success.dark"
+                            }
+                          >
+                            {formatKgs(filteredTotals.balanceKgs)} kg
+                          </Typography>
+                        </Stack>
                       </Stack>
                       <Stack spacing={0.3}>
                         <Typography variant="caption" color="text.secondary">
-                          Egresados
+                          ↓ Egresados
                         </Typography>
                         <Typography variant="body1" fontWeight={700}>
                           {formatKgs(filteredTotals.outKgs)} kg
-                        </Typography>
-                      </Stack>
-                      <Stack spacing={0.3}>
-                        <Typography variant="caption" color="text.secondary">
-                          Saldo
-                        </Typography>
-                        <Typography
-                          variant="body1"
-                          fontWeight={800}
-                          color={
-                            filteredTotals.balanceKgs === 0
-                              ? 'text.secondary'
-                              : 'success.dark'
-                          }
-                        >
-                          {formatKgs(filteredTotals.balanceKgs)} kg
                         </Typography>
                       </Stack>
                     </Stack>
@@ -865,18 +861,18 @@ const StockPageClient = ({
                         void openEditDialog(s);
                       }}
                       sx={(theme) => ({
-                        cursor: 'pointer',
+                        cursor: "pointer",
                         borderRadius: 2.5,
                         border: `1px solid ${theme.palette.divider}`,
                         boxShadow: `0 2px 8px ${alpha(
                           theme.palette.grey[500],
-                          0.08
+                          0.08,
                         )}`,
-                        '&:hover': {
-                          transform: 'translateY(-4px)',
+                        "&:hover": {
+                          transform: "translateY(-4px)",
                           boxShadow: `0 8px 24px ${alpha(
                             theme.palette.primary.main,
-                            0.15
+                            0.15,
                           )}`,
                           borderColor: theme.palette.primary.main,
                         },
@@ -909,12 +905,12 @@ const StockPageClient = ({
                           >
                             <Chip
                               size="small"
-                              label={s.unitType || '—'}
+                              label={s.unitType || "—"}
                               variant="outlined"
                               sx={{
                                 fontWeight: 600,
-                                fontSize: '0.75rem',
-                                textTransform: 'capitalize',
+                                fontSize: "0.75rem",
+                                textTransform: "capitalize",
                               }}
                             />
                             {s.crop ? <CropChip crop={s.crop} /> : null}
@@ -930,7 +926,7 @@ const StockPageClient = ({
 
                           <Box
                             sx={(theme) => ({
-                              height: '1px',
+                              height: "1px",
                               background: `linear-gradient(90deg, ${theme.palette.divider} 0%, transparent 100%)`,
                             })}
                           />
@@ -950,11 +946,11 @@ const StockPageClient = ({
                                 href={`/ciclos/${firstCycleId}`}
                                 onClick={(event) => event.stopPropagation()}
                                 sx={(theme) => ({
-                                  fontSize: '0.9rem',
+                                  fontSize: "0.9rem",
                                   fontWeight: 700,
                                   color: theme.palette.primary.main,
-                                  textDecoration: 'none',
-                                  '&:hover': { textDecoration: 'underline' },
+                                  textDecoration: "none",
+                                  "&:hover": { textDecoration: "underline" },
                                 })}
                               >
                                 {`${firstCycleLabel}`}
@@ -973,54 +969,52 @@ const StockPageClient = ({
                           <Stack
                             direction="row"
                             justifyContent="space-between"
-                            mt={1}
+                            marginRight={3}
                           >
-                            <Stack spacing={0.5}>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                fontWeight={700}
-                              >
-                                Ingresados
-                              </Typography>
-                              <Typography
-                                variant="body2"
-                                fontWeight={700}
-                                color="primary"
-                              >
-                                {formatKgs(s.totalInKgs)} kg
-                              </Typography>
+                            <Stack spacing={2}>
+                              <Stack spacing={0.2}>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  fontWeight={700}
+                                >
+                                  ↑ Ingresados
+                                </Typography>
+                                <Typography variant="body2" fontWeight={700}>
+                                  {formatKgs(s.totalInKgs)} kg
+                                </Typography>
+                              </Stack>
+                              <Stack spacing={0.2}>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  fontWeight={700}
+                                >
+                                  Saldo
+                                </Typography>
+                                <Typography
+                                  variant="body2"
+                                  fontWeight={800}
+                                  color={
+                                    s.currentKgs === 0
+                                      ? "text.secondary"
+                                      : "success.dark"
+                                  }
+                                >
+                                  {formatKgs(s.currentKgs)} kg
+                                </Typography>
+                              </Stack>
                             </Stack>
-                            <Stack spacing={0.5}>
+                            <Stack spacing={0.2}>
                               <Typography
                                 variant="caption"
                                 color="text.secondary"
                                 fontWeight={700}
                               >
-                                Egresados
+                                ↓ Egresados
                               </Typography>
                               <Typography variant="body2" fontWeight={600}>
                                 {formatKgs(s.totalOutFromHarvestKgs)} kg
-                              </Typography>
-                            </Stack>
-                            <Stack spacing={0.5}>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                fontWeight={700}
-                              >
-                                Saldo
-                              </Typography>
-                              <Typography
-                                variant="body2"
-                                fontWeight={800}
-                                color={
-                                  s.currentKgs === 0
-                                    ? 'text.secondary'
-                                    : 'success.dark'
-                                }
-                              >
-                                {formatKgs(s.currentKgs)} kg
                               </Typography>
                             </Stack>
                           </Stack>

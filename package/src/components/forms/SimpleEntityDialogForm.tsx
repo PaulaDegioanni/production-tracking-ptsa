@@ -110,6 +110,8 @@ export type SimpleEntityDialogFormProps = {
     values: Record<string, any>,
   ) => void;
   extraActions?: React.ReactNode;
+  extraActionsInline?: boolean;
+  showCancel?: boolean;
   externalValues?: Record<string, any> | null;
   externalValuesKey?: string | number | null;
   topContent?: React.ReactNode;
@@ -153,6 +155,8 @@ const SimpleEntityDialogForm = ({
   sections,
   onFieldChange,
   extraActions,
+  extraActionsInline = false,
+  showCancel = true,
   externalValues,
   externalValuesKey,
   topContent,
@@ -870,10 +874,21 @@ const SimpleEntityDialogForm = ({
           sx: {
             borderRadius: { xs: 0, md: 3 },
             overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            height: { xs: "100%", md: "auto" },
+            "@supports (height: 100dvh)": {
+              height: { xs: "100dvh", md: "auto" },
+            },
           },
         }}
       >
-        <Box component="form" onSubmit={handleSubmit} noValidate>
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          noValidate
+          sx={{ display: "flex", flexDirection: "column", height: "100%" }}
+        >
           <DialogTitle
             sx={{
               background: `linear-gradient(135deg, ${alpha(
@@ -921,11 +936,10 @@ const SimpleEntityDialogForm = ({
               px: { xs: 2, md: 3 },
               py: 3,
               backgroundColor: alpha(theme.palette.grey[50], 0.3),
-              maxHeight: {
-                xs: "calc(100vh - 170px)",
-                md: "70vh",
-              },
               overflowY: "auto",
+              flex: "1 1 auto",
+              minHeight: 0,
+              maxHeight: { md: "70vh" },
             }}
           >
             {topContent ? (
@@ -1025,9 +1039,10 @@ const SimpleEntityDialogForm = ({
               borderTop: `1px solid ${theme.palette.divider}`,
               gap: 1.5,
               flexWrap: "wrap",
+              flexShrink: 0,
             }}
           >
-            {extraActions ? (
+            {extraActions && !extraActionsInline ? (
               <Box
                 sx={{
                   flexGrow: 1,
@@ -1041,49 +1056,58 @@ const SimpleEntityDialogForm = ({
                 {extraActions}
               </Box>
             ) : null}
-            <Button
-              onClick={handleCancel}
-              disabled={loading}
-              variant="outlined"
-              sx={{
-                borderRadius: 2,
-                textTransform: "none",
-                fontWeight: 600,
-                px: 3,
-              }}
+            <Stack
+              direction="row"
+              spacing={1.5}
+              sx={{ width: "100%", justifyContent: "flex-end" }}
             >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={loading}
-              startIcon={
-                loading ? (
-                  <CircularProgress color="inherit" size={18} />
-                ) : (
-                  <CheckCircleOutlineIcon />
-                )
-              }
-              sx={{
-                borderRadius: 2,
-                textTransform: "none",
-                fontWeight: 700,
-                px: 4,
-                boxShadow: `0 4px 12px ${alpha(
-                  theme.palette.primary.main,
-                  0.3,
-                )}`,
-                "&:hover": {
-                  boxShadow: `0 6px 16px ${alpha(
+              {extraActionsInline ? extraActions : null}
+              {showCancel ? (
+                <Button
+                  onClick={handleCancel}
+                  disabled={loading}
+                  variant="outlined"
+                  sx={{
+                    borderRadius: 2,
+                    textTransform: "none",
+                    fontWeight: 600,
+                    px: 3,
+                  }}
+                >
+                  Cancelar
+                </Button>
+              ) : null}
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={loading}
+                startIcon={
+                  loading ? (
+                    <CircularProgress color="inherit" size={18} />
+                  ) : (
+                    <CheckCircleOutlineIcon />
+                  )
+                }
+                sx={{
+                  borderRadius: 2,
+                  textTransform: "none",
+                  fontWeight: 700,
+                  px: 4,
+                  boxShadow: `0 4px 12px ${alpha(
                     theme.palette.primary.main,
-                    0.4,
+                    0.3,
                   )}`,
-                },
-              }}
-            >
-              {loading ? "Guardando..." : "Guardar"}
-            </Button>
+                  "&:hover": {
+                    boxShadow: `0 6px 16px ${alpha(
+                      theme.palette.primary.main,
+                      0.4,
+                    )}`,
+                  },
+                }}
+              >
+                {loading ? "Guardando..." : "Guardar"}
+              </Button>
+            </Stack>
           </DialogActions>
         </Box>
       </Dialog>

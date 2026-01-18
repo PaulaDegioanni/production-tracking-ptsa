@@ -428,7 +428,7 @@ const CycleDetailPageClient = ({
       sx={(theme) => {
         const paletteColor = theme.palette[color] as PaletteColor;
         return {
-          p: 3,
+          p: { xs: 2, md: 3 },
           borderRadius: 3,
           background: gradient
             ? `linear-gradient(135deg, ${alpha(
@@ -449,7 +449,7 @@ const CycleDetailPageClient = ({
       }}
     >
       <Stack
-        spacing={2}
+        spacing={{ xs: 1.5, md: 2 }}
         direction={{ xs: "row", md: "column" }}
         alignItems={{ xs: "center", md: "self-start" }}
       >
@@ -457,8 +457,8 @@ const CycleDetailPageClient = ({
           sx={(theme) => {
             const paletteColor = theme.palette[color] as PaletteColor;
             return {
-              width: 48,
-              height: 48,
+              width: { xs: 40, md: 48 },
+              height: { xs: 40, md: 48 },
               borderRadius: 2,
               bgcolor: alpha(paletteColor.main, 0.12),
               display: "flex",
@@ -478,7 +478,7 @@ const CycleDetailPageClient = ({
               fontWeight: 600,
               textTransform: "uppercase",
               letterSpacing: "0.5px",
-              fontSize: "0.7rem",
+              fontSize: { xs: "0.6rem", md: "0.7rem" },
             }}
           >
             {label}
@@ -492,6 +492,7 @@ const CycleDetailPageClient = ({
                   fontWeight: 800,
                   color: paletteColor.main,
                   lineHeight: 1.2,
+                  fontSize: { xs: "1.6rem", md: "2.4rem" },
                 };
               }}
             >
@@ -662,7 +663,12 @@ const CycleDetailPageClient = ({
     >
       <Stack direction="row" alignItems="center" spacing={2}>
         {icon}
-        <Typography variant="h5" fontWeight={800} color="text.primary">
+        <Typography
+          variant="h5"
+          fontWeight={800}
+          color="text.primary"
+          sx={{ fontSize: { xs: "1.1rem", md: "1.5rem" } }}
+        >
           {title} ({count})
         </Typography>
       </Stack>
@@ -697,6 +703,7 @@ const CycleDetailPageClient = ({
     <PageContainer
       title={`Ciclo ${cycle.cycleId}`}
       description={`Detalle del ciclo ${cycle.cycleId}`}
+      disableMobilePadding
     >
       <Box sx={{ minHeight: "100vh", bgcolor: "background.default", pb: 8 }}>
         {/* Hero Header */}
@@ -707,7 +714,8 @@ const CycleDetailPageClient = ({
               0.05,
             )} 0%, ${alpha(theme.palette.primary.light, 0.02)} 100%)`,
             borderBottom: `1px solid ${theme.palette.divider}`,
-            py: { xs: 4, md: 6 },
+            pt: { xs: 2, md: 6 },
+            pb: { xs: 3, md: 6 },
             px: { xs: 2, md: 4 },
           })}
         >
@@ -1014,7 +1022,7 @@ const CycleDetailPageClient = ({
                     md: "repeat(3, 1fr)",
                     lg: "repeat(5, 1fr)",
                   },
-                  gap: 3,
+                  gap: 2,
                 }}
               >
                 <StatCard
@@ -1142,7 +1150,7 @@ const CycleDetailPageClient = ({
                     </Box>
 
                     {/* Mobile Cards */}
-                    <Box sx={{ display: { xs: "block", md: "none" }, p: 2 }}>
+                    <Box sx={{ display: { xs: "block", md: "none" } }}>
                       <Stack spacing={2}>
                         {lots.map((lot) => (
                           <Card
@@ -1289,7 +1297,7 @@ const CycleDetailPageClient = ({
                     </Box>
 
                     {/* Mobile Cards */}
-                    <Box sx={{ display: { xs: "block", md: "none" }, p: 2 }}>
+                    <Box sx={{ display: { xs: "block", md: "none" } }}>
                       <Stack spacing={2}>
                         {harvests.map((h) => {
                           const lotNames = h.lotsIds
@@ -1504,7 +1512,7 @@ const CycleDetailPageClient = ({
                     </Box>
 
                     {/* Mobile Cards */}
-                    <Box sx={{ display: { xs: "block", md: "none" }, p: 2 }}>
+                    <Box sx={{ display: { xs: "block", md: "none" } }}>
                       <Stack spacing={2}>
                         {stockUnits.map((s) => (
                           <Card
@@ -1540,7 +1548,7 @@ const CycleDetailPageClient = ({
                                   justifyContent="space-between"
                                   alignItems="center"
                                   paddingRight="50px"
-                                  paddingBottom="20px"
+                                  paddingBottom="5px"
                                 >
                                   <Box>
                                     <Typography
@@ -1548,12 +1556,12 @@ const CycleDetailPageClient = ({
                                       color="text.secondary"
                                       fontWeight={700}
                                     >
-                                      Ingresados
+                                      ↑ Ingresados
                                     </Typography>
                                     <Typography
                                       variant="body2"
                                       fontWeight={700}
-                                      mt={0.5}
+                                      mt={0.3}
                                     >
                                       {s.totalInKgs.toLocaleString("es-ES")} kg
                                     </Typography>
@@ -1564,12 +1572,12 @@ const CycleDetailPageClient = ({
                                       color="text.secondary"
                                       fontWeight={700}
                                     >
-                                      Egresados
+                                      ↓ Egresados
                                     </Typography>
                                     <Typography
                                       variant="body2"
                                       fontWeight={700}
-                                      mt={0.5}
+                                      mt={0.3}
                                     >
                                       {s.totalOutFromHarvestKgs.toLocaleString(
                                         "es-ES",
@@ -1589,7 +1597,7 @@ const CycleDetailPageClient = ({
                                 <Typography
                                   variant="h6"
                                   marginTop="0px"
-                                  lineHeight="0.7rem"
+                                  lineHeight="0.5rem"
                                   fontWeight={800}
                                   color="warning.dark"
                                 >
@@ -1760,16 +1768,16 @@ const CycleDetailPageClient = ({
                     </Box>
 
                     {/* Mobile Cards */}
-                    <Box sx={{ display: { xs: "block", md: "none" }, p: 2 }}>
+                    <Box sx={{ display: { xs: "block", md: "none" } }}>
                       <Stack spacing={2}>
                         {truckTrips.map((t) => {
                           const fromStock = (t.stockOriginIds ?? []).length > 0;
                           const fromHarvest =
                             (t.harvestOriginIds ?? []).length > 0;
                           const originLabel = fromStock
-                            ? "Desde stock"
+                            ? "Stock"
                             : fromHarvest
-                              ? "Desde cosecha"
+                              ? "Cosecha"
                               : "—";
 
                           return (
@@ -1813,7 +1821,7 @@ const CycleDetailPageClient = ({
                                     direction="row"
                                     justifyContent="space-between"
                                     paddingRight="50px"
-                                    paddingBottom="20px"
+                                    paddingBottom="5px"
                                   >
                                     <Box>
                                       <Typography
@@ -1854,7 +1862,7 @@ const CycleDetailPageClient = ({
                                     variant="h6"
                                     fontWeight={800}
                                     color="secondary.dark"
-                                    lineHeight="0.8rem"
+                                    lineHeight="0.5rem"
                                   >
                                     {t.totalKgsDestination.toLocaleString(
                                       "es-ES",

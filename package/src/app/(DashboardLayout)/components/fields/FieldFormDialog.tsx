@@ -607,6 +607,8 @@ const FieldFormDialog = ({
         fields={formFields}
         sections={FIELD_FORM_SECTIONS}
         initialValues={resolvedInitialValues}
+        showCancel={false}
+        extraActionsInline
         extraActions={
           mode === "edit" && fieldId ? (
             <Button

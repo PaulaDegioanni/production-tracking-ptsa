@@ -157,10 +157,10 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                 t.originFieldFromHarvest
               );
             })
-            .filter((v): v is string => Boolean(v))
+            .filter((v): v is string => Boolean(v)),
         ),
       ).sort(),
-    [sortedTrips]
+    [sortedTrips],
   );
 
   const uniqueCycles = React.useMemo<string[]>(
@@ -844,20 +844,42 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                       TOTAL
                     </Typography>
                     <Stack
-                      spacing={1.2}
                       direction="row"
+                      marginRight={3}
                       justifyContent="space-between"
                     >
-                      <Stack spacing={0.2}>
-                        <Typography variant="caption" color="text.secondary">
-                          Kgs Origen
-                        </Typography>
-                        <Typography variant="body1" fontWeight={600}>
-                          {filteredTotals.totalKgsOrigin.toLocaleString(
-                            "es-ES",
-                          )}{" "}
-                          kg
-                        </Typography>
+                      <Stack spacing={1.5}>
+                        <Stack spacing={0.2}>
+                          <Typography variant="caption" color="text.secondary">
+                            Kgs Origen
+                          </Typography>
+                          <Typography variant="body1" fontWeight={600}>
+                            {filteredTotals.totalKgsOrigin.toLocaleString(
+                              "es-ES",
+                            )}{" "}
+                            kg
+                          </Typography>
+                        </Stack>
+
+                        <Stack spacing={0.2}>
+                          <Typography variant="caption" color="text.secondary">
+                            Kgs Diferencia
+                          </Typography>
+                          <Typography
+                            variant="body1"
+                            fontWeight={700}
+                            color={
+                              filteredTotals.totalDifference >= 0
+                                ? "success.dark"
+                                : "error.dark"
+                            }
+                          >
+                            {filteredTotals.totalDifference.toLocaleString(
+                              "es-ES",
+                            )}{" "}
+                            kg
+                          </Typography>
+                        </Stack>
                       </Stack>
                       <Stack spacing={0.2}>
                         <Typography variant="caption" color="text.secondary">
@@ -869,25 +891,6 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                           color="primary"
                         >
                           {filteredTotals.totalKgsDestination.toLocaleString(
-                            "es-ES",
-                          )}{" "}
-                          kg
-                        </Typography>
-                      </Stack>
-                      <Stack spacing={0.2}>
-                        <Typography variant="caption" color="text.secondary">
-                          Kgs Diferencia
-                        </Typography>
-                        <Typography
-                          variant="body1"
-                          fontWeight={700}
-                          color={
-                            filteredTotals.totalDifference >= 0
-                              ? "success.main"
-                              : "error.main"
-                          }
-                        >
-                          {filteredTotals.totalDifference.toLocaleString(
                             "es-ES",
                           )}{" "}
                           kg
@@ -1070,8 +1073,8 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                                 fontWeight={700}
                                 color={
                                   differenceKgs >= 0
-                                    ? "success.main"
-                                    : "error.main"
+                                    ? "success.dark"
+                                    : "error.dark"
                                 }
                               >
                                 {differenceKgs.toLocaleString("es-ES")} kg
