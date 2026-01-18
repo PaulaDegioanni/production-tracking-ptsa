@@ -2049,36 +2049,36 @@ const CosechasPageClient = ({
                     >
                       TOTAL
                     </Typography>
-                    <Stack spacing={1.2}>
+                    <Stack spacing={1.2} marginRight={3}>
+                      <Stack spacing={0.2}>
+                        <Typography variant="caption" color="text.secondary">
+                          Cosechados
+                        </Typography>
+                        <Typography
+                          variant="body1"
+                          fontWeight={700}
+                          align="left"
+                        >
+                          {formatKgs(totals.totalHarvestedKgs)} kg
+                        </Typography>
+                      </Stack>
                       <Stack
                         direction="row"
-                        justifyContent="space-between"
                         spacing={1.5}
+                        justifyContent="space-between"
                       >
-                        <Stack spacing={0.2}>
-                          <Typography variant="caption" color="text.secondary">
-                            Cosechados
-                          </Typography>
-                          <Typography
-                            variant="body1"
-                            fontWeight={700}
-                            align="left"
-                          >
-                            {formatKgs(totals.totalHarvestedKgs)} kg
-                          </Typography>
-                        </Stack>
                         <Stack spacing={0.2}>
                           <Typography
                             variant="caption"
                             color="text.secondary"
                             flexWrap="wrap"
                           >
-                            Ingresados a Stock
+                            ↑ En Stock
                           </Typography>
                           <Typography
                             variant="body1"
                             fontWeight={700}
-                            color="primary"
+                            color="success.dark"
                             align="left"
                           >
                             {formatKgs(totals.totalToStockKgs)} kg
@@ -2086,12 +2086,12 @@ const CosechasPageClient = ({
                         </Stack>
                         <Stack spacing={0.2}>
                           <Typography variant="caption" color="text.secondary">
-                            Egresados en Camión
+                            ↓ En Camión
                           </Typography>
                           <Typography
                             variant="body1"
                             fontWeight={700}
-                            color="primary"
+                            color="error.dark"
                             align="left"
                           >
                             {formatKgs(totals.totalDirectTruckKgs)} kg
@@ -2212,8 +2212,8 @@ const CosechasPageClient = ({
                               background: `linear-gradient(90deg, ${theme.palette.divider} 0%, transparent 100%)`,
                             })}
                           />
-                          <Stack direction="row" justifyContent="space-between">
-                            <Stack spacing={0.5}>
+                          <Stack spacing={2} marginRight={3}>
+                            <Stack spacing={0.2}>
                               <Typography
                                 variant="caption"
                                 color="text.secondary"
@@ -2230,40 +2230,47 @@ const CosechasPageClient = ({
                                 kg
                               </Typography>
                             </Stack>
-                            <Stack spacing={0.5}>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                fontWeight={700}
-                              >
-                                Ingresados a Stock
-                              </Typography>
-                              <Typography
-                                variant="body1"
-                                fontWeight={700}
-                                color="primary"
-                                align="left"
-                              >
-                                {formatKgs(Number(harvest.stockKgs) || 0)} kg
-                              </Typography>
-                            </Stack>
-                            <Stack spacing={0.5} alignItems="flex-end">
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                fontWeight={700}
-                              >
-                                Egresados en Camión
-                              </Typography>
-                              <Typography
-                                variant="body1"
-                                fontWeight={700}
-                                color="primary"
-                                align="left"
-                              >
-                                {formatKgs(Number(harvest.directTruckKgs) || 0)}{" "}
-                                kg
-                              </Typography>
+                            <Stack
+                              direction="row"
+                              justifyContent="space-between"
+                            >
+                              <Stack spacing={0.2}>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  fontWeight={700}
+                                >
+                                  ↑ En Stock
+                                </Typography>
+                                <Typography
+                                  variant="body1"
+                                  fontWeight={700}
+                                  color="success.dark"
+                                  align="left"
+                                >
+                                  {formatKgs(Number(harvest.stockKgs) || 0)} kg
+                                </Typography>
+                              </Stack>
+                              <Stack spacing={0.2}>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  fontWeight={700}
+                                >
+                                  ↓ En Camión
+                                </Typography>
+                                <Typography
+                                  variant="body1"
+                                  fontWeight={700}
+                                  color="error.dark"
+                                  align="left"
+                                >
+                                  {formatKgs(
+                                    Number(harvest.directTruckKgs) || 0,
+                                  )}{" "}
+                                  kg
+                                </Typography>
+                              </Stack>
                             </Stack>
                           </Stack>
                         </Stack>
