@@ -877,10 +877,18 @@ const SimpleEntityDialogForm = ({
             display: "flex",
             flexDirection: "column",
             height: { xs: "100%", md: "auto" },
+            "@supports (height: 100dvh)": {
+              height: { xs: "100dvh", md: "auto" },
+            },
           },
         }}
       >
-        <Box component="form" onSubmit={handleSubmit} noValidate>
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          noValidate
+          sx={{ display: "flex", flexDirection: "column", height: "100%" }}
+        >
           <DialogTitle
             sx={{
               background: `linear-gradient(135deg, ${alpha(
@@ -928,12 +936,10 @@ const SimpleEntityDialogForm = ({
               px: { xs: 2, md: 3 },
               py: 3,
               backgroundColor: alpha(theme.palette.grey[50], 0.3),
-              maxHeight: {
-                xs: "calc(100vh - 170px)",
-                md: "70vh",
-              },
               overflowY: "auto",
               flex: "1 1 auto",
+              minHeight: 0,
+              maxHeight: { md: "70vh" },
             }}
           >
             {topContent ? (
