@@ -1,6 +1,7 @@
 "use client";
 import { styled, Container, Box } from "@mui/material";
-import React, { useState, Activity } from "react";
+import React, { useState } from "react";
+import { usePathname } from "next/navigation";
 import Header from "@/app/(DashboardLayout)/layout/header/Header";
 import Sidebar from "@/app/(DashboardLayout)/layout/sidebar/Sidebar";
 
@@ -29,8 +30,19 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  React.useEffect(() => {
+    if (!pathname || pathname === "/") return;
+    try {
+      localStorage.setItem("ptsa_last_path", pathname);
+    } catch {
+      // Ignore storage failures (private mode, permissions, etc.).
+    }
+  }, [pathname]);
+
   return (
     <MainWrapper className="mainwrapper">
       {/* ------------------------------------------- */}

@@ -1,15 +1,18 @@
-'use client'
-import { Grid, Box, Typography } from '@mui/material';
-import PageContainer from '@/app/(DashboardLayout)/components/container/PageContainer';
-// components
-import SalesOverview from '@/app/(DashboardLayout)/components/dashboard/SalesOverview';
-import YearlyBreakup from '@/app/(DashboardLayout)/components/dashboard/YearlyBreakup';
-import RecentTransactions from '@/app/(DashboardLayout)/components/dashboard/RecentTransactions';
-import ProductPerformance from '@/app/(DashboardLayout)/components/dashboard/ProductPerformance';
-import Blog from '@/app/(DashboardLayout)/components/dashboard/Blog';
-import MonthlyEarnings from '@/app/(DashboardLayout)/components/dashboard/MonthlyEarnings';
+'use client';
+import * as React from "react";
+import { Grid, Box, Typography } from "@mui/material";
+import { useRouter } from "next/navigation";
 
-const Dashboard = () => {
+import PageContainer from "@/app/(DashboardLayout)/components/container/PageContainer";
+import SalesOverview from "@/app/(DashboardLayout)/components/dashboard/SalesOverview";
+import YearlyBreakup from "@/app/(DashboardLayout)/components/dashboard/YearlyBreakup";
+import RecentTransactions from "@/app/(DashboardLayout)/components/dashboard/RecentTransactions";
+import ProductPerformance from "@/app/(DashboardLayout)/components/dashboard/ProductPerformance";
+import Blog from "@/app/(DashboardLayout)/components/dashboard/Blog";
+import MonthlyEarnings from "@/app/(DashboardLayout)/components/dashboard/MonthlyEarnings";
+import { useSession } from "@/hooks/useSession";
+
+export const Dashboard = () => {
   return (
     <PageContainer title="Dashboard" description="this is Dashboard">
       <Box>
@@ -65,6 +68,36 @@ const Dashboard = () => {
       </Box>
     </PageContainer>
   );
-}
+};
 
-export default Dashboard;
+const RootRedirect = () => {
+  const router = useRouter();
+  const { user, loading } = useSession();
+
+  React.useEffect(() => {
+    if (loading) return;
+    let lastPath: string | null = null;
+    try {
+      lastPath = localStorage.getItem("ptsa_last_path");
+    } catch {
+      lastPath = null;
+    }
+
+    const safeLastPath =
+      lastPath && lastPath.startsWith("/") && lastPath !== "/"
+        ? lastPath
+        : "/ciclos";
+
+    if (!user) {
+      const nextParam = encodeURIComponent(safeLastPath);
+      router.replace(`/authentication/login?next=${nextParam}`);
+      return;
+    }
+
+    router.replace(safeLastPath);
+  }, [loading, router, user]);
+
+  return null;
+};
+
+export default RootRedirect;
