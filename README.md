@@ -1,92 +1,52 @@
-<div align="center">
-   <a href="https://adminmart.com/" target="_blank">
-      <img src="https://adminmart.github.io/template_api/images/brand-logo/adminmart-Logo.svg" alt="modernize-image" width="100px" height="80px">
-   </a>
-</div>
+# Production Tracking PTSA
 
-# [Modernize Free Next Js Admin Template](https://modernize-nextjs-free.vercel.app/)
+Internal web app for tracking harvests, stock, and truck trips. The Next.js app lives in `package/`.
 
-<!-- Main image of Template -->
-[![Next Js](https://adminmart.com/wp-content/uploads/2023/03/modernize-free-next-js-admin-template.png)](#)
-
-    
-# Modernize Free Next.js Admin Template
-
-A free, developer-friendly admin dashboard template built using **Next.js (v15)**, **Material UI (MUI v7)**, **React**, and **TypeScript**.  
-It provides a clean project structure, responsive design, and ready-made pages such as Dashboard, Login/Register, Typography, and Sample pages.  
-Distributed under the **MIT license**, it’s free for both personal and commercial use.
-
----
-
-## ✨ Features
-
-- ⚡ Built with **Next.js 15**, **React**, **TypeScript**, and **MUI 7**
-- 📱 Fully responsive design
-- 🗂️ Organized folder structure
-- 🔑 Authentication pages (Login, Signup)
-- 📊 Dashboard, Typography, Sample layout pages
-- 🆓 Free under **MIT license**
-- 🚀 Lightweight and production-ready
-
----
+This app lives in `package/`.
+Deployed at https://production-tracking-ptsa.vercel.app/
 
 ## 🚀 Getting Started
 
-### 1. Clone the repository
+1.  Clone the repository
+2.  Navigate to the project
+
 ```bash
-git clone https://github.com/adminmart/Modernize-Nextjs-Free.git
+    cd Modernize-Nextjs-Free/package
 ```
 
-### 2. Navigate to the project
+3. Install dependencies
+
 ```bash
-cd Modernize-Nextjs-Free/package
+    cd package
+    npm install
 ```
 
-### 3. Install dependencies
+4. Run in development mode
+
 ```bash
-npm install
+    npm run build
 ```
 
-### 4. Run in development mode
+5. Build for production
+
 ```bash
-npm run dev
+    npm run build
+    npm start
 ```
 
-### 5. Build for production
-```bash
-npm run build
-```
-## 📂 Pages Included
+## Environment variables
 
-- Dashboard  
-- Login & Signup  
-- Typography  
-- Sample Layout  
+Set these in `package/.env.local`:
 
----
-
-
-## 📊 Summary Table
-
-| Aspect           | Details                                                 |
-|------------------|---------------------------------------------------------|
-| Framework        | Next.js (v15), React, TypeScript, Material UI (v7)      |
-| Pages Included   | Dashboard, Login/Register, Typography, Sample           |
-| Design           | Responsive, MUI-styled, clean and modern                |
-| License          | MIT – Free for personal and commercial use              |
-| Getting Started  | Clone → npm install → npm run dev → npm run build       |
-| Pro Version      | 65+ pages, NextAuth/Firebase auth, Dark mode, Figma     |
-
----
-
-## 📜 License
-
-This project is licensed under the **MIT License** – you can use it for personal and commercial projects.
-
----
-
-## 📧 Support
-
-For more info or query, visit [AdminMart](https://adminmart.com).
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+- `NEXT_PUBLIC_BASEROW_URL`
+- `BASEROW_TOKEN`
+- `NEXT_PUBLIC_BASEROW_FIELDS_TABLE_ID`
+- `NEXT_PUBLIC_BASEROW_LOTS_TABLE_ID`
+- `NEXT_PUBLIC_BASEROW_CYCLES_TABLE_ID`
+- `NEXT_PUBLIC_BASEROW_HARVESTS_TABLE_ID`
+- `NEXT_PUBLIC_BASEROW_STOCK_TABLE_ID`
+- `NEXT_PUBLIC_BASEROW_TRUCK_TRIPS_TABLE_ID`
+- `NEXT_PUBLIC_BASEROW_TRUCKS_TABLE_ID`
+- `NEXT_PUBLIC_BASEROW_PROVIDERS_TABLE_ID`
+- `NEXT_PUBLIC_BASEROW_USERS_TABLE_ID`
+- `JWT_SECRET`
