@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import React from "react";
 import {
@@ -98,8 +98,7 @@ const AuthLogin = ({ title, subtitle, subtext, nextPath }: AuthLoginProps) => {
         return;
       }
 
-      const role: AppRole =
-        data?.role === "operador" ? "Operador" : "Admin";
+      const role: AppRole = data?.role === "operador" ? "Operador" : "Admin";
       const destination = resolveRedirectPath(nextPath ?? null, role);
 
       router.replace(destination);
@@ -193,7 +192,7 @@ const AuthLogin = ({ title, subtitle, subtext, nextPath }: AuthLoginProps) => {
                 label="Recordar este dispositivo"
               />
             </FormGroup>
-            <Typography
+            {/* <Typography
               component={Link}
               href="/authentication/reset-password"
               fontWeight="500"
@@ -203,7 +202,7 @@ const AuthLogin = ({ title, subtitle, subtext, nextPath }: AuthLoginProps) => {
               }}
             >
               Resetear contraseña
-            </Typography>
+            </Typography> */}
           </Stack>
         </Stack>
         <Box>
