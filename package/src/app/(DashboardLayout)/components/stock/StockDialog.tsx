@@ -813,6 +813,8 @@ const StockDialog = ({
         onFieldChange={handleDialogFieldChange}
         externalValues={formValuesPatch?.data ?? null}
         externalValuesKey={formValuesPatch?.key ?? null}
+        showCancel={false}
+        extraActionsInline
         extraActions={
           mode === 'edit' ? (
             <Button

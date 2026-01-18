@@ -1015,6 +1015,8 @@ const TruckTripDialog = ({
         sections={TRUCK_TRIP_FORM_SECTIONS}
         initialValues={dialogInitialValues}
         onFieldChange={handleDialogFieldChange}
+        showCancel={false}
+        extraActionsInline
         extraActions={
           mode === "edit" ? (
             <Button

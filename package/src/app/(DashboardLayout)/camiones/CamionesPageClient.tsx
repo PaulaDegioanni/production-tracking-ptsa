@@ -819,6 +819,8 @@ const CamionesPageClient = ({
           fields={dialogFields}
           sections={dialogSections}
           initialValues={dialogInitialValues}
+          showCancel={false}
+          extraActionsInline
           extraActions={
             dialogMode === "edit" ? (
               <Button

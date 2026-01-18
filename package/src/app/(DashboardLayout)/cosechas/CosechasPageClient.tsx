@@ -2288,6 +2288,8 @@ const CosechasPageClient = ({
         onFieldChange={handleDialogFieldChange}
         externalValues={dialogValuesPatch?.data ?? null}
         externalValuesKey={dialogValuesPatch?.key ?? null}
+        showCancel={false}
+        extraActionsInline
         extraActions={
           dialogMode === "edit" ? (
             <Button
