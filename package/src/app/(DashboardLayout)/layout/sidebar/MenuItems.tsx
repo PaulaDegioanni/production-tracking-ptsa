@@ -14,12 +14,12 @@ import {
 import { uniqueId } from "lodash";
 
 const baseMenuItems = [
-  {
-    id: uniqueId(),
-    title: "Dashboard",
-    icon: IconLayoutDashboard,
-    href: "/",
-  },
+  // {
+  //   id: uniqueId(),
+  //   title: "Dashboard",
+  //   icon: IconLayoutDashboard,
+  //   href: "/",
+  // },
 
   {
     navlabel: true,
@@ -108,4 +108,3 @@ export const getMenuItemsForRole = (role?: string) => {
 };
 
 export default baseMenuItems;
-
