@@ -75,22 +75,6 @@ const baseMenuItems = [
     icon: IconTruckFilled,
     href: "/camiones",
   },
-  {
-    navlabel: true,
-    subheader: "AUTH",
-  },
-  {
-    id: uniqueId(),
-    title: "Login",
-    icon: IconLogin,
-    href: "/authentication/login",
-  },
-  {
-    id: uniqueId(),
-    title: "Register",
-    icon: IconUserPlus,
-    href: "/authentication/register",
-  },
 ];
 
 const getCosechasItem = () => ({
