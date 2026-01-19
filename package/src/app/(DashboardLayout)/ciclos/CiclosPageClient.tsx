@@ -61,6 +61,18 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
     [initialCiclos],
   );
 
+  const fieldOptions = React.useMemo(
+    () =>
+      Array.from(
+        new Set(
+          initialCiclos
+            .map((ciclo) => ciclo.field)
+            .filter((field): field is string => Boolean(field?.trim())),
+        ),
+      ).sort((a, b) => a.localeCompare(b, "es")),
+    [initialCiclos],
+  );
+
   const filterCycles = (cycle: CycleItem) => {
     const matchYear = yearFilter === "all" || cycle.period === yearFilter;
 
@@ -70,7 +82,7 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
 
     const matchField =
       fieldFilter === "all" ||
-      cycle.field.toLowerCase().includes(fieldFilter.toLowerCase());
+      cycle.field.trim() === fieldFilter;
 
     const matchStatus = statusFilter === "all" || cycle.status === statusFilter;
 
@@ -225,9 +237,11 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
                       sx={{ bgcolor: "background.paper" }}
                     >
                       <MenuItem value="all">Todos</MenuItem>
-                      <MenuItem value="ADELIA MARIA">ADELIA MARIA</MenuItem>
-                      <MenuItem value="BOGINO">BOGINO</MenuItem>
-                      <MenuItem value="GHIGLIONE">GHIGLIONE</MenuItem>
+                      {fieldOptions.map((field) => (
+                        <MenuItem key={field} value={field}>
+                          {field}
+                        </MenuItem>
+                      ))}
                     </Select>
                   </FormControl>
 
