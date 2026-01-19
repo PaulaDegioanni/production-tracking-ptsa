@@ -3,7 +3,7 @@
 Internal web app for tracking harvests, stock, and truck trips. The Next.js app lives in `package/`.
 
 This app lives in `package/`.
-Deployed at https://production-tracking-ptsa.vercel.app/
+Deployed at https://poitauadetegua.vercel.app/
 
 ## 🚀 Getting Started
 
