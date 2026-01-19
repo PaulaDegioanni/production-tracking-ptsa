@@ -8,11 +8,18 @@ import {
   Checkbox,
   FormControlLabel,
   FormGroup,
+  IconButton,
+  InputAdornment,
   Stack,
   Typography,
+  Fade,
+  Grow,
+  Slide,
 } from "@mui/material";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
+import VisibilityOffOutlinedIcon from "@mui/icons-material/VisibilityOffOutlined";
 
 import CustomTextField from "@/app/(DashboardLayout)/components/forms/theme-elements/CustomTextField";
 import type { AppRole } from "@/lib/auth/types";
@@ -60,6 +67,12 @@ const AuthLogin = ({ title, subtitle, subtext, nextPath }: AuthLoginProps) => {
   });
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -118,107 +131,161 @@ const AuthLogin = ({ title, subtitle, subtext, nextPath }: AuthLoginProps) => {
 
   return (
     <>
-      {title ? (
-        <Typography fontWeight="700" variant="h2" mb={1}>
-          {title}
-        </Typography>
-      ) : null}
+      <Fade in={mounted} timeout={600}>
+        <Box>
+          {title ? (
+            <Typography fontWeight="700" variant="h2" mb={1}>
+              {title}
+            </Typography>
+          ) : null}
 
-      {subtext}
+          {subtext}
+        </Box>
+      </Fade>
 
-      {error ? (
+      <Slide direction="down" in={!!error} mountOnEnter unmountOnExit>
         <Alert severity="error" sx={{ mt: 2, mb: 1 }}>
           {error}
         </Alert>
-      ) : null}
+      </Slide>
 
-      <Box component="form" noValidate onSubmit={handleSubmit}>
-        <Stack>
-          <Box>
-            <Typography
-              variant="subtitle1"
-              fontWeight={600}
-              component="label"
-              htmlFor="username"
-              mb="5px"
-            >
-              Usuario
-            </Typography>
-            <CustomTextField
-              id="username"
-              name="username"
-              variant="outlined"
-              fullWidth
-              autoComplete="username"
-              value={credentials.username}
-              onChange={handleChange}
-            />
-          </Box>
-          <Box mt="25px">
-            <Typography
-              variant="subtitle1"
-              fontWeight={600}
-              component="label"
-              htmlFor="password"
-              mb="5px"
-            >
-              Contraseña
-            </Typography>
-            <CustomTextField
-              id="password"
-              name="password"
-              type="password"
-              variant="outlined"
-              fullWidth
-              autoComplete="current-password"
-              value={credentials.password}
-              onChange={handleChange}
-            />
-          </Box>
-          <Stack
-            justifyContent="space-between"
-            direction="row"
-            alignItems="center"
-            my={2}
-          >
-            <FormGroup>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={credentials.remember}
-                    onChange={handleRememberChange}
-                  />
-                }
-                label="Recordar este dispositivo"
-              />
-            </FormGroup>
-            {/* <Typography
-              component={Link}
-              href="/authentication/reset-password"
-              fontWeight="500"
+      <Grow in={mounted} timeout={800}>
+        <Box component="form" noValidate onSubmit={handleSubmit}>
+          <Stack spacing={2.5}>
+            <Box
               sx={{
-                textDecoration: "none",
-                color: "primary.main",
+                transition: "transform 0.2s ease-in-out",
+                "&:focus-within": {
+                  transform: "translateY(-2px)",
+                },
               }}
             >
-              Resetear contraseña
-            </Typography> */}
+              <Typography
+                variant="subtitle1"
+                fontWeight={600}
+                component="label"
+                htmlFor="username"
+                mb="5px"
+              >
+                Usuario
+              </Typography>
+              <CustomTextField
+                id="username"
+                name="username"
+                variant="outlined"
+                fullWidth
+                autoComplete="username"
+                value={credentials.username}
+                onChange={handleChange}
+                sx={{
+                  transition: "all 0.3s ease-in-out",
+                }}
+              />
+            </Box>
+            <Box
+              sx={{
+                transition: "transform 0.2s ease-in-out",
+                "&:focus-within": {
+                  transform: "translateY(-2px)",
+                },
+              }}
+            >
+              <Typography
+                variant="subtitle1"
+                fontWeight={600}
+                component="label"
+                htmlFor="password"
+                mb="5px"
+              >
+                Contraseña
+              </Typography>
+              <CustomTextField
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                variant="outlined"
+                fullWidth
+                autoComplete="current-password"
+                value={credentials.password}
+                onChange={handleChange}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        edge="end"
+                        aria-label={
+                          showPassword
+                            ? "Ocultar contraseña"
+                            : "Mostrar contraseña"
+                        }
+                        onClick={() => setShowPassword((prev) => !prev)}
+                      >
+                        {showPassword ? (
+                          <VisibilityOutlinedIcon />
+                        ) : (
+                          <VisibilityOffOutlinedIcon />
+                        )}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  transition: "all 0.3s ease-in-out",
+                }}
+              />
+            </Box>
+            <Stack
+              justifyContent="space-between"
+              direction="row"
+              alignItems="center"
+            >
+              <FormGroup>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={credentials.remember}
+                      onChange={handleRememberChange}
+                      sx={{
+                        transition: "all 0.2s ease-in-out",
+                        "&:hover": {
+                          transform: "scale(1.1)",
+                        },
+                      }}
+                    />
+                  }
+                  label="Recordar este dispositivo"
+                />
+              </FormGroup>
+            </Stack>
           </Stack>
-        </Stack>
-        <Box>
-          <Button
-            color="primary"
-            variant="contained"
-            size="large"
-            fullWidth
-            type="submit"
-            disabled={!canSubmit}
-          >
-            {submitting ? "Ingresando..." : "Iniciar sesión"}
-          </Button>
+          <Box mt={3}>
+            <Button
+              color="primary"
+              variant="contained"
+              size="large"
+              fullWidth
+              type="submit"
+              disabled={!canSubmit}
+              sx={{
+                transition: "all 0.3s ease-in-out",
+                "&:hover:not(:disabled)": {
+                  transform: "translateY(-2px)",
+                  boxShadow: 4,
+                },
+                "&:active:not(:disabled)": {
+                  transform: "translateY(0px)",
+                },
+              }}
+            >
+              {submitting ? "Ingresando..." : "Iniciar sesión"}
+            </Button>
+          </Box>
         </Box>
-      </Box>
-      {subtitle}
+      </Grow>
+
+      <Fade in={mounted} timeout={1000}>
+        <Box>{subtitle}</Box>
+      </Fade>
     </>
   );
 };

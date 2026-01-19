@@ -1,5 +1,5 @@
 "use client";
-import { Grid, Box, Card, Stack, Typography } from "@mui/material";
+import { Grid, Box, Stack, Typography } from "@mui/material";
 import { useSearchParams } from "next/navigation";
 // components
 import PageContainer from "@/app/(DashboardLayout)/components/container/PageContainer";
@@ -11,19 +11,25 @@ const Login2 = () => {
   const nextPath = searchParams.get("next");
 
   return (
-    <PageContainer title="Login" description="this is Login page">
+    <PageContainer
+      title="Login"
+      description="this is Login page"
+      disableMobilePadding
+    >
       <Box
         sx={{
           position: "relative",
+          bgcolor: "#f7f9fc",
+
           "&:before": {
             content: '""',
-            background: "radial-gradient(#d2f1df, #d3d7fa, #bad8f4)",
+            background: "radial-gradient(#edf7f0, #eff1ff, #e8f2ff)",
             backgroundSize: "400% 400%",
             animation: "gradient 15s ease infinite",
             position: "absolute",
             height: "100%",
             width: "100%",
-            opacity: "0.3",
+            opacity: "0.2",
           },
         }}
       >
@@ -44,12 +50,17 @@ const Login2 = () => {
               xl: 3,
             }}
           >
-            <Card
-              elevation={9}
-              sx={{ p: 4, zIndex: 1, width: "100%", maxWidth: "500px" }}
+            <Box
+              sx={{
+                px: { xs: 6, sm: 4 },
+                py: { xs: 3, sm: 4 },
+                zIndex: 1,
+                width: "100%",
+                maxWidth: "500px",
+              }}
             >
               <Box display="flex" alignItems="center" justifyContent="center">
-                <Logo />
+                <Logo width={200} height={200} />
               </Box>
               <AuthLogin
                 nextPath={nextPath}
@@ -62,7 +73,7 @@ const Login2 = () => {
                   ></Stack>
                 }
               />
-            </Card>
+            </Box>
           </Grid>
         </Grid>
       </Box>

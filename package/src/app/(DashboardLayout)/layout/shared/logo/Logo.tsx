@@ -1,14 +1,19 @@
 import { Box } from "@mui/material";
 
-const Logo = () => {
+type LogoProps = {
+  width?: number;
+  height?: number;
+};
+
+const Logo = ({ width = 154, height = 200 }: LogoProps) => {
   return (
     <Box sx={{ display: "inline-flex" }}>
       <img
         src="/images/logos/PTSA-logo-transparent.svg"
         alt="logo PTSA"
         style={{
-          width: 134,
-          height: 180,
+          width,
+          height,
           objectFit: "contain",
           display: "block",
         }}
