@@ -41,6 +41,7 @@ import AgricultureIcon from "@mui/icons-material/Agriculture";
 import EventAvailableIcon from "@mui/icons-material/EventAvailable";
 import DateRangeIcon from "@mui/icons-material/DateRange";
 import EditIcon from "@mui/icons-material/Edit";
+import EditCalendarIcon from "@mui/icons-material/EditCalendar";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
@@ -65,6 +66,12 @@ type CycleDetailPageClientProps = {
   initialDetail: CycleDetailDto;
 };
 
+type CycleDatesPayload = {
+  fallowStartDate: string | null;
+  sowingDate: string | null;
+  estimatedHarvestDate: string | null;
+};
+
 const updateCycleStatus = async (
   cycleId: number,
   status: CycleStatus,
@@ -79,6 +86,32 @@ const updateCycleStatus = async (
 
   if (!response.ok) {
     let message = "No se pudo actualizar el estado del ciclo";
+    try {
+      const data = await response.json();
+      if (typeof data?.error === "string") {
+        message = data.error;
+      }
+    } catch {
+      // ignore parse errors
+    }
+    throw new Error(message);
+  }
+};
+
+const updateCycleDates = async (
+  cycleId: number,
+  payload: CycleDatesPayload,
+): Promise<void> => {
+  const response = await fetch(`/api/cycles/${cycleId}/dates`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    let message = "No se pudieron actualizar las fechas del ciclo";
     try {
       const data = await response.json();
       if (typeof data?.error === "string") {
@@ -217,6 +250,21 @@ const CycleDetailPageClient = ({
   const [statusSaving, setStatusSaving] = React.useState(false);
   const [statusError, setStatusError] = React.useState<string | null>(null);
   const [statusSnackbarOpen, setStatusSnackbarOpen] = React.useState(false);
+  const [localCycleDates, setLocalCycleDates] =
+    React.useState<CycleDatesPayload>({
+      fallowStartDate: cycle.fallowStartDate ?? null,
+      sowingDate: cycle.sowingDate ?? null,
+      estimatedHarvestDate: cycle.estimatedHarvestDate ?? null,
+    });
+  const [isEditingDates, setIsEditingDates] = React.useState(false);
+  const [datesDraft, setDatesDraft] = React.useState<CycleDatesPayload>({
+    fallowStartDate: cycle.fallowStartDate ?? null,
+    sowingDate: cycle.sowingDate ?? null,
+    estimatedHarvestDate: cycle.estimatedHarvestDate ?? null,
+  });
+  const [datesSaving, setDatesSaving] = React.useState(false);
+  const [datesError, setDatesError] = React.useState<string | null>(null);
+  const [datesSnackbarOpen, setDatesSnackbarOpen] = React.useState(false);
   const isDesktop = useMediaQuery(
     (theme: Theme) => theme.breakpoints.up("md"),
     { defaultMatches: true },
@@ -322,7 +370,7 @@ const CycleDetailPageClient = ({
     ? `${formatDate(computeHarvestTimeRange.start)} – ${formatDate(
         computeHarvestTimeRange.end,
       )}`
-    : formatDate(cycle.estimatedHarvestDate);
+    : formatDate(localCycleDates.estimatedHarvestDate);
 
   const harvestDurationLabel =
     computeHarvestTimeRange.start && computeHarvestTimeRange.days
@@ -339,13 +387,13 @@ const CycleDetailPageClient = ({
     {
       icon: <GrassIcon />,
       label: "Barbecho",
-      dateLabel: formatDate(cycle.fallowStartDate),
+      dateLabel: formatDate(localCycleDates.fallowStartDate),
       color: "primary",
     },
     {
       icon: <AgricultureIcon />,
       label: "Siembra",
-      dateLabel: formatDate(cycle.sowingDate),
+      dateLabel: formatDate(localCycleDates.sowingDate),
       color: "primary",
     },
   ];
@@ -366,6 +414,19 @@ const CycleDetailPageClient = ({
           color: "warning",
         },
   );
+
+  const dateOrderError = React.useMemo(() => {
+    const { fallowStartDate, sowingDate, estimatedHarvestDate } = datesDraft;
+    if (fallowStartDate && sowingDate && fallowStartDate > sowingDate) {
+      return "La fecha de barbecho debe ser anterior o igual a la fecha de siembra.";
+    }
+    if (sowingDate && estimatedHarvestDate && sowingDate > estimatedHarvestDate) {
+      return "La fecha de siembra debe ser anterior o igual a la fecha estimada de cosecha.";
+    }
+    return null;
+  }, [datesDraft]);
+
+  const canSaveDates = !datesSaving && !dateOrderError;
 
   const handleToggleStatusEdit = () => {
     setStatusError(null);
@@ -398,12 +459,51 @@ const CycleDetailPageClient = ({
     }
   };
 
+  const handleToggleDatesEdit = () => {
+    setDatesError(null);
+    setDatesDraft(localCycleDates);
+    setIsEditingDates((prev) => !prev);
+  };
+
+  const handleCancelDatesEdit = () => {
+    setDatesDraft(localCycleDates);
+    setDatesError(null);
+    setIsEditingDates(false);
+  };
+
+  const handleSaveDates = async () => {
+    setDatesSaving(true);
+    setDatesError(null);
+    try {
+      await updateCycleDates(cycle.id, datesDraft);
+      setLocalCycleDates(datesDraft);
+      setIsEditingDates(false);
+      setDatesSnackbarOpen(true);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Ocurrió un error al actualizar las fechas";
+      setDatesError(message);
+    } finally {
+      setDatesSaving(false);
+    }
+  };
+
   const handleSnackbarClose = (
     _event: React.SyntheticEvent | Event,
     reason?: SnackbarCloseReason,
   ) => {
     if (reason === "clickaway") return;
     setStatusSnackbarOpen(false);
+  };
+
+  const handleDatesSnackbarClose = (
+    _event: React.SyntheticEvent | Event,
+    reason?: SnackbarCloseReason,
+  ) => {
+    if (reason === "clickaway") return;
+    setDatesSnackbarOpen(false);
   };
 
   type StatCardProps = {
@@ -775,6 +875,19 @@ const CycleDetailPageClient = ({
               >
                 <EditIcon fontSize="small" />
               </IconButton>
+              <IconButton
+                size="medium"
+                onClick={handleToggleDatesEdit}
+                disabled={datesSaving}
+                sx={{
+                  bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
+                  "&:hover": {
+                    bgcolor: (theme) => alpha(theme.palette.primary.main, 0.15),
+                  },
+                }}
+              >
+                <EditCalendarIcon fontSize="small" />
+              </IconButton>
             </Stack>
           </Stack>
 
@@ -846,6 +959,113 @@ const CycleDetailPageClient = ({
               </Paper>
             </Box>
           </Collapse>
+
+          <Collapse in={isEditingDates}>
+            <Box
+              maxWidth="1400px"
+              mx="auto"
+              mt={3}
+              sx={{
+                display: "flex",
+                justifyContent: { xs: "stretch", md: "flex-end" },
+              }}
+            >
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 3,
+                  borderRadius: 3,
+                  border: (theme) => `1px solid ${theme.palette.divider}`,
+                  width: { xs: "100%", md: 640 },
+                }}
+              >
+                <Stack spacing={2}>
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gap: 2,
+                      gridTemplateColumns: {
+                        xs: "repeat(1, minmax(0, 1fr))",
+                        md: "repeat(3, minmax(0, 1fr))",
+                      },
+                    }}
+                  >
+                    <TextField
+                      type="date"
+                      label="Fecha inicio barbecho"
+                      size="small"
+                      fullWidth
+                      value={datesDraft.fallowStartDate ?? ""}
+                      onChange={(event) =>
+                        setDatesDraft((prev) => ({
+                          ...prev,
+                          fallowStartDate: event.target.value || null,
+                        }))
+                      }
+                      disabled={datesSaving}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                    <TextField
+                      type="date"
+                      label="Fecha de siembra"
+                      size="small"
+                      fullWidth
+                      value={datesDraft.sowingDate ?? ""}
+                      onChange={(event) =>
+                        setDatesDraft((prev) => ({
+                          ...prev,
+                          sowingDate: event.target.value || null,
+                        }))
+                      }
+                      disabled={datesSaving}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                    <TextField
+                      type="date"
+                      label="Fecha estimada de cosecha"
+                      size="small"
+                      fullWidth
+                      value={datesDraft.estimatedHarvestDate ?? ""}
+                      onChange={(event) =>
+                        setDatesDraft((prev) => ({
+                          ...prev,
+                          estimatedHarvestDate: event.target.value || null,
+                        }))
+                      }
+                      disabled={datesSaving}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  </Box>
+                  <Stack direction="row" spacing={1.5}>
+                    <Button
+                      variant="contained"
+                      onClick={handleSaveDates}
+                      disabled={!canSaveDates}
+                      sx={{ borderRadius: 2 }}
+                    >
+                      {datesSaving ? "Guardando..." : "Guardar"}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      onClick={handleCancelDatesEdit}
+                      disabled={datesSaving}
+                      sx={{ borderRadius: 2 }}
+                    >
+                      Cancelar
+                    </Button>
+                  </Stack>
+                  {dateOrderError && (
+                    <Alert severity="error">{dateOrderError}</Alert>
+                  )}
+                  {datesError && (
+                    <Alert severity="error" onClose={() => setDatesError(null)}>
+                      {datesError}
+                    </Alert>
+                  )}
+                </Stack>
+              </Paper>
+            </Box>
+          </Collapse>
         </Box>
 
         <Box maxWidth="1400px" mx="auto" px={{ xs: 2, md: 4 }} mt={4}>
@@ -887,13 +1107,13 @@ const CycleDetailPageClient = ({
                       <TimelinePhase
                         icon={<GrassIcon sx={{ fontSize: 32 }} />}
                         title="Barbecho"
-                        date={formatDate(cycle.fallowStartDate)}
+                        date={formatDate(localCycleDates.fallowStartDate)}
                         color="primary"
                       />
                       <TimelinePhase
                         icon={<IconSeedling />}
                         title="Siembra"
-                        date={formatDate(cycle.sowingDate)}
+                        date={formatDate(localCycleDates.sowingDate)}
                         color="primary"
                       />
                       <TimelinePhase
@@ -1902,6 +2122,22 @@ const CycleDetailPageClient = ({
           sx={{ width: "100%" }}
         >
           Estado del ciclo actualizado correctamente
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={datesSnackbarOpen}
+        autoHideDuration={4000}
+        onClose={handleDatesSnackbarClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={(event) => handleDatesSnackbarClose(event)}
+          severity="success"
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          Fechas del ciclo actualizadas correctamente
         </Alert>
       </Snackbar>
     </PageContainer>
