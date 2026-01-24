@@ -250,8 +250,17 @@ const CycleDetailPageClient = ({
     });
   };
 
+  const formatNumber = (
+    value: number,
+    options?: Intl.NumberFormatOptions,
+  ): string =>
+    (Number.isFinite(value) ? value : 0).toLocaleString("es-ES", {
+      useGrouping: true,
+      ...options,
+    });
+
   const formatKgs = (value: number): string =>
-    (value || 0).toLocaleString("es-ES", { maximumFractionDigits: 0 });
+    formatNumber(value, { maximumFractionDigits: 0 });
 
   const formatReadonlyKg = (value: number): string => `${formatKgs(value)} kg`;
 
@@ -287,6 +296,13 @@ const CycleDetailPageClient = ({
       "Cosechas asociadas": buildChipValues(stock.originHarvestsLabels),
       "Viajes de camión desde stock": buildChipValues(stock.truckTripLabels),
     };
+  };
+
+  const getProviderLabel = (trip: TruckTripDto): string => {
+    if (trip.provider) return trip.provider;
+    if (trip.destinationDetail) return trip.destinationDetail;
+    if (trip.destinationType) return trip.destinationType;
+    return "—";
   };
 
   const buildHarvestInitialValues = (harvest: HarvestDto): HarvestFormValues => {
@@ -608,6 +624,26 @@ const CycleDetailPageClient = ({
       const data = (await response.json()) as { truckTrips?: TruckTripDto[] };
       if (Array.isArray(data.truckTrips)) {
         setTruckTripsState(data.truckTrips);
+      }
+    } catch {
+      // ignore refresh errors
+    }
+  }, [cycle.id]);
+
+  const refreshCycle = React.useCallback(async () => {
+    try {
+      const response = await fetch(`/api/cycles/${cycle.id}`, {
+        cache: "no-store",
+      });
+      if (!response.ok) return;
+      const data = (await response.json()) as { cycle?: typeof cycle };
+      if (data?.cycle) {
+        setCycleState(data.cycle as any);
+        setLocalCycleDates({
+          fallowStartDate: data.cycle.fallowStartDate ?? null,
+          sowingDate: data.cycle.sowingDate ?? null,
+          estimatedHarvestDate: data.cycle.estimatedHarvestDate ?? null,
+        });
       }
     } catch {
       // ignore refresh errors
@@ -1277,7 +1313,7 @@ const CycleDetailPageClient = ({
           variant="h5"
           fontWeight={800}
           color="text.primary"
-          sx={{ fontSize: { xs: "1.1rem", md: "1.5rem" } }}
+          sx={{ fontSize: { xs: "1.1rem", md: "1.3rem" } }}
         >
           {title} ({count})
         </Typography>
@@ -1757,7 +1793,7 @@ const CycleDetailPageClient = ({
                 <StatCard
                   icon={<IconFreezeRowColumn />}
                   label="Superficie"
-                  value={cycle.areaHa.toLocaleString("es-ES")}
+                  value={formatNumber(cycle.areaHa, { maximumFractionDigits: 2 })}
                   unit="ha"
                   color="primary"
                   gradient
@@ -1773,7 +1809,7 @@ const CycleDetailPageClient = ({
                 <StatCard
                   icon={<CheckCircleIcon sx={{ fontSize: 28 }} />}
                   label="Cosechado"
-                  value={cycle.totalKgs.toLocaleString("es-ES")}
+                  value={formatNumber(cycle.totalKgs)}
                   unit="kg"
                   color="success"
                   gradient
@@ -1781,7 +1817,7 @@ const CycleDetailPageClient = ({
                 <StatCard
                   icon={<IconMoneybag />}
                   label="En Stock"
-                  value={cycle.stockKgs.toLocaleString("es-ES")}
+                  value={formatNumber(cycle.stockKgs)}
                   unit="kg"
                   color="warning"
                   gradient
@@ -1789,7 +1825,7 @@ const CycleDetailPageClient = ({
                 <StatCard
                   icon={<IconTruck />}
                   label="En camión"
-                  value={cycle.truckKgs}
+                  value={formatNumber(cycle.truckKgs)}
                   unit="kg"
                   color="secondary"
                   gradient
@@ -1880,7 +1916,7 @@ const CycleDetailPageClient = ({
                               </TableCell>
                               <TableCell align="right">
                                 <Typography variant="body1" fontWeight={600}>
-                                  {lot.areaHa.toLocaleString("es-ES")}
+                                  {formatNumber(lot.areaHa, { maximumFractionDigits: 2 })}
                                 </Typography>
                               </TableCell>
                             </TableRow>
@@ -1915,7 +1951,7 @@ const CycleDetailPageClient = ({
                                   {lot.code}
                                 </Typography>
                                 <Typography variant="h6" fontWeight={700}>
-                                  {lot.areaHa.toLocaleString("es-ES")} ha
+                                  {formatNumber(lot.areaHa, { maximumFractionDigits: 2 })} ha
                                 </Typography>
                               </Stack>
                             </CardContent>
@@ -2033,12 +2069,12 @@ const CycleDetailPageClient = ({
                                 </TableCell>
                                 <TableCell align="right">
                                   <Typography variant="body1" fontWeight={700}>
-                                    {h.harvestedKgs.toLocaleString("es-ES")}
+                                    {formatNumber(h.harvestedKgs)}
                                   </Typography>
                                 </TableCell>
                                 <TableCell align="right">
                                   <Typography variant="body1" fontWeight={600}>
-                                    {h.directTruckKgs.toLocaleString("es-ES")}
+                                    {formatNumber(h.directTruckKgs)}
                                   </Typography>
                                 </TableCell>
                               </TableRow>
@@ -2114,7 +2150,7 @@ const CycleDetailPageClient = ({
                                         fontWeight={800}
                                         color="success.dark"
                                       >
-                                        {h.harvestedKgs.toLocaleString("es-ES")}{" "}
+                                        {formatNumber(h.harvestedKgs)}{" "}
                                         kg
                                       </Typography>
                                     </Box>
@@ -2131,9 +2167,7 @@ const CycleDetailPageClient = ({
                                         mt={0.5}
                                         fontWeight={600}
                                       >
-                                        {h.directTruckKgs.toLocaleString(
-                                          "es-ES",
-                                        )}{" "}
+                                        {formatNumber(h.directTruckKgs)}{" "}
                                         kg
                                       </Typography>
                                     </Box>
@@ -2249,27 +2283,25 @@ const CycleDetailPageClient = ({
                                   options={STOCK_STATUS_OPTIONS}
                                 />
                               </TableCell>
-                              <TableCell align="right">
-                                <Typography variant="body1" fontWeight={600}>
-                                  {s.totalInKgs.toLocaleString("es-ES")}
-                                </Typography>
-                              </TableCell>
-                              <TableCell align="right">
-                                <Typography variant="body1" fontWeight={600}>
-                                  {s.totalOutFromHarvestKgs.toLocaleString(
-                                    "es-ES",
-                                  )}
-                                </Typography>
-                              </TableCell>
-                              <TableCell align="right">
-                                <Typography
-                                  variant="body1"
-                                  fontWeight={800}
-                                  color="warning.dark"
-                                >
-                                  {s.currentKgs.toLocaleString("es-ES")}
-                                </Typography>
-                              </TableCell>
+                                <TableCell align="right">
+                                  <Typography variant="body1" fontWeight={600}>
+                                    {formatNumber(s.totalInKgs)}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell align="right">
+                                  <Typography variant="body1" fontWeight={600}>
+                                    {formatNumber(s.totalOutFromHarvestKgs)}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell align="right">
+                                  <Typography
+                                    variant="body1"
+                                    fontWeight={800}
+                                    color="warning.dark"
+                                  >
+                                    {formatNumber(s.currentKgs)}
+                                  </Typography>
+                                </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -2334,7 +2366,7 @@ const CycleDetailPageClient = ({
                                       fontWeight={700}
                                       mt={0.3}
                                     >
-                                      {s.totalInKgs.toLocaleString("es-ES")} kg
+                                      {formatNumber(s.totalInKgs)} kg
                                     </Typography>
                                   </Box>
                                   <Box>
@@ -2350,9 +2382,7 @@ const CycleDetailPageClient = ({
                                       fontWeight={700}
                                       mt={0.3}
                                     >
-                                      {s.totalOutFromHarvestKgs.toLocaleString(
-                                        "es-ES",
-                                      )}{" "}
+                                      {formatNumber(s.totalOutFromHarvestKgs)}{" "}
                                       kg
                                     </Typography>
                                   </Box>
@@ -2372,7 +2402,7 @@ const CycleDetailPageClient = ({
                                   fontWeight={800}
                                   color="warning.dark"
                                 >
-                                  {s.currentKgs.toLocaleString("es-ES")} kg
+                                  {formatNumber(s.currentKgs)} kg
                                 </Typography>
                               </Stack>
                             </CardContent>
@@ -2439,6 +2469,7 @@ const CycleDetailPageClient = ({
                               "Camión",
                               "Origen",
                               "Destino",
+                              "Proveedor",
                               "Kgs cargados",
                             ].map((header) => (
                               <TableCell
@@ -2522,15 +2553,18 @@ const CycleDetailPageClient = ({
                                       "—"}
                                   </Typography>
                                 </TableCell>
+                                <TableCell>
+                                  <Typography variant="body1">
+                                    {t.provider || "—"}
+                                  </Typography>
+                                </TableCell>
                                 <TableCell align="right">
                                   <Typography
                                     variant="body1"
                                     fontWeight={800}
                                     color="secondary.dark"
                                   >
-                                    {t.totalKgsDestination.toLocaleString(
-                                      "es-ES",
-                                    )}
+                                    {formatNumber(t.totalKgsDestination)}
                                   </Typography>
                                 </TableCell>
                               </TableRow>
@@ -2587,14 +2621,27 @@ const CycleDetailPageClient = ({
                                       options={TRIP_STATUS_OPTIONS}
                                     />
                                   </Stack>
-                                  <Chip
-                                    variant="outlined"
-                                    size="small"
-                                    label={
-                                      t.truckPlate || "Camión sin identificar"
-                                    }
+                                  <Stack
+                                    direction="row"
+                                    spacing={1}
+                                    flexWrap="wrap"
                                     sx={{ alignSelf: "flex-start" }}
-                                  />
+                                  >
+                                    <Chip
+                                      variant="outlined"
+                                      size="small"
+                                      label={
+                                        t.truckPlate || "Camión sin identificar"
+                                      }
+                                    />
+                                    <Chip
+                                      variant="outlined"
+                                      size="small"
+                                      label={
+                                        t.provider || "Proveedor sin definir"
+                                      }
+                                    />
+                                  </Stack>
                                   <Divider />
                                   <Stack
                                     direction="row"
@@ -2643,9 +2690,7 @@ const CycleDetailPageClient = ({
                                     color="secondary.dark"
                                     lineHeight="0.5rem"
                                   >
-                                    {t.totalKgsDestination.toLocaleString(
-                                      "es-ES",
-                                    )}{" "}
+                                    {formatNumber(t.totalKgsDestination)}{" "}
                                     kg
                                   </Typography>
                                 </Stack>
@@ -2674,6 +2719,7 @@ const CycleDetailPageClient = ({
           onSuccess={async () => {
             setIsCreateStockOpen(false);
             await refreshStockUnits();
+            await refreshCycle();
           }}
         />
       )}
@@ -2685,7 +2731,11 @@ const CycleDetailPageClient = ({
           activeTrip={null}
           initialValues={createTripInitialValues}
           onClose={handleCloseCreateTrip}
-          onSuccess={() => setIsCreateTripOpen(false)}
+          onSuccess={async () => {
+            setIsCreateTripOpen(false);
+            await refreshTruckTrips();
+            await refreshCycle();
+          }}
         />
       )}
 
@@ -2706,6 +2756,7 @@ const CycleDetailPageClient = ({
           onSuccess={async () => {
             setIsCreateHarvestOpen(false);
             await refreshHarvests();
+            await refreshCycle();
           }}
         />
       )}
@@ -2728,6 +2779,7 @@ const CycleDetailPageClient = ({
           onSuccess={async () => {
             setIsEditHarvestOpen(false);
             await refreshHarvests();
+            await refreshCycle();
           }}
         />
       )}
@@ -2744,6 +2796,7 @@ const CycleDetailPageClient = ({
           onSuccess={async () => {
             setIsEditStockOpen(false);
             await refreshStockUnits();
+            await refreshCycle();
           }}
         />
       )}
@@ -2757,6 +2810,7 @@ const CycleDetailPageClient = ({
           onSuccess={async () => {
             setIsEditTripOpen(false);
             await refreshTruckTrips();
+            await refreshCycle();
           }}
         />
       )}

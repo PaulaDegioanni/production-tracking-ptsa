@@ -468,8 +468,14 @@ const HarvestDialog = ({
         : [];
     const truckOptions = mergeOptions(baseTruckOptions, fallbackTruckOptions);
 
+    const showDependenciesError =
+      Boolean(dependenciesError) &&
+      !dependencies.lots.length &&
+      !dependencies.cycles.length &&
+      !dependencies.stocks.length &&
+      !dependencies.truckTrips.length;
     const dependentHelperText = selectedFieldId
-      ? (dependenciesError ?? undefined)
+      ? (showDependenciesError ? dependenciesError ?? undefined : undefined)
       : "Seleccioná un campo primero";
     const dependentDisabled = !selectedFieldId || dependenciesLoading;
 
