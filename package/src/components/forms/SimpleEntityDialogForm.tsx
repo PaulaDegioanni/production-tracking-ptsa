@@ -318,12 +318,20 @@ const SimpleEntityDialogForm = ({
         }
       });
 
+      // Si aún no hay opciones disponibles, no limpies el valor.
+      // Esto es clave para selects dependientes que cargan options async.
+      if (allowedValues.size === 0) {
+        return;
+      }
+
       const normalizedSignature = Array.from(allowedValues).sort().join("|");
       const previousSignature = signatureMap.get(field.key) ?? null;
-      const currentSignature = field.loading ? null : normalizedSignature;
+
+      // Si está loading o disabled, NO validamos ni limpiamos valores todavía
+      const currentSignature = field.loading || field.disabled ? null : normalizedSignature;
       signatureMap.set(field.key, currentSignature);
 
-      if (field.loading || currentSignature === previousSignature) {
+      if (field.loading || field.disabled || currentSignature === previousSignature) {
         return;
       }
 

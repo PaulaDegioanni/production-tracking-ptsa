@@ -3,12 +3,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   getStockFieldDependencies,
   getStockFieldOptions,
+  getStockSelectOptions,
 } from '@/lib/baserow/stockFormOptions';
 
 export async function GET(request: NextRequest) {
   try {
+    const selectOnly = request.nextUrl.searchParams.get('select');
     const campoId = request.nextUrl.searchParams.get('campoId');
     const campoName = request.nextUrl.searchParams.get('campoName') ?? undefined;
+
+    if (selectOnly === 'true') {
+      const { unitTypes, statuses } = await getStockSelectOptions();
+      return NextResponse.json({
+        unitTypeOptions: unitTypes,
+        statusOptions: statuses,
+      });
+    }
 
     if (!campoId) {
       const fields = await getStockFieldOptions();

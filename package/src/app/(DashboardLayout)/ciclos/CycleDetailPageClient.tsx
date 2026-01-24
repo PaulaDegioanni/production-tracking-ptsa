@@ -16,6 +16,10 @@ import {
   Card,
   CardContent,
   Divider,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   IconButton,
   TextField,
   MenuItem,
@@ -41,6 +45,7 @@ import AgricultureIcon from "@mui/icons-material/Agriculture";
 import EventAvailableIcon from "@mui/icons-material/EventAvailable";
 import DateRangeIcon from "@mui/icons-material/DateRange";
 import EditIcon from "@mui/icons-material/Edit";
+import EditCalendarIcon from "@mui/icons-material/EditCalendar";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
@@ -56,14 +61,38 @@ import StockDialog, {
 import TruckTripDialog, {
   type TruckTripFormValues,
 } from "@/app/(DashboardLayout)/components/truckTrips/TruckTripDialog";
+import HarvestDialog, {
+  type HarvestFormValues,
+} from "@/app/(DashboardLayout)/components/harvests/HarvestDialog";
 
 import type { CycleDetailDto } from "@/lib/baserow/cycleDetail";
 import type { CycleStatus } from "@/lib/baserow/cycles";
+import type { HarvestDto } from "@/lib/baserow/harvests";
+import type { LotDto } from "@/lib/baserow/lots";
+import type { StockDto } from "@/lib/baserow/stocks";
+import type { TruckTripDto } from "@/lib/baserow/truckTrips";
 import type { Theme } from "@mui/material/styles";
+import { splitIsoToDateAndTimeLocal } from "@/lib/forms/datetime";
 
 type CycleDetailPageClientProps = {
   initialDetail: CycleDetailDto;
 };
+
+type CycleDatesPayload = {
+  fallowStartDate: string | null;
+  sowingDate: string | null;
+  estimatedHarvestDate: string | null;
+};
+
+const parseDateString = (value?: string | null) => {
+  if (!value) return null;
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
+};
+
+const normalizeNullableDate = (value: string | null) =>
+  value === null ? undefined : value;
 
 const updateCycleStatus = async (
   cycleId: number,
@@ -91,6 +120,66 @@ const updateCycleStatus = async (
   }
 };
 
+const updateCycleDates = async (
+  cycleId: number,
+  payload: Partial<CycleDatesPayload>,
+): Promise<void> => {
+  const response = await fetch(`/api/cycles/${cycleId}/dates`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    let message = "No se pudieron actualizar las fechas del ciclo";
+    try {
+      const data = await response.json();
+      if (typeof data?.error === "string") {
+        message = data.error;
+      }
+    } catch {
+      // ignore parse errors
+    }
+    throw new Error(message);
+  }
+};
+
+const updateCycleLots = async (
+  cycleId: number,
+  lotIds: number[],
+): Promise<{
+  cycle: { id: number; lotIds: number[]; fieldId: number | null };
+  lots: LotDto[];
+}> => {
+  const response = await fetch(`/api/cycles/${cycleId}/lots`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ lotIds }),
+  });
+
+  if (!response.ok) {
+    let message = "No se pudieron actualizar los lotes del ciclo";
+    try {
+      const data = await response.json();
+      if (typeof data?.error === "string") {
+        message = data.error;
+      }
+    } catch {
+      // ignore parse errors
+    }
+    throw new Error(message);
+  }
+
+  return (await response.json()) as {
+    cycle: { id: number; lotIds: number[]; fieldId: number | null };
+    lots: LotDto[];
+  };
+};
+
 const getStockStatusLabel = (status: unknown): string => {
   if (!status) return "—";
   if (typeof status === "string") return status;
@@ -110,7 +199,22 @@ const getStockStatusLabel = (status: unknown): string => {
 const CycleDetailPageClient = ({
   initialDetail,
 }: CycleDetailPageClientProps) => {
-  const { cycle, lots, harvests, stockUnits, truckTrips } = initialDetail;
+  const { stockUnits: initialStockUnits, truckTrips: initialTruckTrips } =
+    initialDetail;
+  const [cycleState, setCycleState] = React.useState(initialDetail.cycle);
+  const [lotsState, setLotsState] = React.useState(initialDetail.lots);
+  const [harvestsState, setHarvestsState] = React.useState(
+    initialDetail.harvests,
+  );
+  const [stockUnitsState, setStockUnitsState] =
+    React.useState(initialStockUnits);
+  const [truckTripsState, setTruckTripsState] =
+    React.useState(initialTruckTrips);
+  const cycle = cycleState;
+  const lots = lotsState;
+  const harvests = harvestsState;
+  const stockUnits = stockUnitsState;
+  const truckTrips = truckTripsState;
   const resolvedFieldId = React.useMemo(() => {
     const normalizeFieldId = (value: number | null | undefined) =>
       typeof value === "number" && !Number.isNaN(value) ? value : null;
@@ -144,6 +248,84 @@ const CycleDetailPageClient = ({
       month: "short",
       year: "numeric",
     });
+  };
+
+  const formatNumber = (
+    value: number,
+    options?: Intl.NumberFormatOptions,
+  ): string =>
+    (Number.isFinite(value) ? value : 0).toLocaleString("es-ES", {
+      useGrouping: true,
+      ...options,
+    });
+
+  const formatKgs = (value: number): string =>
+    formatNumber(value, { maximumFractionDigits: 0 });
+
+  const formatReadonlyKg = (value: number): string => `${formatKgs(value)} kg`;
+
+  const buildChipValues = (items?: string[]): string[] => {
+    if (!Array.isArray(items)) return [];
+    return items
+      .map((label) => (typeof label === "string" ? label.trim() : ""))
+      .filter((label) => Boolean(label));
+  };
+
+  const buildStockInitialValues = (stock: StockDto): StockFormValues => {
+    const firstCycleId = stock.cycleIds?.[0] ?? cycle.id ?? "";
+    const createdDate = stock.createdAt
+      ? stock.createdAt.slice(0, 10)
+      : getTodayDateString();
+
+    const campoId = stock.fieldId ?? resolvedFieldId ?? ""; 
+
+    return {
+      "Tipo unidad": stock.unitTypeId ?? "",
+      Campo: campoId,
+      "Ciclo de siembra": firstCycleId,
+      Cultivo: stock.crop ?? "",
+      "Fecha de creación": createdDate,
+      Estado: stock.statusId ?? "",
+      Notas: stock.notes ?? "",
+      ID: stock.name || `#${stock.id}`,
+      "Kgs actuales": formatReadonlyKg(stock.currentKgs ?? 0),
+      "Total kgs ingresados": formatReadonlyKg(stock.totalInKgs ?? 0),
+      "Total kgs egresados": formatReadonlyKg(
+        stock.totalOutFromHarvestKgs ?? 0,
+      ),
+      "Cosechas asociadas": buildChipValues(stock.originHarvestsLabels),
+      "Viajes de camión desde stock": buildChipValues(stock.truckTripLabels),
+    };
+  };
+
+  const getProviderLabel = (trip: TruckTripDto): string => {
+    if (trip.provider) return trip.provider;
+    if (trip.destinationDetail) return trip.destinationDetail;
+    if (trip.destinationType) return trip.destinationType;
+    return "—";
+  };
+
+  const buildHarvestInitialValues = (harvest: HarvestDto): HarvestFormValues => {
+    const { date, time } = splitIsoToDateAndTimeLocal(harvest.date);
+    const { date: todayDate, time: todayTime } = splitIsoToDateAndTimeLocal(
+      new Date().toISOString(),
+    );
+
+    return {
+      Fecha_fecha: date || todayDate,
+      Fecha_hora: time || todayTime,
+      "KG Cosechados":
+        harvest.harvestedKgs != null ? String(harvest.harvestedKgs) : "",
+      Campo: (harvest.fieldId ?? "") as "" | number,
+      Lotes: (harvest.lotsIds ?? []) as Array<string | number>,
+      "Ciclo de siembra": (harvest.cycleId ?? "") as "" | number,
+      Cultivo: harvest.crop ?? "",
+      Stock: (harvest.stockIds ?? []) as Array<string | number>,
+      "Viajes camión directos": (harvest.directTruckTripIds ?? []) as Array<
+        string | number
+      >,
+      Notas: harvest.notes ?? "",
+    };
   };
 
   const CYCLE_STATUS_OPTIONS: StatusChipOption[] = [
@@ -217,6 +399,47 @@ const CycleDetailPageClient = ({
   const [statusSaving, setStatusSaving] = React.useState(false);
   const [statusError, setStatusError] = React.useState<string | null>(null);
   const [statusSnackbarOpen, setStatusSnackbarOpen] = React.useState(false);
+  const [localCycleDates, setLocalCycleDates] =
+    React.useState<CycleDatesPayload>({
+      fallowStartDate: cycle.fallowStartDate ?? null,
+      sowingDate: cycle.sowingDate ?? null,
+      estimatedHarvestDate: cycle.estimatedHarvestDate ?? null,
+    });
+  const [isEditingDates, setIsEditingDates] = React.useState(false);
+  const [datesDraft, setDatesDraft] = React.useState<CycleDatesPayload>({
+    fallowStartDate: cycle.fallowStartDate ?? null,
+    sowingDate: cycle.sowingDate ?? null,
+    estimatedHarvestDate: cycle.estimatedHarvestDate ?? null,
+  });
+  const [datesSaving, setDatesSaving] = React.useState(false);
+  const [datesError, setDatesError] = React.useState<string | null>(null);
+  const [datesSnackbarOpen, setDatesSnackbarOpen] = React.useState(false);
+  const hasHarvests = harvests.length > 0;
+  const [isEditLotsOpen, setIsEditLotsOpen] = React.useState(false);
+  const [lotsOptions, setLotsOptions] = React.useState<LotDto[]>([]);
+  const [lotsOptionsLoading, setLotsOptionsLoading] = React.useState(false);
+  const [selectedLotIdsDraft, setSelectedLotIdsDraft] = React.useState<number[]>(
+    cycle.lotIds,
+  );
+  const [lotsSaving, setLotsSaving] = React.useState(false);
+  const [lotsError, setLotsError] = React.useState<string | null>(null);
+  const [lotsSnackbarOpen, setLotsSnackbarOpen] = React.useState(false);
+  const lotsSelectionError =
+    selectedLotIdsDraft.length === 0
+      ? "Debés seleccionar al menos un lote"
+      : null;
+  const [stockUnitTypeOptions, setStockUnitTypeOptions] = React.useState<
+    Array<{ id: number; label: string }>
+  >([]);
+  const [stockStatusOptions, setStockStatusOptions] = React.useState<
+    Array<{ id: number; label: string }>
+  >([]);
+  const [stockOptionsLoading, setStockOptionsLoading] = React.useState(false);
+  const [stockOptionsError, setStockOptionsError] = React.useState<
+    string | null
+  >(null);
+  const [stockOptionsSnackbarOpen, setStockOptionsSnackbarOpen] =
+    React.useState(false);
   const isDesktop = useMediaQuery(
     (theme: Theme) => theme.breakpoints.up("md"),
     { defaultMatches: true },
@@ -228,11 +451,27 @@ const CycleDetailPageClient = ({
 
   const [isCreateStockOpen, setIsCreateStockOpen] = React.useState(false);
   const [isCreateTripOpen, setIsCreateTripOpen] = React.useState(false);
+  const [isCreateHarvestOpen, setIsCreateHarvestOpen] = React.useState(false);
+  const [isEditStockOpen, setIsEditStockOpen] = React.useState(false);
+  const [isEditTripOpen, setIsEditTripOpen] = React.useState(false);
+  const [isEditHarvestOpen, setIsEditHarvestOpen] = React.useState(false);
   const [createStockInitialValues, setCreateStockInitialValues] =
     React.useState<StockFormValues | null>(null);
+  const [editStockInitialValues, setEditStockInitialValues] =
+    React.useState<StockFormValues | null>(null);
+  const [activeStock, setActiveStock] = React.useState<StockDto | null>(null);
 
   const [createTripInitialValues, setCreateTripInitialValues] =
     React.useState<TruckTripFormValues | null>(null);
+  const [activeTrip, setActiveTrip] = React.useState<TruckTripDto | null>(null);
+
+  const [createHarvestInitialValues, setCreateHarvestInitialValues] =
+    React.useState<HarvestFormValues | null>(null);
+  const [editHarvestInitialValues, setEditHarvestInitialValues] =
+    React.useState<HarvestFormValues | null>(null);
+  const [activeHarvest, setActiveHarvest] = React.useState<HarvestDto | null>(
+    null,
+  );
 
   const pad2 = (n: number) => String(n).padStart(2, "0");
 
@@ -248,13 +487,23 @@ const CycleDetailPageClient = ({
 
   const buildCreateStockInitialValues =
     React.useCallback((): StockFormValues => {
+      const normalizeLabel = (value: string) =>
+        value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+      const unitTypeDefault =
+        stockUnitTypeOptions.find(
+          (option) => normalizeLabel(option.label) === "bolson",
+        ) ?? stockUnitTypeOptions[0];
+      const statusDefault =
+        stockStatusOptions.find(
+          (option) => normalizeLabel(option.label) === "nuevo",
+        ) ?? stockStatusOptions[0];
       return {
-        "Tipo unidad": "",
+        "Tipo unidad": unitTypeDefault?.id ?? "",
         Campo: resolvedFieldId ?? "",
         "Ciclo de siembra": cycle.id ?? "", // row id del ciclo (Baserow)
         Cultivo: cycle.crop ?? "",
         "Fecha de creación": getTodayDateString(),
-        Estado: "",
+        Estado: statusDefault?.id ?? "",
         Notas: "",
         ID: "",
         "Kgs actuales": "",
@@ -263,7 +512,12 @@ const CycleDetailPageClient = ({
         "Cosechas asociadas": [],
         "Viajes de camión desde stock": [],
       };
-    }, [cycle, resolvedFieldId]);
+    }, [
+      cycle,
+      resolvedFieldId,
+      stockStatusOptions,
+      stockUnitTypeOptions,
+    ]);
 
   const buildCreateTripInitialValues =
     React.useCallback((): TruckTripFormValues => {
@@ -286,7 +540,25 @@ const CycleDetailPageClient = ({
       };
     }, [cycle, resolvedFieldId]);
 
+  const buildCreateHarvestInitialValues =
+    React.useCallback((): HarvestFormValues => {
+      return {
+        Fecha_fecha: getTodayDateString(),
+        Fecha_hora: getCurrentTimeString(),
+        "KG Cosechados": "",
+        Campo: resolvedFieldId ?? "",
+        Lotes: [],
+        "Ciclo de siembra": cycle.id ?? "",
+        Cultivo: cycle.crop ?? "",
+        Stock: [],
+        "Viajes camión directos": [],
+        Notas: "",
+      };
+    }, [cycle, lots, resolvedFieldId]);
+
   const handleOpenCreateStock = React.useCallback(() => {
+    setActiveStock(null);
+    setIsEditStockOpen(false);
     setCreateStockInitialValues(buildCreateStockInitialValues());
     setIsCreateStockOpen(true);
   }, [buildCreateStockInitialValues]);
@@ -302,6 +574,163 @@ const CycleDetailPageClient = ({
 
   const handleCloseCreateTrip = React.useCallback(() => {
     setIsCreateTripOpen(false);
+  }, []);
+
+  const handleOpenCreateHarvest = React.useCallback(() => {
+    setCreateHarvestInitialValues(buildCreateHarvestInitialValues());
+    setIsCreateHarvestOpen(true);
+  }, [buildCreateHarvestInitialValues]);
+
+  const handleCloseCreateHarvest = React.useCallback(() => {
+    setIsCreateHarvestOpen(false);
+  }, []);
+
+  const refreshHarvests = React.useCallback(async () => {
+    try {
+      const response = await fetch(`/api/cycles/${cycle.id}/harvests`, {
+        cache: "no-store",
+      });
+      if (!response.ok) return;
+      const data = (await response.json()) as { harvests?: typeof harvests };
+      if (Array.isArray(data.harvests)) {
+        setHarvestsState(data.harvests);
+      }
+    } catch {
+      // ignore refresh errors
+    }
+  }, [cycle.id]);
+
+  const refreshStockUnits = React.useCallback(async () => {
+    try {
+      const response = await fetch(`/api/cycles/${cycle.id}/stocks`, {
+        cache: "no-store",
+      });
+      if (!response.ok) return;
+      const data = (await response.json()) as { stockUnits?: StockDto[] };
+      if (Array.isArray(data.stockUnits)) {
+        setStockUnitsState(data.stockUnits);
+      }
+    } catch {
+      // ignore refresh errors
+    }
+  }, [cycle.id]);
+
+  const refreshTruckTrips = React.useCallback(async () => {
+    try {
+      const response = await fetch(`/api/cycles/${cycle.id}/truck-trips`, {
+        cache: "no-store",
+      });
+      if (!response.ok) return;
+      const data = (await response.json()) as { truckTrips?: TruckTripDto[] };
+      if (Array.isArray(data.truckTrips)) {
+        setTruckTripsState(data.truckTrips);
+      }
+    } catch {
+      // ignore refresh errors
+    }
+  }, [cycle.id]);
+
+  const refreshCycle = React.useCallback(async () => {
+    try {
+      const response = await fetch(`/api/cycles/${cycle.id}`, {
+        cache: "no-store",
+      });
+      if (!response.ok) return;
+      const data = (await response.json()) as { cycle?: typeof cycle };
+      if (data?.cycle) {
+        setCycleState(data.cycle as any);
+        setLocalCycleDates({
+          fallowStartDate: data.cycle.fallowStartDate ?? null,
+          sowingDate: data.cycle.sowingDate ?? null,
+          estimatedHarvestDate: data.cycle.estimatedHarvestDate ?? null,
+        });
+      }
+    } catch {
+      // ignore refresh errors
+    }
+  }, [cycle.id]);
+
+  const handleOpenEditHarvest = React.useCallback(
+    (harvest: HarvestDto) => {
+      setActiveHarvest(harvest);
+      setEditHarvestInitialValues(buildHarvestInitialValues(harvest));
+      setIsEditHarvestOpen(true);
+    },
+    [buildHarvestInitialValues],
+  );
+
+  const handleCloseEditHarvest = React.useCallback(() => {
+    setIsEditHarvestOpen(false);
+    setActiveHarvest(null);
+  }, []);
+
+  const handleOpenEditStock = React.useCallback(
+    (stock: StockDto) => {
+      setActiveStock(stock);
+      setEditStockInitialValues(buildStockInitialValues(stock));
+      setIsEditStockOpen(true);
+    },
+    [buildStockInitialValues],
+  );
+
+  const handleCloseEditStock = React.useCallback(() => {
+    setIsEditStockOpen(false);
+    setActiveStock(null);
+  }, []);
+
+  const handleOpenEditTrip = React.useCallback((trip: TruckTripDto) => {
+    setActiveTrip(trip);
+    setIsEditTripOpen(true);
+  }, []);
+
+  const handleCloseEditTrip = React.useCallback(() => {
+    setIsEditTripOpen(false);
+    setActiveTrip(null);
+  }, []);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    const loadStockSelectOptions = async () => {
+      try {
+        setStockOptionsLoading(true);
+        setStockOptionsError(null);
+        const response = await fetch("/api/stocks/options?select=true", {
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          const errorBody = await response.text();
+          throw new Error(
+            errorBody || "No se pudieron cargar las opciones de stock",
+          );
+        }
+        const data = (await response.json()) as {
+          unitTypeOptions?: Array<{ id: number; label: string }>;
+          statusOptions?: Array<{ id: number; label: string }>;
+        };
+        if (!isMounted) return;
+        setStockUnitTypeOptions(
+          Array.isArray(data.unitTypeOptions) ? data.unitTypeOptions : [],
+        );
+        setStockStatusOptions(
+          Array.isArray(data.statusOptions) ? data.statusOptions : [],
+        );
+      } catch (error) {
+        if (!isMounted) return;
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Error al cargar opciones de stock";
+        setStockOptionsError(message);
+        setStockOptionsSnackbarOpen(true);
+      } finally {
+        if (isMounted) setStockOptionsLoading(false);
+      }
+    };
+
+    loadStockSelectOptions();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   React.useEffect(() => {
@@ -322,12 +751,39 @@ const CycleDetailPageClient = ({
     ? `${formatDate(computeHarvestTimeRange.start)} – ${formatDate(
         computeHarvestTimeRange.end,
       )}`
-    : formatDate(cycle.estimatedHarvestDate);
+    : formatDate(localCycleDates.estimatedHarvestDate);
 
   const harvestDurationLabel =
     computeHarvestTimeRange.start && computeHarvestTimeRange.days
       ? `${computeHarvestTimeRange.days} días`
       : undefined;
+
+  const computedCropDurationDays = React.useMemo(() => {
+    const sowingDate = parseDateString(localCycleDates.sowingDate);
+    const harvestDate = parseDateString(
+      computeHarvestTimeRange.start ?? localCycleDates.estimatedHarvestDate,
+    );
+
+    if (!sowingDate || !harvestDate) return null;
+    const diffMs = harvestDate.getTime() - sowingDate.getTime();
+    if (!Number.isFinite(diffMs)) return null;
+    const days = Math.round(diffMs / (1000 * 60 * 60 * 24)) + 1;
+    return days > 0 ? days : null;
+  }, [
+    computeHarvestTimeRange.start,
+    localCycleDates.estimatedHarvestDate,
+    localCycleDates.sowingDate,
+  ]);
+
+  const cropDurationLabel: string | undefined = (() => {
+    if (computedCropDurationDays !== null) {
+      return `${computedCropDurationDays} días`;
+    }
+    if (typeof cycle.cropDurationDays === "number") {
+      return `${cycle.cropDurationDays} días`;
+    }
+    return undefined;
+  })();
 
   const mobileTimelineItems: Array<{
     icon: React.ReactNode;
@@ -335,18 +791,20 @@ const CycleDetailPageClient = ({
     dateLabel: string;
     color: PaletteKey;
     durationLabel?: string;
+    cropDurationLabel?: string;
   }> = [
     {
       icon: <GrassIcon />,
       label: "Barbecho",
-      dateLabel: formatDate(cycle.fallowStartDate),
+      dateLabel: formatDate(localCycleDates.fallowStartDate),
       color: "primary",
     },
     {
       icon: <AgricultureIcon />,
       label: "Siembra",
-      dateLabel: formatDate(cycle.sowingDate),
+      dateLabel: formatDate(localCycleDates.sowingDate),
       color: "primary",
+      cropDurationLabel,
     },
   ];
 
@@ -367,6 +825,25 @@ const CycleDetailPageClient = ({
         },
   );
 
+  const dateOrderError = React.useMemo(() => {
+    const fallowStartDate =
+      datesDraft.fallowStartDate ?? localCycleDates.fallowStartDate;
+    const sowingDate = datesDraft.sowingDate ?? localCycleDates.sowingDate;
+    const estimatedHarvestDate = hasHarvests
+      ? null
+      : datesDraft.estimatedHarvestDate ?? localCycleDates.estimatedHarvestDate;
+
+    if (fallowStartDate && sowingDate && fallowStartDate > sowingDate) {
+      return "La fecha de barbecho debe ser anterior o igual a la fecha de siembra.";
+    }
+    if (sowingDate && estimatedHarvestDate && sowingDate > estimatedHarvestDate) {
+      return "La fecha de siembra debe ser anterior o igual a la fecha estimada de cosecha.";
+    }
+    return null;
+  }, [datesDraft, hasHarvests, localCycleDates]);
+
+  const canSaveDates = !datesSaving && !dateOrderError;
+
   const handleToggleStatusEdit = () => {
     setStatusError(null);
     setStatusDraft(status);
@@ -385,6 +862,7 @@ const CycleDetailPageClient = ({
     try {
       await updateCycleStatus(cycle.id, statusDraft);
       setStatus(statusDraft);
+      setCycleState((prev) => ({ ...prev, status: statusDraft }));
       setIsEditingStatus(false);
       setStatusSnackbarOpen(true);
     } catch (error) {
@@ -398,12 +876,167 @@ const CycleDetailPageClient = ({
     }
   };
 
+  const handleToggleDatesEdit = () => {
+    setDatesError(null);
+    setDatesDraft(localCycleDates);
+    setIsEditingDates((prev) => !prev);
+  };
+
+  const handleCancelDatesEdit = () => {
+    setDatesDraft(localCycleDates);
+    setDatesError(null);
+    setIsEditingDates(false);
+  };
+
+  const handleSaveDates = async () => {
+    setDatesSaving(true);
+    setDatesError(null);
+    try {
+      const payload: Partial<CycleDatesPayload> = {
+        fallowStartDate: datesDraft.fallowStartDate,
+        sowingDate: datesDraft.sowingDate,
+      };
+      if (!hasHarvests) {
+        payload.estimatedHarvestDate = datesDraft.estimatedHarvestDate;
+      }
+
+      await updateCycleDates(cycle.id, payload);
+      setLocalCycleDates((prev) => ({
+        fallowStartDate: datesDraft.fallowStartDate,
+        sowingDate: datesDraft.sowingDate,
+        estimatedHarvestDate: hasHarvests
+          ? prev.estimatedHarvestDate
+          : datesDraft.estimatedHarvestDate,
+      }));
+      setCycleState((prev) => ({
+        ...prev,
+        fallowStartDate: normalizeNullableDate(datesDraft.fallowStartDate),
+        sowingDate: normalizeNullableDate(datesDraft.sowingDate),
+        estimatedHarvestDate: hasHarvests
+          ? prev.estimatedHarvestDate
+          : normalizeNullableDate(datesDraft.estimatedHarvestDate),
+      }));
+      setIsEditingDates(false);
+      setDatesSnackbarOpen(true);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Ocurrió un error al actualizar las fechas";
+      setDatesError(message);
+    } finally {
+      setDatesSaving(false);
+    }
+  };
+
   const handleSnackbarClose = (
     _event: React.SyntheticEvent | Event,
     reason?: SnackbarCloseReason,
   ) => {
     if (reason === "clickaway") return;
     setStatusSnackbarOpen(false);
+  };
+
+  const handleDatesSnackbarClose = (
+    _event: React.SyntheticEvent | Event,
+    reason?: SnackbarCloseReason,
+  ) => {
+    if (reason === "clickaway") return;
+    setDatesSnackbarOpen(false);
+  };
+
+  const handleOpenEditLots = () => {
+    setLotsError(null);
+    setSelectedLotIdsDraft(cycle.lotIds);
+    setIsEditLotsOpen(true);
+  };
+
+  const handleCloseEditLots = () => {
+    if (lotsSaving) return;
+    setIsEditLotsOpen(false);
+  };
+
+  const loadLotsOptions = React.useCallback(
+    async (fieldId: number | null) => {
+      if (!fieldId) {
+        setLotsOptions([]);
+        return;
+      }
+      try {
+        setLotsOptionsLoading(true);
+        setLotsError(null);
+        const response = await fetch(`/api/fields/${fieldId}/lots`, {
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          const errorBody = await response.text();
+          throw new Error(errorBody || "No se pudieron cargar los lotes");
+        }
+        const data = (await response.json()) as { lots?: LotDto[] };
+        const lots = Array.isArray(data.lots) ? data.lots : [];
+        setLotsOptions(
+          lots.sort((a, b) => a.code.localeCompare(b.code)),
+        );
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Error inesperado al cargar lotes";
+        setLotsError(message);
+      } finally {
+        setLotsOptionsLoading(false);
+      }
+    },
+    [],
+  );
+
+  React.useEffect(() => {
+    if (!isEditLotsOpen) return;
+    loadLotsOptions(resolvedFieldId);
+  }, [isEditLotsOpen, loadLotsOptions, resolvedFieldId]);
+
+  const handleSaveLots = async () => {
+    if (!selectedLotIdsDraft.length) {
+      setLotsError("Debés seleccionar al menos un lote");
+      return;
+    }
+    setLotsSaving(true);
+    setLotsError(null);
+    try {
+      const result = await updateCycleLots(cycle.id, selectedLotIdsDraft);
+      setCycleState((prev) => ({
+        ...prev,
+        lotIds: result.cycle.lotIds,
+        fieldId: result.cycle.fieldId ?? prev.fieldId,
+      }));
+      setLotsState(result.lots);
+      setIsEditLotsOpen(false);
+      setLotsSnackbarOpen(true);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Ocurrió un error al actualizar los lotes";
+      setLotsError(message);
+    } finally {
+      setLotsSaving(false);
+    }
+  };
+
+  const handleLotsSnackbarClose = (
+    _event: React.SyntheticEvent | Event,
+    reason?: SnackbarCloseReason,
+  ) => {
+    if (reason === "clickaway") return;
+    setLotsSnackbarOpen(false);
+  };
+
+  const handleStockOptionsSnackbarClose = (
+    _event: React.SyntheticEvent | Event,
+    reason?: SnackbarCloseReason,
+  ) => {
+    if (reason === "clickaway") return;
+    setStockOptionsSnackbarOpen(false);
   };
 
   type StatCardProps = {
@@ -520,6 +1153,7 @@ const CycleDetailPageClient = ({
     color: PaletteKey;
     isLast?: boolean;
     durationLabel?: string;
+    cropDurationLabel?: string;
   };
 
   const TimelinePhase = ({
@@ -529,6 +1163,7 @@ const CycleDetailPageClient = ({
     color,
     isLast = false,
     durationLabel,
+    cropDurationLabel,
   }: TimelinePhaseProps) => (
     <Box sx={{ position: "relative", flex: 1 }}>
       <Stack alignItems="center" spacing={1.5}>
@@ -583,7 +1218,18 @@ const CycleDetailPageClient = ({
           </Typography>
           {durationLabel && (
             <Chip
-              label={durationLabel}
+              label={`Cosecha: ${durationLabel}`}
+              sx={(theme) => ({
+                mt: "1rem",
+                fontWeight: 600,
+                borderRadius: "8px",
+                paddingX: "80px",
+              })}
+            />
+          )}
+          {cropDurationLabel && (
+            <Chip
+              label={`Duración cultivo: ${cropDurationLabel}`}
               sx={(theme) => ({
                 mt: "1rem",
                 fontWeight: 600,
@@ -667,7 +1313,7 @@ const CycleDetailPageClient = ({
           variant="h5"
           fontWeight={800}
           color="text.primary"
-          sx={{ fontSize: { xs: "1.1rem", md: "1.5rem" } }}
+          sx={{ fontSize: { xs: "1.1rem", md: "1.3rem" } }}
         >
           {title} ({count})
         </Typography>
@@ -709,10 +1355,10 @@ const CycleDetailPageClient = ({
         {/* Hero Header */}
         <Box
           sx={(theme) => ({
-            background: `linear-gradient(135deg, ${alpha(
+            background: `${alpha(
               theme.palette.primary.main,
               0.05,
-            )} 0%, ${alpha(theme.palette.primary.light, 0.02)} 100%)`,
+            )}` ,
             borderBottom: `1px solid ${theme.palette.divider}`,
             pt: { xs: 2, md: 6 },
             pb: { xs: 3, md: 6 },
@@ -729,25 +1375,16 @@ const CycleDetailPageClient = ({
           >
             <Box>
               <Typography
-                variant="h3"
+                variant="h2"
+                color="primary.dark"
                 sx={{
                   fontWeight: 900,
-                  background: (theme) =>
-                    `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
                   mb: 1,
                 }}
               >
                 {cycle.cycleId}
               </Typography>
-              <Stack
-                direction="row"
-                spacing={1.5}
-                alignItems="center"
-                flexWrap="wrap"
-                mt={3}
-              >
+              
                 <Chip
                   label={`Periodo ${cycle.period}`}
                   sx={{
@@ -755,16 +1392,9 @@ const CycleDetailPageClient = ({
                     color: "primary.dark",
                     fontWeight: 700,
                     borderRadius: "8px",
+                    mt: 2,
                   }}
                 />
-                <Typography
-                  variant="subtitle1"
-                  color="text.secondary"
-                  fontWeight={600}
-                >
-                  {cycle.field}
-                </Typography>
-              </Stack>
             </Box>
             <Stack direction="row" spacing={1.5} alignItems="center">
               <StatusChip
@@ -790,6 +1420,19 @@ const CycleDetailPageClient = ({
                 }}
               >
                 <EditIcon fontSize="small" />
+              </IconButton>
+              <IconButton
+                size="medium"
+                onClick={handleToggleDatesEdit}
+                disabled={datesSaving}
+                sx={{
+                  bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
+                  "&:hover": {
+                    bgcolor: (theme) => alpha(theme.palette.primary.main, 0.15),
+                  },
+                }}
+              >
+                <EditCalendarIcon fontSize="small" />
               </IconButton>
             </Stack>
           </Stack>
@@ -862,6 +1505,118 @@ const CycleDetailPageClient = ({
               </Paper>
             </Box>
           </Collapse>
+
+          <Collapse in={isEditingDates}>
+            <Box
+              maxWidth="1400px"
+              mx="auto"
+              mt={3}
+              sx={{
+                display: "flex",
+                justifyContent: { xs: "stretch", md: "flex-end" },
+              }}
+            >
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 3,
+                  borderRadius: 3,
+                  border: (theme) => `1px solid ${theme.palette.divider}`,
+                  width: { xs: "100%", md: 640 },
+                }}
+              >
+                <Stack spacing={2}>
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gap: 2,
+                      gridTemplateColumns: {
+                        xs: "repeat(1, minmax(0, 1fr))",
+                        md: "repeat(3, minmax(0, 1fr))",
+                      },
+                    }}
+                  >
+                    <TextField
+                      type="date"
+                      label="Fecha inicio barbecho"
+                      size="small"
+                      fullWidth
+                      value={datesDraft.fallowStartDate ?? ""}
+                      onChange={(event) =>
+                        setDatesDraft((prev) => ({
+                          ...prev,
+                          fallowStartDate: event.target.value || null,
+                        }))
+                      }
+                      disabled={datesSaving}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                    <TextField
+                      type="date"
+                      label="Fecha de siembra"
+                      size="small"
+                      fullWidth
+                      value={datesDraft.sowingDate ?? ""}
+                      onChange={(event) =>
+                        setDatesDraft((prev) => ({
+                          ...prev,
+                          sowingDate: event.target.value || null,
+                        }))
+                      }
+                      disabled={datesSaving}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                    <TextField
+                      type="date"
+                      label="Fecha estimada de cosecha"
+                      size="small"
+                      fullWidth
+                      value={datesDraft.estimatedHarvestDate ?? ""}
+                      onChange={(event) =>
+                        setDatesDraft((prev) => ({
+                          ...prev,
+                          estimatedHarvestDate: event.target.value || null,
+                        }))
+                      }
+                      disabled={datesSaving || hasHarvests}
+                      helperText={
+                        hasHarvests
+                          ? "Ya hay cosechas registrada"
+                          : undefined
+                      }
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  </Box>
+                  <Stack direction="row" spacing={1.5}>
+                    <Button
+                      variant="contained"
+                      onClick={handleSaveDates}
+                      disabled={!canSaveDates}
+                      sx={{ borderRadius: 2 }}
+                    >
+                      {datesSaving ? "Guardando..." : "Guardar"}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      onClick={handleCancelDatesEdit}
+                      disabled={datesSaving}
+                      sx={{ borderRadius: 2 }}
+                    >
+                      Cancelar
+                    </Button>
+                  </Stack>
+                  {dateOrderError && (
+                    <Alert severity="error">{dateOrderError}</Alert>
+                  )}
+                  {datesError && (
+                    <Alert severity="error" onClose={() => setDatesError(null)}>
+                      {datesError}
+                    </Alert>
+                  )}
+                </Stack>
+              </Paper>
+            </Box>
+          </Collapse>
         </Box>
 
         <Box maxWidth="1400px" mx="auto" px={{ xs: 2, md: 4 }} mt={4}>
@@ -887,13 +1642,10 @@ const CycleDetailPageClient = ({
                         left: "10%",
                         right: "10%",
                         height: "3px",
-                        background: `linear-gradient(to right, ${alpha(
+                        background: ` ${alpha(
                           theme.palette.primary.main,
-                          0.2,
-                        )}, ${theme.palette.primary.main}, ${alpha(
-                          theme.palette.success.main,
-                          0.8,
-                        )})`,
+                          0.5,
+                        )}`,
                         borderRadius: "8px",
                         zIndex: 0,
                       })}
@@ -906,14 +1658,15 @@ const CycleDetailPageClient = ({
                       <TimelinePhase
                         icon={<GrassIcon sx={{ fontSize: 32 }} />}
                         title="Barbecho"
-                        date={formatDate(cycle.fallowStartDate)}
+                        date={formatDate(localCycleDates.fallowStartDate)}
                         color="primary"
                       />
                       <TimelinePhase
                         icon={<IconSeedling />}
                         title="Siembra"
-                        date={formatDate(cycle.sowingDate)}
+                        date={formatDate(localCycleDates.sowingDate)}
                         color="primary"
+                        cropDurationLabel={cropDurationLabel}
                       />
                       <TimelinePhase
                         icon={
@@ -985,12 +1738,24 @@ const CycleDetailPageClient = ({
                           <Typography variant="body1" fontWeight={700}>
                             {item.dateLabel}
                           </Typography>
+                          {item.cropDurationLabel && (
+                            <Chip
+                              size="small"
+                              label={`Duración cultivo: ${item.cropDurationLabel}`}
+                              
+                              sx={(theme) => ({
+                                mt: 0.7,
+                                fontWeight: 600,
+                                borderRadius: "8px",
+                              })}
+                            />
+                          )}
                           {item.durationLabel && (
                             <Chip
                               size="small"
                               label={item.durationLabel}
                               sx={{
-                                mt: 0.5,
+                                mt: 0.7,
                                 fontWeight: 600,
                                 borderRadius: "8px",
                               }}
@@ -1028,7 +1793,7 @@ const CycleDetailPageClient = ({
                 <StatCard
                   icon={<IconFreezeRowColumn />}
                   label="Superficie"
-                  value={cycle.areaHa.toLocaleString("es-ES")}
+                  value={formatNumber(cycle.areaHa, { maximumFractionDigits: 2 })}
                   unit="ha"
                   color="primary"
                   gradient
@@ -1044,7 +1809,7 @@ const CycleDetailPageClient = ({
                 <StatCard
                   icon={<CheckCircleIcon sx={{ fontSize: 28 }} />}
                   label="Cosechado"
-                  value={cycle.totalKgs.toLocaleString("es-ES")}
+                  value={formatNumber(cycle.totalKgs)}
                   unit="kg"
                   color="success"
                   gradient
@@ -1052,7 +1817,7 @@ const CycleDetailPageClient = ({
                 <StatCard
                   icon={<IconMoneybag />}
                   label="En Stock"
-                  value={cycle.stockKgs.toLocaleString("es-ES")}
+                  value={formatNumber(cycle.stockKgs)}
                   unit="kg"
                   color="warning"
                   gradient
@@ -1060,7 +1825,7 @@ const CycleDetailPageClient = ({
                 <StatCard
                   icon={<IconTruck />}
                   label="En camión"
-                  value={cycle.truckKgs}
+                  value={formatNumber(cycle.truckKgs)}
                   unit="kg"
                   color="secondary"
                   gradient
@@ -1076,6 +1841,17 @@ const CycleDetailPageClient = ({
                 count={lots.length}
                 isOpen={isLotsOpen}
                 onToggle={() => setIsLotsOpen((prev) => !prev)}
+                actions={
+                  <Button
+                    variant="text"
+                    size="small"
+                    onClick={handleOpenEditLots}
+                    sx={{ textTransform: "none", fontWeight: 700 }}
+                    disabled={resolvedFieldId === null}
+                  >
+                    Editar lotes
+                  </Button>
+                }
               />
 
               <Collapse in={isLotsOpen} timeout={250} unmountOnExit>
@@ -1140,7 +1916,7 @@ const CycleDetailPageClient = ({
                               </TableCell>
                               <TableCell align="right">
                                 <Typography variant="body1" fontWeight={600}>
-                                  {lot.areaHa.toLocaleString("es-ES")}
+                                  {formatNumber(lot.areaHa, { maximumFractionDigits: 2 })}
                                 </Typography>
                               </TableCell>
                             </TableRow>
@@ -1175,7 +1951,7 @@ const CycleDetailPageClient = ({
                                   {lot.code}
                                 </Typography>
                                 <Typography variant="h6" fontWeight={700}>
-                                  {lot.areaHa.toLocaleString("es-ES")} ha
+                                  {formatNumber(lot.areaHa, { maximumFractionDigits: 2 })} ha
                                 </Typography>
                               </Stack>
                             </CardContent>
@@ -1200,6 +1976,16 @@ const CycleDetailPageClient = ({
                 count={harvests.length}
                 isOpen={isHarvestsOpen}
                 onToggle={() => setIsHarvestsOpen((prev) => !prev)}
+                actions={
+                  <Button
+                    variant="text"
+                    size="small"
+                    onClick={handleOpenCreateHarvest}
+                    sx={{ textTransform: "none", fontWeight: 700 }}
+                  >
+                    + Nueva cosecha
+                  </Button>
+                }
               />
 
               <Collapse in={isHarvestsOpen} timeout={250} unmountOnExit>
@@ -1257,7 +2043,9 @@ const CycleDetailPageClient = ({
                             return (
                               <TableRow
                                 key={h.id}
+                                onClick={() => handleOpenEditHarvest(h)}
                                 sx={{
+                                  cursor: "pointer",
                                   "&:hover": {
                                     bgcolor: (theme) =>
                                       alpha(theme.palette.success.main, 0.02),
@@ -1281,12 +2069,12 @@ const CycleDetailPageClient = ({
                                 </TableCell>
                                 <TableCell align="right">
                                   <Typography variant="body1" fontWeight={700}>
-                                    {h.harvestedKgs.toLocaleString("es-ES")}
+                                    {formatNumber(h.harvestedKgs)}
                                   </Typography>
                                 </TableCell>
                                 <TableCell align="right">
                                   <Typography variant="body1" fontWeight={600}>
-                                    {h.directTruckKgs.toLocaleString("es-ES")}
+                                    {formatNumber(h.directTruckKgs)}
                                   </Typography>
                                 </TableCell>
                               </TableRow>
@@ -1307,10 +2095,16 @@ const CycleDetailPageClient = ({
                           return (
                             <Card
                               key={h.id}
+                              onClick={() => handleOpenEditHarvest(h)}
                               sx={{
                                 borderRadius: 2,
                                 border: (theme) =>
                                   `2px solid ${alpha(theme.palette.success.main, 0.3)}`,
+                                cursor: "pointer",
+                                "&:hover": {
+                                  boxShadow: (theme) =>
+                                    `0 8px 20px ${alpha(theme.palette.success.main, 0.15)}`,
+                                },
                               }}
                             >
                               <CardContent>
@@ -1356,7 +2150,7 @@ const CycleDetailPageClient = ({
                                         fontWeight={800}
                                         color="success.dark"
                                       >
-                                        {h.harvestedKgs.toLocaleString("es-ES")}{" "}
+                                        {formatNumber(h.harvestedKgs)}{" "}
                                         kg
                                       </Typography>
                                     </Box>
@@ -1373,9 +2167,7 @@ const CycleDetailPageClient = ({
                                         mt={0.5}
                                         fontWeight={600}
                                       >
-                                        {h.directTruckKgs.toLocaleString(
-                                          "es-ES",
-                                        )}{" "}
+                                        {formatNumber(h.directTruckKgs)}{" "}
                                         kg
                                       </Typography>
                                     </Box>
@@ -1406,7 +2198,12 @@ const CycleDetailPageClient = ({
                     size="small"
                     onClick={handleOpenCreateStock}
                     sx={{ textTransform: "none", fontWeight: 700 }}
-                    disabled={resolvedFieldId === null}
+                    disabled={
+                      resolvedFieldId === null ||
+                      stockOptionsLoading ||
+                      !stockUnitTypeOptions.length ||
+                      !stockStatusOptions.length
+                    }
                   >
                     + Nuevo stock
                   </Button>
@@ -1466,7 +2263,9 @@ const CycleDetailPageClient = ({
                           {stockUnits.map((s) => (
                             <TableRow
                               key={s.id}
+                              onClick={() => handleOpenEditStock(s)}
                               sx={{
+                                cursor: "pointer",
                                 "&:hover": {
                                   bgcolor: (theme) =>
                                     alpha(theme.palette.warning.main, 0.02),
@@ -1484,27 +2283,25 @@ const CycleDetailPageClient = ({
                                   options={STOCK_STATUS_OPTIONS}
                                 />
                               </TableCell>
-                              <TableCell align="right">
-                                <Typography variant="body1" fontWeight={600}>
-                                  {s.totalInKgs.toLocaleString("es-ES")}
-                                </Typography>
-                              </TableCell>
-                              <TableCell align="right">
-                                <Typography variant="body1" fontWeight={600}>
-                                  {s.totalOutFromHarvestKgs.toLocaleString(
-                                    "es-ES",
-                                  )}
-                                </Typography>
-                              </TableCell>
-                              <TableCell align="right">
-                                <Typography
-                                  variant="body1"
-                                  fontWeight={800}
-                                  color="warning.dark"
-                                >
-                                  {s.currentKgs.toLocaleString("es-ES")}
-                                </Typography>
-                              </TableCell>
+                                <TableCell align="right">
+                                  <Typography variant="body1" fontWeight={600}>
+                                    {formatNumber(s.totalInKgs)}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell align="right">
+                                  <Typography variant="body1" fontWeight={600}>
+                                    {formatNumber(s.totalOutFromHarvestKgs)}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell align="right">
+                                  <Typography
+                                    variant="body1"
+                                    fontWeight={800}
+                                    color="warning.dark"
+                                  >
+                                    {formatNumber(s.currentKgs)}
+                                  </Typography>
+                                </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -1517,10 +2314,16 @@ const CycleDetailPageClient = ({
                         {stockUnits.map((s) => (
                           <Card
                             key={s.id}
+                            onClick={() => handleOpenEditStock(s)}
                             sx={{
                               borderRadius: 2,
                               border: (theme) =>
                                 `2px solid ${alpha(theme.palette.warning.main, 0.3)}`,
+                              cursor: "pointer",
+                              "&:hover": {
+                                boxShadow: (theme) =>
+                                  `0 8px 20px ${alpha(theme.palette.warning.main, 0.15)}`,
+                              },
                             }}
                           >
                             <CardContent>
@@ -1563,7 +2366,7 @@ const CycleDetailPageClient = ({
                                       fontWeight={700}
                                       mt={0.3}
                                     >
-                                      {s.totalInKgs.toLocaleString("es-ES")} kg
+                                      {formatNumber(s.totalInKgs)} kg
                                     </Typography>
                                   </Box>
                                   <Box>
@@ -1579,9 +2382,7 @@ const CycleDetailPageClient = ({
                                       fontWeight={700}
                                       mt={0.3}
                                     >
-                                      {s.totalOutFromHarvestKgs.toLocaleString(
-                                        "es-ES",
-                                      )}{" "}
+                                      {formatNumber(s.totalOutFromHarvestKgs)}{" "}
                                       kg
                                     </Typography>
                                   </Box>
@@ -1601,7 +2402,7 @@ const CycleDetailPageClient = ({
                                   fontWeight={800}
                                   color="warning.dark"
                                 >
-                                  {s.currentKgs.toLocaleString("es-ES")} kg
+                                  {formatNumber(s.currentKgs)} kg
                                 </Typography>
                               </Stack>
                             </CardContent>
@@ -1668,6 +2469,7 @@ const CycleDetailPageClient = ({
                               "Camión",
                               "Origen",
                               "Destino",
+                              "Proveedor",
                               "Kgs cargados",
                             ].map((header) => (
                               <TableCell
@@ -1702,7 +2504,9 @@ const CycleDetailPageClient = ({
                             return (
                               <TableRow
                                 key={t.id}
+                                onClick={() => handleOpenEditTrip(t)}
                                 sx={{
+                                  cursor: "pointer",
                                   "&:hover": {
                                     bgcolor: (theme) =>
                                       alpha(theme.palette.secondary.main, 0.02),
@@ -1749,15 +2553,18 @@ const CycleDetailPageClient = ({
                                       "—"}
                                   </Typography>
                                 </TableCell>
+                                <TableCell>
+                                  <Typography variant="body1">
+                                    {t.provider || "—"}
+                                  </Typography>
+                                </TableCell>
                                 <TableCell align="right">
                                   <Typography
                                     variant="body1"
                                     fontWeight={800}
                                     color="secondary.dark"
                                   >
-                                    {t.totalKgsDestination.toLocaleString(
-                                      "es-ES",
-                                    )}
+                                    {formatNumber(t.totalKgsDestination)}
                                   </Typography>
                                 </TableCell>
                               </TableRow>
@@ -1783,10 +2590,16 @@ const CycleDetailPageClient = ({
                           return (
                             <Card
                               key={t.id}
+                              onClick={() => handleOpenEditTrip(t)}
                               sx={{
                                 borderRadius: 2,
                                 border: (theme) =>
                                   `2px solid ${alpha(theme.palette.secondary.main, 0.3)}`,
+                                cursor: "pointer",
+                                "&:hover": {
+                                  boxShadow: (theme) =>
+                                    `0 8px 20px ${alpha(theme.palette.secondary.main, 0.15)}`,
+                                },
                               }}
                             >
                               <CardContent>
@@ -1808,14 +2621,27 @@ const CycleDetailPageClient = ({
                                       options={TRIP_STATUS_OPTIONS}
                                     />
                                   </Stack>
-                                  <Chip
-                                    variant="outlined"
-                                    size="small"
-                                    label={
-                                      t.truckPlate || "Camión sin identificar"
-                                    }
+                                  <Stack
+                                    direction="row"
+                                    spacing={1}
+                                    flexWrap="wrap"
                                     sx={{ alignSelf: "flex-start" }}
-                                  />
+                                  >
+                                    <Chip
+                                      variant="outlined"
+                                      size="small"
+                                      label={
+                                        t.truckPlate || "Camión sin identificar"
+                                      }
+                                    />
+                                    <Chip
+                                      variant="outlined"
+                                      size="small"
+                                      label={
+                                        t.provider || "Proveedor sin definir"
+                                      }
+                                    />
+                                  </Stack>
                                   <Divider />
                                   <Stack
                                     direction="row"
@@ -1864,9 +2690,7 @@ const CycleDetailPageClient = ({
                                     color="secondary.dark"
                                     lineHeight="0.5rem"
                                   >
-                                    {t.totalKgsDestination.toLocaleString(
-                                      "es-ES",
-                                    )}{" "}
+                                    {formatNumber(t.totalKgsDestination)}{" "}
                                     kg
                                   </Typography>
                                 </Stack>
@@ -1889,11 +2713,14 @@ const CycleDetailPageClient = ({
           mode="create"
           activeStock={null}
           initialValues={createStockInitialValues}
-          // ⚠️ por ahora: si no tenés estas options en este page, el dialog queda sin opciones
-          unitTypeOptions={[]}
-          statusOptions={[]}
+          unitTypeOptions={stockUnitTypeOptions}
+          statusOptions={stockStatusOptions}
           onClose={handleCloseCreateStock}
-          onSuccess={() => setIsCreateStockOpen(false)}
+          onSuccess={async () => {
+            setIsCreateStockOpen(false);
+            await refreshStockUnits();
+            await refreshCycle();
+          }}
         />
       )}
 
@@ -1904,9 +2731,165 @@ const CycleDetailPageClient = ({
           activeTrip={null}
           initialValues={createTripInitialValues}
           onClose={handleCloseCreateTrip}
-          onSuccess={() => setIsCreateTripOpen(false)}
+          onSuccess={async () => {
+            setIsCreateTripOpen(false);
+            await refreshTruckTrips();
+            await refreshCycle();
+          }}
         />
       )}
+
+      {createHarvestInitialValues && (
+        <HarvestDialog
+          open={isCreateHarvestOpen}
+          mode="create"
+          initialValues={createHarvestInitialValues}
+          fieldId={resolvedFieldId}
+          fieldLabel={cycle.field}
+          cycleLabel={
+            cycle.cycleId
+              ? `${cycle.cycleId} · ${cycle.crop || "Sin cultivo"}`
+              : cycle.crop || `Ciclo #${cycle.id}`
+          }
+          hideCreateStockButton
+          onClose={handleCloseCreateHarvest}
+          onSuccess={async () => {
+            setIsCreateHarvestOpen(false);
+            await refreshHarvests();
+            await refreshCycle();
+          }}
+        />
+      )}
+
+      {editHarvestInitialValues && activeHarvest && (
+        <HarvestDialog
+          open={isEditHarvestOpen}
+          mode="edit"
+          activeHarvest={activeHarvest}
+          initialValues={editHarvestInitialValues}
+          fieldLabel={activeHarvest.field || cycle.field}
+          cycleLabel={
+            activeHarvest.cycleLabel ??
+            (cycle.cycleId
+              ? `${cycle.cycleId} · ${cycle.crop || "Sin cultivo"}`
+              : cycle.crop || `Ciclo #${cycle.id}`)
+          }
+          hideCreateStockButton
+          onClose={handleCloseEditHarvest}
+          onSuccess={async () => {
+            setIsEditHarvestOpen(false);
+            await refreshHarvests();
+            await refreshCycle();
+          }}
+        />
+      )}
+
+      {editStockInitialValues && activeStock && (
+        <StockDialog
+          open={isEditStockOpen}
+          mode="edit"
+          activeStock={activeStock}
+          initialValues={editStockInitialValues}
+          unitTypeOptions={stockUnitTypeOptions}
+          statusOptions={stockStatusOptions}
+          onClose={handleCloseEditStock}
+          onSuccess={async () => {
+            setIsEditStockOpen(false);
+            await refreshStockUnits();
+            await refreshCycle();
+          }}
+        />
+      )}
+
+      {activeTrip && (
+        <TruckTripDialog
+          open={isEditTripOpen}
+          mode="edit"
+          activeTrip={activeTrip}
+          onClose={handleCloseEditTrip}
+          onSuccess={async () => {
+            setIsEditTripOpen(false);
+            await refreshTruckTrips();
+            await refreshCycle();
+          }}
+        />
+      )}
+
+      <Dialog
+        open={isEditLotsOpen}
+        onClose={handleCloseEditLots}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Editar lotes</DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <Stack spacing={2}>
+            <TextField
+              select
+              label="Lotes"
+              fullWidth
+              value={selectedLotIdsDraft}
+              onChange={(event) => {
+                const value = event.target.value;
+                const next =
+                  typeof value === "string"
+                    ? value
+                        .split(",")
+                        .map((id) => Number(id))
+                        .filter((id) => Number.isFinite(id) && id > 0)
+                    : (value as number[]);
+                setSelectedLotIdsDraft(next);
+              }}
+              SelectProps={{
+                multiple: true,
+                renderValue: (selected) => (
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                    {(selected as number[]).map((id) => {
+                      const lot = lotsOptions.find((option) => option.id === id);
+                      return (
+                        <Chip
+                          key={id}
+                          label={lot?.code || `Lote #${id}`}
+                          size="small"
+                        />
+                      );
+                    })}
+                  </Box>
+                ),
+              }}
+              disabled={lotsOptionsLoading || lotsSaving}
+              helperText={
+                lotsSelectionError ||
+                (lotsOptionsLoading ? "Cargando lotes..." : undefined)
+              }
+              error={Boolean(lotsSelectionError)}
+            >
+              {lotsOptions.map((lot) => (
+                <MenuItem key={lot.id} value={lot.id}>
+                  {lot.code || `Lote #${lot.id}`}
+                </MenuItem>
+              ))}
+            </TextField>
+            {lotsError && <Alert severity="error">{lotsError}</Alert>}
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            variant="outlined"
+            onClick={handleCloseEditLots}
+            disabled={lotsSaving}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSaveLots}
+            disabled={lotsSaving || Boolean(lotsSelectionError)}
+          >
+            {lotsSaving ? "Guardando..." : "Guardar"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Snackbar
         open={statusSnackbarOpen}
@@ -1921,6 +2904,55 @@ const CycleDetailPageClient = ({
           sx={{ width: "100%" }}
         >
           Estado del ciclo actualizado correctamente
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={datesSnackbarOpen}
+        autoHideDuration={4000}
+        onClose={handleDatesSnackbarClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={(event) => handleDatesSnackbarClose(event)}
+          severity="success"
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          Fechas del ciclo actualizadas correctamente
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={lotsSnackbarOpen}
+        autoHideDuration={4000}
+        onClose={handleLotsSnackbarClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={(event) => handleLotsSnackbarClose(event)}
+          severity="success"
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          Lotes actualizados correctamente
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={stockOptionsSnackbarOpen}
+        autoHideDuration={5000}
+        onClose={handleStockOptionsSnackbarClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={(event) => handleStockOptionsSnackbarClose(event)}
+          severity="error"
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {stockOptionsError ||
+            "No se pudieron cargar las opciones de stock"}
         </Alert>
       </Snackbar>
     </PageContainer>
