@@ -61,6 +61,9 @@ import StockDialog, {
 import TruckTripDialog, {
   type TruckTripFormValues,
 } from "@/app/(DashboardLayout)/components/truckTrips/TruckTripDialog";
+import HarvestDialog, {
+  type HarvestFormValues,
+} from "@/app/(DashboardLayout)/components/harvests/HarvestDialog";
 
 import type { CycleDetailDto } from "@/lib/baserow/cycleDetail";
 import type { CycleStatus } from "@/lib/baserow/cycles";
@@ -192,11 +195,15 @@ const getStockStatusLabel = (status: unknown): string => {
 const CycleDetailPageClient = ({
   initialDetail,
 }: CycleDetailPageClientProps) => {
-  const { harvests, stockUnits, truckTrips } = initialDetail;
+  const { stockUnits, truckTrips } = initialDetail;
   const [cycleState, setCycleState] = React.useState(initialDetail.cycle);
   const [lotsState, setLotsState] = React.useState(initialDetail.lots);
+  const [harvestsState, setHarvestsState] = React.useState(
+    initialDetail.harvests,
+  );
   const cycle = cycleState;
   const lots = lotsState;
+  const harvests = harvestsState;
   const resolvedFieldId = React.useMemo(() => {
     const normalizeFieldId = (value: number | null | undefined) =>
       typeof value === "number" && !Number.isNaN(value) ? value : null;
@@ -343,11 +350,15 @@ const CycleDetailPageClient = ({
 
   const [isCreateStockOpen, setIsCreateStockOpen] = React.useState(false);
   const [isCreateTripOpen, setIsCreateTripOpen] = React.useState(false);
+  const [isCreateHarvestOpen, setIsCreateHarvestOpen] = React.useState(false);
   const [createStockInitialValues, setCreateStockInitialValues] =
     React.useState<StockFormValues | null>(null);
 
   const [createTripInitialValues, setCreateTripInitialValues] =
     React.useState<TruckTripFormValues | null>(null);
+
+  const [createHarvestInitialValues, setCreateHarvestInitialValues] =
+    React.useState<HarvestFormValues | null>(null);
 
   const pad2 = (n: number) => String(n).padStart(2, "0");
 
@@ -401,6 +412,22 @@ const CycleDetailPageClient = ({
       };
     }, [cycle, resolvedFieldId]);
 
+  const buildCreateHarvestInitialValues =
+    React.useCallback((): HarvestFormValues => {
+      return {
+        Fecha_fecha: getTodayDateString(),
+        Fecha_hora: getCurrentTimeString(),
+        "KG Cosechados": "",
+        Campo: resolvedFieldId ?? "",
+        Lotes: [],
+        "Ciclo de siembra": cycle.id ?? "",
+        Cultivo: cycle.crop ?? "",
+        Stock: [],
+        "Viajes camión directos": [],
+        Notas: "",
+      };
+    }, [cycle, lots, resolvedFieldId]);
+
   const handleOpenCreateStock = React.useCallback(() => {
     setCreateStockInitialValues(buildCreateStockInitialValues());
     setIsCreateStockOpen(true);
@@ -418,6 +445,30 @@ const CycleDetailPageClient = ({
   const handleCloseCreateTrip = React.useCallback(() => {
     setIsCreateTripOpen(false);
   }, []);
+
+  const handleOpenCreateHarvest = React.useCallback(() => {
+    setCreateHarvestInitialValues(buildCreateHarvestInitialValues());
+    setIsCreateHarvestOpen(true);
+  }, [buildCreateHarvestInitialValues]);
+
+  const handleCloseCreateHarvest = React.useCallback(() => {
+    setIsCreateHarvestOpen(false);
+  }, []);
+
+  const refreshHarvests = React.useCallback(async () => {
+    try {
+      const response = await fetch(`/api/cycles/${cycle.id}/harvests`, {
+        cache: "no-store",
+      });
+      if (!response.ok) return;
+      const data = (await response.json()) as { harvests?: typeof harvests };
+      if (Array.isArray(data.harvests)) {
+        setHarvestsState(data.harvests);
+      }
+    } catch {
+      // ignore refresh errors
+    }
+  }, [cycle.id]);
 
   React.useEffect(() => {
     if (isDesktop) {
@@ -1654,6 +1705,16 @@ const CycleDetailPageClient = ({
                 count={harvests.length}
                 isOpen={isHarvestsOpen}
                 onToggle={() => setIsHarvestsOpen((prev) => !prev)}
+                actions={
+                  <Button
+                    variant="text"
+                    size="small"
+                    onClick={handleOpenCreateHarvest}
+                    sx={{ textTransform: "none", fontWeight: 700 }}
+                  >
+                    + Nueva cosecha
+                  </Button>
+                }
               />
 
               <Collapse in={isHarvestsOpen} timeout={250} unmountOnExit>
@@ -2359,6 +2420,26 @@ const CycleDetailPageClient = ({
           initialValues={createTripInitialValues}
           onClose={handleCloseCreateTrip}
           onSuccess={() => setIsCreateTripOpen(false)}
+        />
+      )}
+
+      {createHarvestInitialValues && (
+        <HarvestDialog
+          open={isCreateHarvestOpen}
+          initialValues={createHarvestInitialValues}
+          fieldId={resolvedFieldId}
+          fieldLabel={cycle.field}
+          cycleLabel={
+            cycle.cycleId
+              ? `${cycle.cycleId} · ${cycle.crop || "Sin cultivo"}`
+              : cycle.crop || `Ciclo #${cycle.id}`
+          }
+          hideCreateStockButton
+          onClose={handleCloseCreateHarvest}
+          onSuccess={async () => {
+            setIsCreateHarvestOpen(false);
+            await refreshHarvests();
+          }}
         />
       )}
 
