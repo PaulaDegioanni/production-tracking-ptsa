@@ -72,6 +72,13 @@ type CycleDatesPayload = {
   estimatedHarvestDate: string | null;
 };
 
+const parseDateString = (value?: string | null) => {
+  if (!value) return null;
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
+};
+
 const updateCycleStatus = async (
   cycleId: number,
   status: CycleStatus,
@@ -100,7 +107,7 @@ const updateCycleStatus = async (
 
 const updateCycleDates = async (
   cycleId: number,
-  payload: CycleDatesPayload,
+  payload: Partial<CycleDatesPayload>,
 ): Promise<void> => {
   const response = await fetch(`/api/cycles/${cycleId}/dates`, {
     method: "PATCH",
@@ -265,6 +272,7 @@ const CycleDetailPageClient = ({
   const [datesSaving, setDatesSaving] = React.useState(false);
   const [datesError, setDatesError] = React.useState<string | null>(null);
   const [datesSnackbarOpen, setDatesSnackbarOpen] = React.useState(false);
+  const hasHarvests = harvests.length > 0;
   const isDesktop = useMediaQuery(
     (theme: Theme) => theme.breakpoints.up("md"),
     { defaultMatches: true },
@@ -377,12 +385,40 @@ const CycleDetailPageClient = ({
       ? `${computeHarvestTimeRange.days} días`
       : undefined;
 
+  const computedCropDurationDays = React.useMemo(() => {
+    const sowingDate = parseDateString(localCycleDates.sowingDate);
+    const harvestDate = parseDateString(
+      computeHarvestTimeRange.start ?? localCycleDates.estimatedHarvestDate,
+    );
+
+    if (!sowingDate || !harvestDate) return null;
+    const diffMs = harvestDate.getTime() - sowingDate.getTime();
+    if (!Number.isFinite(diffMs)) return null;
+    const days = Math.round(diffMs / (1000 * 60 * 60 * 24)) + 1;
+    return days > 0 ? days : null;
+  }, [
+    computeHarvestTimeRange.start,
+    localCycleDates.estimatedHarvestDate,
+    localCycleDates.sowingDate,
+  ]);
+
+  const cropDurationLabel = (() => {
+    if (computedCropDurationDays !== null) {
+      return `${computedCropDurationDays} días`;
+    }
+    if (typeof cycle.cropDurationDays === "number") {
+      return `${cycle.cropDurationDays} días`;
+    }
+    return null;
+  })();
+
   const mobileTimelineItems: Array<{
     icon: React.ReactNode;
     label: string;
     dateLabel: string;
     color: PaletteKey;
     durationLabel?: string;
+    cropDurationLabel?: string;
   }> = [
     {
       icon: <GrassIcon />,
@@ -395,6 +431,7 @@ const CycleDetailPageClient = ({
       label: "Siembra",
       dateLabel: formatDate(localCycleDates.sowingDate),
       color: "primary",
+      cropDurationLabel,
     },
   ];
 
@@ -416,7 +453,13 @@ const CycleDetailPageClient = ({
   );
 
   const dateOrderError = React.useMemo(() => {
-    const { fallowStartDate, sowingDate, estimatedHarvestDate } = datesDraft;
+    const fallowStartDate =
+      datesDraft.fallowStartDate ?? localCycleDates.fallowStartDate;
+    const sowingDate = datesDraft.sowingDate ?? localCycleDates.sowingDate;
+    const estimatedHarvestDate = hasHarvests
+      ? null
+      : datesDraft.estimatedHarvestDate ?? localCycleDates.estimatedHarvestDate;
+
     if (fallowStartDate && sowingDate && fallowStartDate > sowingDate) {
       return "La fecha de barbecho debe ser anterior o igual a la fecha de siembra.";
     }
@@ -424,7 +467,7 @@ const CycleDetailPageClient = ({
       return "La fecha de siembra debe ser anterior o igual a la fecha estimada de cosecha.";
     }
     return null;
-  }, [datesDraft]);
+  }, [datesDraft, hasHarvests, localCycleDates]);
 
   const canSaveDates = !datesSaving && !dateOrderError;
 
@@ -475,8 +518,22 @@ const CycleDetailPageClient = ({
     setDatesSaving(true);
     setDatesError(null);
     try {
-      await updateCycleDates(cycle.id, datesDraft);
-      setLocalCycleDates(datesDraft);
+      const payload: Partial<CycleDatesPayload> = {
+        fallowStartDate: datesDraft.fallowStartDate,
+        sowingDate: datesDraft.sowingDate,
+      };
+      if (!hasHarvests) {
+        payload.estimatedHarvestDate = datesDraft.estimatedHarvestDate;
+      }
+
+      await updateCycleDates(cycle.id, payload);
+      setLocalCycleDates((prev) => ({
+        fallowStartDate: datesDraft.fallowStartDate,
+        sowingDate: datesDraft.sowingDate,
+        estimatedHarvestDate: hasHarvests
+          ? prev.estimatedHarvestDate
+          : datesDraft.estimatedHarvestDate,
+      }));
       setIsEditingDates(false);
       setDatesSnackbarOpen(true);
     } catch (error) {
@@ -620,6 +677,7 @@ const CycleDetailPageClient = ({
     color: PaletteKey;
     isLast?: boolean;
     durationLabel?: string;
+    cropDurationLabel?: string;
   };
 
   const TimelinePhase = ({
@@ -629,6 +687,7 @@ const CycleDetailPageClient = ({
     color,
     isLast = false,
     durationLabel,
+    cropDurationLabel,
   }: TimelinePhaseProps) => (
     <Box sx={{ position: "relative", flex: 1 }}>
       <Stack alignItems="center" spacing={1.5}>
@@ -683,7 +742,18 @@ const CycleDetailPageClient = ({
           </Typography>
           {durationLabel && (
             <Chip
-              label={durationLabel}
+              label={`Cosecha: ${durationLabel}`}
+              sx={(theme) => ({
+                mt: "1rem",
+                fontWeight: 600,
+                borderRadius: "8px",
+                paddingX: "80px",
+              })}
+            />
+          )}
+          {cropDurationLabel && (
+            <Chip
+              label={`Duración cultivo: ${cropDurationLabel}`}
               sx={(theme) => ({
                 mt: "1rem",
                 fontWeight: 600,
@@ -1032,7 +1102,12 @@ const CycleDetailPageClient = ({
                           estimatedHarvestDate: event.target.value || null,
                         }))
                       }
-                      disabled={datesSaving}
+                      disabled={datesSaving || hasHarvests}
+                      helperText={
+                        hasHarvests
+                          ? "Ya hay cosechas registrada"
+                          : undefined
+                      }
                       InputLabelProps={{ shrink: true }}
                     />
                   </Box>
@@ -1115,6 +1190,7 @@ const CycleDetailPageClient = ({
                         title="Siembra"
                         date={formatDate(localCycleDates.sowingDate)}
                         color="primary"
+                        cropDurationLabel={cropDurationLabel}
                       />
                       <TimelinePhase
                         icon={
@@ -1186,12 +1262,24 @@ const CycleDetailPageClient = ({
                           <Typography variant="body1" fontWeight={700}>
                             {item.dateLabel}
                           </Typography>
+                          {item.cropDurationLabel && (
+                            <Chip
+                              size="small"
+                              label={`Duración cultivo: ${item.cropDurationLabel}`}
+                              
+                              sx={(theme) => ({
+                                mt: 0.7,
+                                fontWeight: 600,
+                                borderRadius: "8px",
+                              })}
+                            />
+                          )}
                           {item.durationLabel && (
                             <Chip
                               size="small"
                               label={item.durationLabel}
                               sx={{
-                                mt: 0.5,
+                                mt: 0.7,
                                 fontWeight: 600,
                                 borderRadius: "8px",
                               }}

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
-import { CYCLES_TABLE_ID } from '@/lib/baserow/cycles';
+import { CYCLES_TABLE_ID, getCycleByIdDto } from '@/lib/baserow/cycles';
+import { getHarvestsByCycleIdDto } from '@/lib/baserow/harvests';
 import {
   BaserowRequestError,
   patchTableRow,
@@ -49,9 +50,9 @@ export async function PATCH(request: Request, context: RouteParams) {
       'estimatedHarvestDate'
     );
 
-    if (!hasFallow || !hasSowing || !hasEstimated) {
+    if (!hasFallow && !hasSowing && !hasEstimated) {
       return NextResponse.json(
-        { error: 'Payload incompleto' },
+        { error: 'Payload vacío' },
         { status: 400 },
       );
     }
@@ -93,14 +94,66 @@ export async function PATCH(request: Request, context: RouteParams) {
       }
     }
 
-    if (fallowStartDate && sowingDate && fallowStartDate > sowingDate) {
+    if (hasEstimated) {
+      const harvests = await getHarvestsByCycleIdDto(rowId);
+      if (harvests.length > 0) {
+        return NextResponse.json(
+          {
+            error:
+              'Estimated harvest date cannot be edited because harvests exist.',
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    let cycleDates:
+      | {
+          fallowStartDate: string | null;
+          sowingDate: string | null;
+          estimatedHarvestDate: string | null;
+        }
+      | null = null;
+
+    const needsOrderingCheck =
+      (hasFallow && hasSowing) ||
+      (hasSowing && hasEstimated) ||
+      hasFallow ||
+      hasSowing ||
+      hasEstimated;
+
+    if (needsOrderingCheck && (!hasFallow || !hasSowing || !hasEstimated)) {
+      const cycle = await getCycleByIdDto(rowId);
+      if (cycle) {
+        cycleDates = {
+          fallowStartDate: cycle.fallowStartDate ?? null,
+          sowingDate: cycle.sowingDate ?? null,
+          estimatedHarvestDate: cycle.estimatedHarvestDate ?? null,
+        };
+      }
+    }
+
+    const resolvedFallow =
+      hasFallow && fallowStartDate !== undefined
+        ? fallowStartDate
+        : cycleDates?.fallowStartDate ?? null;
+    const resolvedSowing =
+      hasSowing && sowingDate !== undefined
+        ? sowingDate
+        : cycleDates?.sowingDate ?? null;
+    const resolvedEstimated =
+      hasEstimated && estimatedHarvestDate !== undefined
+        ? estimatedHarvestDate
+        : cycleDates?.estimatedHarvestDate ?? null;
+
+    if (resolvedFallow && resolvedSowing && resolvedFallow > resolvedSowing) {
       return NextResponse.json(
         { error: 'La fecha de barbecho debe ser anterior o igual a la siembra' },
         { status: 400 },
       );
     }
 
-    if (sowingDate && estimatedHarvestDate && sowingDate > estimatedHarvestDate) {
+    if (resolvedSowing && resolvedEstimated && resolvedSowing > resolvedEstimated) {
       return NextResponse.json(
         {
           error:
@@ -110,11 +163,18 @@ export async function PATCH(request: Request, context: RouteParams) {
       );
     }
 
-    await patchTableRow(CYCLES_TABLE_ID, rowId, {
-      'Fecha inicio barbecho': fallowStartDate ?? null,
-      'Fecha de siembra': sowingDate ?? null,
-      'Fecha estimada de cosecha': estimatedHarvestDate ?? null,
-    });
+    const payload: Record<string, any> = {};
+    if (hasFallow) {
+      payload['Fecha inicio barbecho'] = fallowStartDate ?? null;
+    }
+    if (hasSowing) {
+      payload['Fecha de siembra'] = sowingDate ?? null;
+    }
+    if (hasEstimated) {
+      payload['Fecha estimada de cosecha'] = estimatedHarvestDate ?? null;
+    }
+
+    await patchTableRow(CYCLES_TABLE_ID, rowId, payload);
 
     return NextResponse.json({ ok: true });
   } catch (error) {

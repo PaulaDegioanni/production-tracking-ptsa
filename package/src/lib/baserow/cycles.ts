@@ -50,6 +50,7 @@ export type CycleRaw = {
   "Inicio cosecha"?: string;
   "Fin cosecha"?: string;
   "Duración Cosecha"?: number;
+  "Duración cultivo"?: string | null;
 };
 
 // --- DTO: normalized shape used in the UI ---
@@ -82,6 +83,7 @@ export interface CycleDto {
   harvestStartDate?: string | null;
   harvestEndDate?: string | null;
   harvestDurationDays?: number | null;
+  cropDurationDays?: string | null;
   lotIds: number[];
 }
 
@@ -142,6 +144,7 @@ function mapCycleRow(row: CycleRaw): CycleDto {
     harvestDurationDays: row["Duración Cosecha"]
       ? Number(row["Duración Cosecha"])
       : null,
+    cropDurationDays: row["Duración cultivo"] ?? null,
     lotIds: extractLinkRowIds(row.Lotes as any),
   };
 }
