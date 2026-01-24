@@ -16,7 +16,6 @@ type CycleFormValues = {
   Lotes: Array<number | string>;
   "Fecha inicio barbecho": string;
   "Fecha de siembra": string;
-  "Duración cultivo (días)": string;
   "Fecha estimada de cosecha": string;
   Cultivo: number | "";
   Estado: number | "";
@@ -30,7 +29,6 @@ const getDefaultCycleFormValues = (): CycleFormValues => ({
   Lotes: [],
   "Fecha inicio barbecho": "",
   "Fecha de siembra": "",
-  "Duración cultivo (días)": "",
   "Fecha estimada de cosecha": "",
   Cultivo: "",
   Estado: "",
@@ -38,19 +36,6 @@ const getDefaultCycleFormValues = (): CycleFormValues => ({
   "Rendimiento esperado (qq/ha)": "",
   Notas: "",
 });
-
-const computeEstimatedHarvestDate = (
-  sowingDate?: string,
-  durationInput?: string,
-): string => {
-  if (!sowingDate || !durationInput) return "";
-  const durationDays = Number(durationInput);
-  if (!Number.isFinite(durationDays)) return "";
-  const date = new Date(sowingDate);
-  if (Number.isNaN(date.getTime())) return "";
-  date.setDate(date.getDate() + Math.round(durationDays));
-  return date.toISOString().slice(0, 10);
-};
 
 type SnackbarState = {
   open: boolean;
@@ -256,28 +241,8 @@ const CycleCreateDialog = ({
         setSelectedField(matched);
         fetchLotOptions(parsedValue);
       }
-
-      if (key === "Fecha de siembra" || key === "Duración cultivo (días)") {
-        const nextValues = (values as CycleFormValues) ?? dialogCurrentValues;
-        const estimated = computeEstimatedHarvestDate(
-          nextValues["Fecha de siembra"],
-          nextValues["Duración cultivo (días)"],
-        );
-        if (
-          estimated !== nextValues["Fecha estimada de cosecha"] &&
-          !(estimated === "" && !nextValues["Fecha estimada de cosecha"])
-        ) {
-          applyDialogValuePatch({
-            "Fecha estimada de cosecha": estimated,
-          });
-        } else if (!estimated) {
-          applyDialogValuePatch({
-            "Fecha estimada de cosecha": "",
-          });
-        }
-      }
     },
-    [applyDialogValuePatch, dialogCurrentValues, fieldOptions, fetchLotOptions],
+    [fieldOptions, fetchLotOptions],
   );
 
   const sections = React.useMemo<SimpleEntityDialogSection[]>(
@@ -287,11 +252,10 @@ const CycleCreateDialog = ({
         fields: ["Campo", "Lotes"],
       },
       {
-        title: "Fechas y duración",
+        title: "Fechas",
         fields: [
           "Fecha inicio barbecho",
           "Fecha de siembra",
-          "Duración cultivo (días)",
           "Fecha estimada de cosecha",
         ],
       },
@@ -371,17 +335,9 @@ const CycleCreateDialog = ({
         type: "date",
       },
       {
-        key: "Duración cultivo (días)",
-        label: "Duración de cultivo (días)",
-        type: "number",
-        step: 1,
-      },
-      {
         key: "Fecha estimada de cosecha",
         label: "Fecha estimada de cosecha",
-        type: "readonly",
-        helperText:
-          "Se calcula automáticamente con fecha de siembra + duración.",
+        type: "date",
       },
       {
         key: "Cultivo",
@@ -445,14 +401,11 @@ const CycleCreateDialog = ({
           ? Number(expectedYieldRaw)
           : null;
 
-      const durationRaw = values["Duración cultivo (días)"];
-      const cropDurationDays =
-        durationRaw && durationRaw !== "" ? Number(durationRaw) : null;
-
       return {
         lotIds,
         fallowStartDate: values["Fecha inicio barbecho"] || null,
         sowingDate: values["Fecha de siembra"] || null,
+        estimatedHarvestDate: values["Fecha estimada de cosecha"] || null,
         cropOptionId: values.Cultivo ? Number(values.Cultivo) : null,
         statusOptionId: values.Estado ? Number(values.Estado) : null,
         seed: values.Semilla?.trim() || undefined,
@@ -461,10 +414,6 @@ const CycleCreateDialog = ({
             ? expectedYield
             : null,
         notes: values.Notas?.trim() || undefined,
-        cropDurationDays:
-          cropDurationDays !== null && Number.isFinite(cropDurationDays)
-            ? cropDurationDays
-            : null,
       };
     },
     [],

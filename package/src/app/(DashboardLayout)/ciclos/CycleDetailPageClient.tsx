@@ -709,10 +709,10 @@ const CycleDetailPageClient = ({
         {/* Hero Header */}
         <Box
           sx={(theme) => ({
-            background: `linear-gradient(135deg, ${alpha(
+            background: `${alpha(
               theme.palette.primary.main,
               0.05,
-            )} 0%, ${alpha(theme.palette.primary.light, 0.02)} 100%)`,
+            )}` ,
             borderBottom: `1px solid ${theme.palette.divider}`,
             pt: { xs: 2, md: 6 },
             pb: { xs: 3, md: 6 },
@@ -729,25 +729,16 @@ const CycleDetailPageClient = ({
           >
             <Box>
               <Typography
-                variant="h3"
+                variant="h2"
+                color="primary.dark"
                 sx={{
                   fontWeight: 900,
-                  background: (theme) =>
-                    `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
                   mb: 1,
                 }}
               >
                 {cycle.cycleId}
               </Typography>
-              <Stack
-                direction="row"
-                spacing={1.5}
-                alignItems="center"
-                flexWrap="wrap"
-                mt={3}
-              >
+              
                 <Chip
                   label={`Periodo ${cycle.period}`}
                   sx={{
@@ -755,16 +746,9 @@ const CycleDetailPageClient = ({
                     color: "primary.dark",
                     fontWeight: 700,
                     borderRadius: "8px",
+                    mt: 2,
                   }}
                 />
-                <Typography
-                  variant="subtitle1"
-                  color="text.secondary"
-                  fontWeight={600}
-                >
-                  {cycle.field}
-                </Typography>
-              </Stack>
             </Box>
             <Stack direction="row" spacing={1.5} alignItems="center">
               <StatusChip
@@ -887,13 +871,10 @@ const CycleDetailPageClient = ({
                         left: "10%",
                         right: "10%",
                         height: "3px",
-                        background: `linear-gradient(to right, ${alpha(
+                        background: ` ${alpha(
                           theme.palette.primary.main,
-                          0.2,
-                        )}, ${theme.palette.primary.main}, ${alpha(
-                          theme.palette.success.main,
-                          0.8,
-                        )})`,
+                          0.5,
+                        )}`,
                         borderRadius: "8px",
                         zIndex: 0,
                       })}
