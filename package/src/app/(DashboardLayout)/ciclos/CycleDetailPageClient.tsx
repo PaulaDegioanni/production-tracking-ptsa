@@ -16,6 +16,10 @@ import {
   Card,
   CardContent,
   Divider,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   IconButton,
   TextField,
   MenuItem,
@@ -60,6 +64,7 @@ import TruckTripDialog, {
 
 import type { CycleDetailDto } from "@/lib/baserow/cycleDetail";
 import type { CycleStatus } from "@/lib/baserow/cycles";
+import type { LotDto } from "@/lib/baserow/lots";
 import type { Theme } from "@mui/material/styles";
 
 type CycleDetailPageClientProps = {
@@ -78,6 +83,9 @@ const parseDateString = (value?: string | null) => {
   if (Number.isNaN(date.getTime())) return null;
   return date;
 };
+
+const normalizeNullableDate = (value: string | null) =>
+  value === null ? undefined : value;
 
 const updateCycleStatus = async (
   cycleId: number,
@@ -131,6 +139,40 @@ const updateCycleDates = async (
   }
 };
 
+const updateCycleLots = async (
+  cycleId: number,
+  lotIds: number[],
+): Promise<{
+  cycle: { id: number; lotIds: number[]; fieldId: number | null };
+  lots: LotDto[];
+}> => {
+  const response = await fetch(`/api/cycles/${cycleId}/lots`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ lotIds }),
+  });
+
+  if (!response.ok) {
+    let message = "No se pudieron actualizar los lotes del ciclo";
+    try {
+      const data = await response.json();
+      if (typeof data?.error === "string") {
+        message = data.error;
+      }
+    } catch {
+      // ignore parse errors
+    }
+    throw new Error(message);
+  }
+
+  return (await response.json()) as {
+    cycle: { id: number; lotIds: number[]; fieldId: number | null };
+    lots: LotDto[];
+  };
+};
+
 const getStockStatusLabel = (status: unknown): string => {
   if (!status) return "—";
   if (typeof status === "string") return status;
@@ -150,7 +192,11 @@ const getStockStatusLabel = (status: unknown): string => {
 const CycleDetailPageClient = ({
   initialDetail,
 }: CycleDetailPageClientProps) => {
-  const { cycle, lots, harvests, stockUnits, truckTrips } = initialDetail;
+  const { harvests, stockUnits, truckTrips } = initialDetail;
+  const [cycleState, setCycleState] = React.useState(initialDetail.cycle);
+  const [lotsState, setLotsState] = React.useState(initialDetail.lots);
+  const cycle = cycleState;
+  const lots = lotsState;
   const resolvedFieldId = React.useMemo(() => {
     const normalizeFieldId = (value: number | null | undefined) =>
       typeof value === "number" && !Number.isNaN(value) ? value : null;
@@ -273,6 +319,19 @@ const CycleDetailPageClient = ({
   const [datesError, setDatesError] = React.useState<string | null>(null);
   const [datesSnackbarOpen, setDatesSnackbarOpen] = React.useState(false);
   const hasHarvests = harvests.length > 0;
+  const [isEditLotsOpen, setIsEditLotsOpen] = React.useState(false);
+  const [lotsOptions, setLotsOptions] = React.useState<LotDto[]>([]);
+  const [lotsOptionsLoading, setLotsOptionsLoading] = React.useState(false);
+  const [selectedLotIdsDraft, setSelectedLotIdsDraft] = React.useState<number[]>(
+    cycle.lotIds,
+  );
+  const [lotsSaving, setLotsSaving] = React.useState(false);
+  const [lotsError, setLotsError] = React.useState<string | null>(null);
+  const [lotsSnackbarOpen, setLotsSnackbarOpen] = React.useState(false);
+  const lotsSelectionError =
+    selectedLotIdsDraft.length === 0
+      ? "Debés seleccionar al menos un lote"
+      : null;
   const isDesktop = useMediaQuery(
     (theme: Theme) => theme.breakpoints.up("md"),
     { defaultMatches: true },
@@ -409,7 +468,7 @@ const CycleDetailPageClient = ({
     if (typeof cycle.cropDurationDays === "number") {
       return `${cycle.cropDurationDays} días`;
     }
-    return null;
+    return undefined;
   })();
 
   const mobileTimelineItems: Array<{
@@ -489,6 +548,7 @@ const CycleDetailPageClient = ({
     try {
       await updateCycleStatus(cycle.id, statusDraft);
       setStatus(statusDraft);
+      setCycleState((prev) => ({ ...prev, status: statusDraft }));
       setIsEditingStatus(false);
       setStatusSnackbarOpen(true);
     } catch (error) {
@@ -534,6 +594,14 @@ const CycleDetailPageClient = ({
           ? prev.estimatedHarvestDate
           : datesDraft.estimatedHarvestDate,
       }));
+      setCycleState((prev) => ({
+        ...prev,
+        fallowStartDate: normalizeNullableDate(datesDraft.fallowStartDate),
+        sowingDate: normalizeNullableDate(datesDraft.sowingDate),
+        estimatedHarvestDate: hasHarvests
+          ? prev.estimatedHarvestDate
+          : normalizeNullableDate(datesDraft.estimatedHarvestDate),
+      }));
       setIsEditingDates(false);
       setDatesSnackbarOpen(true);
     } catch (error) {
@@ -561,6 +629,92 @@ const CycleDetailPageClient = ({
   ) => {
     if (reason === "clickaway") return;
     setDatesSnackbarOpen(false);
+  };
+
+  const handleOpenEditLots = () => {
+    setLotsError(null);
+    setSelectedLotIdsDraft(cycle.lotIds);
+    setIsEditLotsOpen(true);
+  };
+
+  const handleCloseEditLots = () => {
+    if (lotsSaving) return;
+    setIsEditLotsOpen(false);
+  };
+
+  const loadLotsOptions = React.useCallback(
+    async (fieldId: number | null) => {
+      if (!fieldId) {
+        setLotsOptions([]);
+        return;
+      }
+      try {
+        setLotsOptionsLoading(true);
+        setLotsError(null);
+        const response = await fetch(`/api/fields/${fieldId}/lots`, {
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          const errorBody = await response.text();
+          throw new Error(errorBody || "No se pudieron cargar los lotes");
+        }
+        const data = (await response.json()) as { lots?: LotDto[] };
+        const lots = Array.isArray(data.lots) ? data.lots : [];
+        setLotsOptions(
+          lots.sort((a, b) => a.code.localeCompare(b.code)),
+        );
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Error inesperado al cargar lotes";
+        setLotsError(message);
+      } finally {
+        setLotsOptionsLoading(false);
+      }
+    },
+    [],
+  );
+
+  React.useEffect(() => {
+    if (!isEditLotsOpen) return;
+    loadLotsOptions(resolvedFieldId);
+  }, [isEditLotsOpen, loadLotsOptions, resolvedFieldId]);
+
+  const handleSaveLots = async () => {
+    if (!selectedLotIdsDraft.length) {
+      setLotsError("Debés seleccionar al menos un lote");
+      return;
+    }
+    setLotsSaving(true);
+    setLotsError(null);
+    try {
+      const result = await updateCycleLots(cycle.id, selectedLotIdsDraft);
+      setCycleState((prev) => ({
+        ...prev,
+        lotIds: result.cycle.lotIds,
+        fieldId: result.cycle.fieldId ?? prev.fieldId,
+      }));
+      setLotsState(result.lots);
+      setIsEditLotsOpen(false);
+      setLotsSnackbarOpen(true);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Ocurrió un error al actualizar los lotes";
+      setLotsError(message);
+    } finally {
+      setLotsSaving(false);
+    }
+  };
+
+  const handleLotsSnackbarClose = (
+    _event: React.SyntheticEvent | Event,
+    reason?: SnackbarCloseReason,
+  ) => {
+    if (reason === "clickaway") return;
+    setLotsSnackbarOpen(false);
   };
 
   type StatCardProps = {
@@ -1365,6 +1519,17 @@ const CycleDetailPageClient = ({
                 count={lots.length}
                 isOpen={isLotsOpen}
                 onToggle={() => setIsLotsOpen((prev) => !prev)}
+                actions={
+                  <Button
+                    variant="text"
+                    size="small"
+                    onClick={handleOpenEditLots}
+                    sx={{ textTransform: "none", fontWeight: 700 }}
+                    disabled={resolvedFieldId === null}
+                  >
+                    Editar lotes
+                  </Button>
+                }
               />
 
               <Collapse in={isLotsOpen} timeout={250} unmountOnExit>
@@ -2197,6 +2362,82 @@ const CycleDetailPageClient = ({
         />
       )}
 
+      <Dialog
+        open={isEditLotsOpen}
+        onClose={handleCloseEditLots}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Editar lotes</DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <Stack spacing={2}>
+            <TextField
+              select
+              label="Lotes"
+              fullWidth
+              value={selectedLotIdsDraft}
+              onChange={(event) => {
+                const value = event.target.value;
+                const next =
+                  typeof value === "string"
+                    ? value
+                        .split(",")
+                        .map((id) => Number(id))
+                        .filter((id) => Number.isFinite(id) && id > 0)
+                    : (value as number[]);
+                setSelectedLotIdsDraft(next);
+              }}
+              SelectProps={{
+                multiple: true,
+                renderValue: (selected) => (
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                    {(selected as number[]).map((id) => {
+                      const lot = lotsOptions.find((option) => option.id === id);
+                      return (
+                        <Chip
+                          key={id}
+                          label={lot?.code || `Lote #${id}`}
+                          size="small"
+                        />
+                      );
+                    })}
+                  </Box>
+                ),
+              }}
+              disabled={lotsOptionsLoading || lotsSaving}
+              helperText={
+                lotsSelectionError ||
+                (lotsOptionsLoading ? "Cargando lotes..." : undefined)
+              }
+              error={Boolean(lotsSelectionError)}
+            >
+              {lotsOptions.map((lot) => (
+                <MenuItem key={lot.id} value={lot.id}>
+                  {lot.code || `Lote #${lot.id}`}
+                </MenuItem>
+              ))}
+            </TextField>
+            {lotsError && <Alert severity="error">{lotsError}</Alert>}
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            variant="outlined"
+            onClick={handleCloseEditLots}
+            disabled={lotsSaving}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSaveLots}
+            disabled={lotsSaving || Boolean(lotsSelectionError)}
+          >
+            {lotsSaving ? "Guardando..." : "Guardar"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Snackbar
         open={statusSnackbarOpen}
         autoHideDuration={4000}
@@ -2226,6 +2467,22 @@ const CycleDetailPageClient = ({
           sx={{ width: "100%" }}
         >
           Fechas del ciclo actualizadas correctamente
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={lotsSnackbarOpen}
+        autoHideDuration={4000}
+        onClose={handleLotsSnackbarClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={(event) => handleLotsSnackbarClose(event)}
+          severity="success"
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          Lotes actualizados correctamente
         </Alert>
       </Snackbar>
     </PageContainer>
