@@ -263,14 +263,16 @@ const CycleDetailPageClient = ({
   };
 
   const buildStockInitialValues = (stock: StockDto): StockFormValues => {
-    const firstCycleId = stock.cycleIds?.[0] ?? "";
+    const firstCycleId = stock.cycleIds?.[0] ?? cycle.id ?? "";
     const createdDate = stock.createdAt
       ? stock.createdAt.slice(0, 10)
       : getTodayDateString();
 
+    const campoId = stock.fieldId ?? resolvedFieldId ?? ""; 
+
     return {
       "Tipo unidad": stock.unitTypeId ?? "",
-      Campo: stock.fieldId ?? "",
+      Campo: campoId,
       "Ciclo de siembra": firstCycleId,
       Cultivo: stock.crop ?? "",
       "Fecha de creación": createdDate,
@@ -539,6 +541,8 @@ const CycleDetailPageClient = ({
     }, [cycle, lots, resolvedFieldId]);
 
   const handleOpenCreateStock = React.useCallback(() => {
+    setActiveStock(null);
+    setIsEditStockOpen(false);
     setCreateStockInitialValues(buildCreateStockInitialValues());
     setIsCreateStockOpen(true);
   }, [buildCreateStockInitialValues]);
@@ -739,7 +743,7 @@ const CycleDetailPageClient = ({
     if (computedCropDurationDays !== null) {
       return `${computedCropDurationDays} días`;
     }
-    if (typeof cycle.cropDurationDays === "number") {
+    if (typeof cycle.cropDurationDays === "string") {
       return `${cycle.cropDurationDays} días`;
     }
     return undefined;
@@ -2667,7 +2671,10 @@ const CycleDetailPageClient = ({
           unitTypeOptions={stockUnitTypeOptions}
           statusOptions={stockStatusOptions}
           onClose={handleCloseCreateStock}
-          onSuccess={() => setIsCreateStockOpen(false)}
+          onSuccess={async () => {
+            setIsCreateStockOpen(false);
+            await refreshStockUnits();
+          }}
         />
       )}
 

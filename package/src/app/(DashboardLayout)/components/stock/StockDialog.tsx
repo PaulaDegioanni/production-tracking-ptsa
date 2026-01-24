@@ -234,6 +234,7 @@ const StockDialog = ({
   const [dependenciesError, setDependenciesError] = React.useState<
     string | null
   >(null);
+  const skipCampoClearRef = React.useRef(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
   const [deleteLoading, setDeleteLoading] = React.useState(false);
   const [formValuesPatch, setFormValuesPatch] = React.useState<{
@@ -435,6 +436,7 @@ const StockDialog = ({
       Number.isNaN(currentValueId) ||
       currentValueId !== matchedField.id
     ) {
+      skipCampoClearRef.current = true;
       applyFormValuePatch({ Campo: matchedField.id });
     }
 
@@ -728,10 +730,33 @@ const StockDialog = ({
         required: true,
         options: campoOptions,
         loading: fieldOptionsLoading,
-        onValueChange: () => ({
-          'Ciclo de siembra': '',
-          Cultivo: '',
-        }),
+        
+        onValueChange: (value, values) => {
+          if (mode === 'edit') return {};
+
+          if (skipCampoClearRef.current) {
+            skipCampoClearRef.current = false;
+            return {};
+          }
+          const nextId = Number(value);
+          const currentFieldRaw = values?.Campo;
+          const currentFieldId =
+            typeof currentFieldRaw === 'number'
+              ? currentFieldRaw
+              : Number(currentFieldRaw || NaN);
+          
+          const isNoopFieldChange =
+            currentFieldId && nextId && currentFieldId === nextId;
+
+          if (isNoopFieldChange) {
+            return {};
+          }
+
+          return {
+            'Ciclo de siembra': '',
+            Cultivo: '',
+          };
+        },
       },
       {
         key: 'Ciclo de siembra',
@@ -743,11 +768,15 @@ const StockDialog = ({
         disabled: dependentDisabled,
         helperText: dependentHelperText,
         onValueChange: (value) => {
-          const cycle = cycleOptions.find((option) => option.value === value);
-          return {
-            Cultivo: cycle?.meta?.crop ?? '',
-          };
-        },
+  const normalized =
+    typeof value === 'number' ? value : Number(value);
+
+  const cycle = cycleOptions.find((option) => option.value === normalized);
+  return {
+    Cultivo: cycle?.meta?.crop ?? '',
+  };
+},
+
       },
       {
         key: 'Cultivo',
