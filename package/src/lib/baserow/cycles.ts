@@ -50,7 +50,7 @@ export type CycleRaw = {
   "Inicio cosecha"?: string;
   "Fin cosecha"?: string;
   "Duración Cosecha"?: number;
-  "Duración cultivo (días)"?: number | null;
+  "Duración cultivo"?: string | null;
 };
 
 // --- DTO: normalized shape used in the UI ---
@@ -83,22 +83,9 @@ export interface CycleDto {
   harvestStartDate?: string | null;
   harvestEndDate?: string | null;
   harvestDurationDays?: number | null;
-  cropDurationDays?: number | null;
+  cropDurationDays?: string | null;
   lotIds: number[];
 }
-
-// Baserow duration fields store values as seconds (float). UI works in days.
-const SECONDS_PER_DAY = 86400;
-
-export const daysToDurationSeconds = (days: number): number => {
-  if (!Number.isFinite(days)) return 0;
-  return Math.round(days * SECONDS_PER_DAY);
-};
-
-export const durationSecondsToDays = (seconds: number): number => {
-  if (!Number.isFinite(seconds)) return 0;
-  return Math.round(seconds / SECONDS_PER_DAY);
-};
 
 // --- Internal helpers to map raw -> dto ---
 function normalizeStatus(option?: CycleRaw["Estado"]): CycleStatus {
@@ -157,10 +144,7 @@ function mapCycleRow(row: CycleRaw): CycleDto {
     harvestDurationDays: row["Duración Cosecha"]
       ? Number(row["Duración Cosecha"])
       : null,
-    cropDurationDays:
-      typeof row["Duración cultivo (días)"] === "number"
-        ? durationSecondsToDays(row["Duración cultivo (días)"])
-        : null,
+    cropDurationDays: row["Duración cultivo"] ?? null,
     lotIds: extractLinkRowIds(row.Lotes as any),
   };
 }
@@ -169,12 +153,12 @@ export type CycleCreateValues = {
   lotIds: number[];
   fallowStartDate?: string | null;
   sowingDate?: string | null;
+  estimatedHarvestDate?: string | null;
   cropOptionId: number | null;
   statusOptionId: number | null;
   seed?: string;
   expectedYield?: number | null;
   notes?: string;
-  cropDurationDays?: number | null;
 };
 
 // --- Public functions ---
@@ -230,23 +214,12 @@ export async function createCycle(
     Lotes: normalizedLotIds,
     "Fecha inicio barbecho": values.fallowStartDate || null,
     "Fecha de siembra": values.sowingDate || null,
+    "Fecha estimada de cosecha": values.estimatedHarvestDate || null,
     Cultivo: values.cropOptionId ?? null,
     Estado: values.statusOptionId ?? null,
     Semilla: values.seed?.trim() ?? "",
     Notas: values.notes?.trim() ?? "",
   };
-
-  if (
-    values.cropDurationDays !== undefined &&
-    values.cropDurationDays !== null &&
-    Number.isFinite(values.cropDurationDays)
-  ) {
-    payload["Duración cultivo (días)"] = daysToDurationSeconds(
-      Number(values.cropDurationDays),
-    );
-  } else {
-    payload["Duración cultivo (días)"] = null;
-  }
 
   if (
     values.expectedYield !== undefined &&
