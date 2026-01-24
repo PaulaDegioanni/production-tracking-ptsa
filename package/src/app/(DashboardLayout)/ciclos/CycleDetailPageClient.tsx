@@ -67,8 +67,12 @@ import HarvestDialog, {
 
 import type { CycleDetailDto } from "@/lib/baserow/cycleDetail";
 import type { CycleStatus } from "@/lib/baserow/cycles";
+import type { HarvestDto } from "@/lib/baserow/harvests";
 import type { LotDto } from "@/lib/baserow/lots";
+import type { StockDto } from "@/lib/baserow/stocks";
+import type { TruckTripDto } from "@/lib/baserow/truckTrips";
 import type { Theme } from "@mui/material/styles";
+import { splitIsoToDateAndTimeLocal } from "@/lib/forms/datetime";
 
 type CycleDetailPageClientProps = {
   initialDetail: CycleDetailDto;
@@ -195,15 +199,22 @@ const getStockStatusLabel = (status: unknown): string => {
 const CycleDetailPageClient = ({
   initialDetail,
 }: CycleDetailPageClientProps) => {
-  const { stockUnits, truckTrips } = initialDetail;
+  const { stockUnits: initialStockUnits, truckTrips: initialTruckTrips } =
+    initialDetail;
   const [cycleState, setCycleState] = React.useState(initialDetail.cycle);
   const [lotsState, setLotsState] = React.useState(initialDetail.lots);
   const [harvestsState, setHarvestsState] = React.useState(
     initialDetail.harvests,
   );
+  const [stockUnitsState, setStockUnitsState] =
+    React.useState(initialStockUnits);
+  const [truckTripsState, setTruckTripsState] =
+    React.useState(initialTruckTrips);
   const cycle = cycleState;
   const lots = lotsState;
   const harvests = harvestsState;
+  const stockUnits = stockUnitsState;
+  const truckTrips = truckTripsState;
   const resolvedFieldId = React.useMemo(() => {
     const normalizeFieldId = (value: number | null | undefined) =>
       typeof value === "number" && !Number.isNaN(value) ? value : null;
@@ -237,6 +248,66 @@ const CycleDetailPageClient = ({
       month: "short",
       year: "numeric",
     });
+  };
+
+  const formatKgs = (value: number): string =>
+    (value || 0).toLocaleString("es-ES", { maximumFractionDigits: 0 });
+
+  const formatReadonlyKg = (value: number): string => `${formatKgs(value)} kg`;
+
+  const buildChipValues = (items?: string[]): string[] => {
+    if (!Array.isArray(items)) return [];
+    return items
+      .map((label) => (typeof label === "string" ? label.trim() : ""))
+      .filter((label) => Boolean(label));
+  };
+
+  const buildStockInitialValues = (stock: StockDto): StockFormValues => {
+    const firstCycleId = stock.cycleIds?.[0] ?? "";
+    const createdDate = stock.createdAt
+      ? stock.createdAt.slice(0, 10)
+      : getTodayDateString();
+
+    return {
+      "Tipo unidad": stock.unitTypeId ?? "",
+      Campo: stock.fieldId ?? "",
+      "Ciclo de siembra": firstCycleId,
+      Cultivo: stock.crop ?? "",
+      "Fecha de creación": createdDate,
+      Estado: stock.statusId ?? "",
+      Notas: stock.notes ?? "",
+      ID: stock.name || `#${stock.id}`,
+      "Kgs actuales": formatReadonlyKg(stock.currentKgs ?? 0),
+      "Total kgs ingresados": formatReadonlyKg(stock.totalInKgs ?? 0),
+      "Total kgs egresados": formatReadonlyKg(
+        stock.totalOutFromHarvestKgs ?? 0,
+      ),
+      "Cosechas asociadas": buildChipValues(stock.originHarvestsLabels),
+      "Viajes de camión desde stock": buildChipValues(stock.truckTripLabels),
+    };
+  };
+
+  const buildHarvestInitialValues = (harvest: HarvestDto): HarvestFormValues => {
+    const { date, time } = splitIsoToDateAndTimeLocal(harvest.date);
+    const { date: todayDate, time: todayTime } = splitIsoToDateAndTimeLocal(
+      new Date().toISOString(),
+    );
+
+    return {
+      Fecha_fecha: date || todayDate,
+      Fecha_hora: time || todayTime,
+      "KG Cosechados":
+        harvest.harvestedKgs != null ? String(harvest.harvestedKgs) : "",
+      Campo: (harvest.fieldId ?? "") as "" | number,
+      Lotes: (harvest.lotsIds ?? []) as Array<string | number>,
+      "Ciclo de siembra": (harvest.cycleId ?? "") as "" | number,
+      Cultivo: harvest.crop ?? "",
+      Stock: (harvest.stockIds ?? []) as Array<string | number>,
+      "Viajes camión directos": (harvest.directTruckTripIds ?? []) as Array<
+        string | number
+      >,
+      Notas: harvest.notes ?? "",
+    };
   };
 
   const CYCLE_STATUS_OPTIONS: StatusChipOption[] = [
@@ -363,14 +434,26 @@ const CycleDetailPageClient = ({
   const [isCreateStockOpen, setIsCreateStockOpen] = React.useState(false);
   const [isCreateTripOpen, setIsCreateTripOpen] = React.useState(false);
   const [isCreateHarvestOpen, setIsCreateHarvestOpen] = React.useState(false);
+  const [isEditStockOpen, setIsEditStockOpen] = React.useState(false);
+  const [isEditTripOpen, setIsEditTripOpen] = React.useState(false);
+  const [isEditHarvestOpen, setIsEditHarvestOpen] = React.useState(false);
   const [createStockInitialValues, setCreateStockInitialValues] =
     React.useState<StockFormValues | null>(null);
+  const [editStockInitialValues, setEditStockInitialValues] =
+    React.useState<StockFormValues | null>(null);
+  const [activeStock, setActiveStock] = React.useState<StockDto | null>(null);
 
   const [createTripInitialValues, setCreateTripInitialValues] =
     React.useState<TruckTripFormValues | null>(null);
+  const [activeTrip, setActiveTrip] = React.useState<TruckTripDto | null>(null);
 
   const [createHarvestInitialValues, setCreateHarvestInitialValues] =
     React.useState<HarvestFormValues | null>(null);
+  const [editHarvestInitialValues, setEditHarvestInitialValues] =
+    React.useState<HarvestFormValues | null>(null);
+  const [activeHarvest, setActiveHarvest] = React.useState<HarvestDto | null>(
+    null,
+  );
 
   const pad2 = (n: number) => String(n).padStart(2, "0");
 
@@ -496,6 +579,74 @@ const CycleDetailPageClient = ({
       // ignore refresh errors
     }
   }, [cycle.id]);
+
+  const refreshStockUnits = React.useCallback(async () => {
+    try {
+      const response = await fetch(`/api/cycles/${cycle.id}/stocks`, {
+        cache: "no-store",
+      });
+      if (!response.ok) return;
+      const data = (await response.json()) as { stockUnits?: StockDto[] };
+      if (Array.isArray(data.stockUnits)) {
+        setStockUnitsState(data.stockUnits);
+      }
+    } catch {
+      // ignore refresh errors
+    }
+  }, [cycle.id]);
+
+  const refreshTruckTrips = React.useCallback(async () => {
+    try {
+      const response = await fetch(`/api/cycles/${cycle.id}/truck-trips`, {
+        cache: "no-store",
+      });
+      if (!response.ok) return;
+      const data = (await response.json()) as { truckTrips?: TruckTripDto[] };
+      if (Array.isArray(data.truckTrips)) {
+        setTruckTripsState(data.truckTrips);
+      }
+    } catch {
+      // ignore refresh errors
+    }
+  }, [cycle.id]);
+
+  const handleOpenEditHarvest = React.useCallback(
+    (harvest: HarvestDto) => {
+      setActiveHarvest(harvest);
+      setEditHarvestInitialValues(buildHarvestInitialValues(harvest));
+      setIsEditHarvestOpen(true);
+    },
+    [buildHarvestInitialValues],
+  );
+
+  const handleCloseEditHarvest = React.useCallback(() => {
+    setIsEditHarvestOpen(false);
+    setActiveHarvest(null);
+  }, []);
+
+  const handleOpenEditStock = React.useCallback(
+    (stock: StockDto) => {
+      setActiveStock(stock);
+      setEditStockInitialValues(buildStockInitialValues(stock));
+      setIsEditStockOpen(true);
+    },
+    [buildStockInitialValues],
+  );
+
+  const handleCloseEditStock = React.useCallback(() => {
+    setIsEditStockOpen(false);
+    setActiveStock(null);
+  }, []);
+
+  const handleOpenEditTrip = React.useCallback((trip: TruckTripDto) => {
+    setActiveTrip(trip);
+    setIsEditTripOpen(true);
+  }, []);
+
+  const handleCloseEditTrip = React.useCallback(() => {
+    setIsEditTripOpen(false);
+    setActiveTrip(null);
+  }, []);
 
   React.useEffect(() => {
     let isMounted = true;
@@ -1852,7 +2003,9 @@ const CycleDetailPageClient = ({
                             return (
                               <TableRow
                                 key={h.id}
+                                onClick={() => handleOpenEditHarvest(h)}
                                 sx={{
+                                  cursor: "pointer",
                                   "&:hover": {
                                     bgcolor: (theme) =>
                                       alpha(theme.palette.success.main, 0.02),
@@ -1902,10 +2055,16 @@ const CycleDetailPageClient = ({
                           return (
                             <Card
                               key={h.id}
+                              onClick={() => handleOpenEditHarvest(h)}
                               sx={{
                                 borderRadius: 2,
                                 border: (theme) =>
                                   `2px solid ${alpha(theme.palette.success.main, 0.3)}`,
+                                cursor: "pointer",
+                                "&:hover": {
+                                  boxShadow: (theme) =>
+                                    `0 8px 20px ${alpha(theme.palette.success.main, 0.15)}`,
+                                },
                               }}
                             >
                               <CardContent>
@@ -2066,7 +2225,9 @@ const CycleDetailPageClient = ({
                           {stockUnits.map((s) => (
                             <TableRow
                               key={s.id}
+                              onClick={() => handleOpenEditStock(s)}
                               sx={{
+                                cursor: "pointer",
                                 "&:hover": {
                                   bgcolor: (theme) =>
                                     alpha(theme.palette.warning.main, 0.02),
@@ -2117,10 +2278,16 @@ const CycleDetailPageClient = ({
                         {stockUnits.map((s) => (
                           <Card
                             key={s.id}
+                            onClick={() => handleOpenEditStock(s)}
                             sx={{
                               borderRadius: 2,
                               border: (theme) =>
                                 `2px solid ${alpha(theme.palette.warning.main, 0.3)}`,
+                              cursor: "pointer",
+                              "&:hover": {
+                                boxShadow: (theme) =>
+                                  `0 8px 20px ${alpha(theme.palette.warning.main, 0.15)}`,
+                              },
                             }}
                           >
                             <CardContent>
@@ -2302,7 +2469,9 @@ const CycleDetailPageClient = ({
                             return (
                               <TableRow
                                 key={t.id}
+                                onClick={() => handleOpenEditTrip(t)}
                                 sx={{
+                                  cursor: "pointer",
                                   "&:hover": {
                                     bgcolor: (theme) =>
                                       alpha(theme.palette.secondary.main, 0.02),
@@ -2383,10 +2552,16 @@ const CycleDetailPageClient = ({
                           return (
                             <Card
                               key={t.id}
+                              onClick={() => handleOpenEditTrip(t)}
                               sx={{
                                 borderRadius: 2,
                                 border: (theme) =>
                                   `2px solid ${alpha(theme.palette.secondary.main, 0.3)}`,
+                                cursor: "pointer",
+                                "&:hover": {
+                                  boxShadow: (theme) =>
+                                    `0 8px 20px ${alpha(theme.palette.secondary.main, 0.15)}`,
+                                },
                               }}
                             >
                               <CardContent>
@@ -2510,6 +2685,7 @@ const CycleDetailPageClient = ({
       {createHarvestInitialValues && (
         <HarvestDialog
           open={isCreateHarvestOpen}
+          mode="create"
           initialValues={createHarvestInitialValues}
           fieldId={resolvedFieldId}
           fieldLabel={cycle.field}
@@ -2523,6 +2699,57 @@ const CycleDetailPageClient = ({
           onSuccess={async () => {
             setIsCreateHarvestOpen(false);
             await refreshHarvests();
+          }}
+        />
+      )}
+
+      {editHarvestInitialValues && activeHarvest && (
+        <HarvestDialog
+          open={isEditHarvestOpen}
+          mode="edit"
+          activeHarvest={activeHarvest}
+          initialValues={editHarvestInitialValues}
+          fieldLabel={activeHarvest.field || cycle.field}
+          cycleLabel={
+            activeHarvest.cycleLabel ??
+            (cycle.cycleId
+              ? `${cycle.cycleId} · ${cycle.crop || "Sin cultivo"}`
+              : cycle.crop || `Ciclo #${cycle.id}`)
+          }
+          hideCreateStockButton
+          onClose={handleCloseEditHarvest}
+          onSuccess={async () => {
+            setIsEditHarvestOpen(false);
+            await refreshHarvests();
+          }}
+        />
+      )}
+
+      {editStockInitialValues && activeStock && (
+        <StockDialog
+          open={isEditStockOpen}
+          mode="edit"
+          activeStock={activeStock}
+          initialValues={editStockInitialValues}
+          unitTypeOptions={stockUnitTypeOptions}
+          statusOptions={stockStatusOptions}
+          onClose={handleCloseEditStock}
+          onSuccess={async () => {
+            setIsEditStockOpen(false);
+            await refreshStockUnits();
+          }}
+        />
+      )}
+
+      {activeTrip && (
+        <TruckTripDialog
+          open={isEditTripOpen}
+          mode="edit"
+          activeTrip={activeTrip}
+          onClose={handleCloseEditTrip}
+          onSuccess={async () => {
+            setIsEditTripOpen(false);
+            await refreshTruckTrips();
           }}
         />
       )}

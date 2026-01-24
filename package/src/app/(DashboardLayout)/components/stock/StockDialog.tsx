@@ -660,11 +660,30 @@ const StockDialog = ({
       value: field.id,
     }));
 
-    const cycleOptions = currentDependencies.cycles.map((cycle) => ({
+    const baseCycleOptions = currentDependencies.cycles.map((cycle) => ({
       label: cycle.label,
       value: cycle.id,
       meta: { crop: cycle.crop },
     }));
+    const cycleOptions =
+      mode === 'edit' && activeStock?.cycleIds?.[0]
+        ? [
+            ...baseCycleOptions,
+            ...(baseCycleOptions.some(
+              (option) => option.value === activeStock.cycleIds[0]
+            )
+              ? []
+              : [
+                  {
+                    label:
+                      activeStock.cycleLabels?.[0] ||
+                      `Ciclo #${activeStock.cycleIds[0]}`,
+                    value: activeStock.cycleIds[0],
+                    meta: { crop: activeStock.crop ?? '' },
+                  },
+                ]),
+          ]
+        : baseCycleOptions;
 
     const unitTypeSelectOptions = unitTypeOptions.map((o) => ({
       label: o.label,

@@ -7,7 +7,11 @@ import SimpleEntityDialogForm, {
   type SimpleEntityDialogFieldConfig,
   type SimpleEntityDialogSection,
 } from "@/components/forms/SimpleEntityDialogForm";
-import { normalizeHarvestFormToBaserowPayload } from "@/lib/harvests/formPayload";
+import {
+  normalizeHarvestFormToBaserowPayload,
+} from "@/lib/harvests/formPayload";
+import { splitIsoToDateAndTimeLocal } from "@/lib/forms/datetime";
+import type { HarvestDto } from "@/lib/baserow/harvests";
 
 export type HarvestFormValues = {
   Fecha_fecha: string; // YYYY-MM-DD
@@ -34,6 +38,8 @@ type FieldDependencies = {
 
 export type HarvestDialogProps = {
   open: boolean;
+  mode?: "create" | "edit";
+  activeHarvest?: HarvestDto | null;
   initialValues: HarvestFormValues;
   fieldId?: number | null;
   fieldLabel?: string;
@@ -51,6 +57,34 @@ const emptyDependencies: FieldDependencies = {
   truckTrips: [],
 };
 
+const mergeOptions = <T extends { label: string; value: number }>(
+  primary: T[],
+  fallback: T[],
+): T[] => {
+  if (!fallback.length) return primary;
+  const seen = new Set(primary.map((option) => option.value));
+  const merged = [...primary];
+  fallback.forEach((option) => {
+    if (!seen.has(option.value)) {
+      seen.add(option.value);
+      merged.push(option);
+    }
+  });
+  return merged;
+};
+
+const buildFallbackOptions = (
+  ids: number[] | null | undefined,
+  labels: string[] | null | undefined,
+  labelForMissing: (id: number) => string,
+): Array<{ label: string; value: number }> => {
+  if (!Array.isArray(ids) || !ids.length) return [];
+  return ids.map((id, index) => ({
+    value: id,
+    label: labels?.[index]?.trim() || labelForMissing(id),
+  }));
+};
+
 const parseNumericId = (value: unknown): number | null => {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string" && value.trim() !== "") {
@@ -62,6 +96,8 @@ const parseNumericId = (value: unknown): number | null => {
 
 const HarvestDialog = ({
   open,
+  mode = "create",
+  activeHarvest = null,
   initialValues,
   fieldId,
   fieldLabel,
@@ -93,11 +129,129 @@ const HarvestDialog = ({
     [formCurrentValues],
   );
 
+  const buildHarvestInitialValues = React.useCallback(
+    (harvest: HarvestDto): HarvestFormValues => {
+      const { date, time } = splitIsoToDateAndTimeLocal(harvest.date);
+      const { date: todayDate, time: todayTime } = splitIsoToDateAndTimeLocal(
+        new Date().toISOString(),
+      );
+
+      return {
+        Fecha_fecha: date || todayDate,
+        Fecha_hora: time || todayTime,
+        "KG Cosechados":
+          harvest.harvestedKgs != null ? String(harvest.harvestedKgs) : "",
+        Campo: (harvest.fieldId ?? "") as "" | number,
+        Lotes: (harvest.lotsIds ?? []) as Array<string | number>,
+        "Ciclo de siembra": (harvest.cycleId ?? "") as "" | number,
+        Cultivo: harvest.crop ?? "",
+        Stock: (harvest.stockIds ?? []) as Array<string | number>,
+        "Viajes camión directos": (harvest.directTruckTripIds ?? []) as Array<
+          string | number
+        >,
+        Notas: harvest.notes ?? "",
+      };
+    },
+    [],
+  );
+
   React.useEffect(() => {
     if (!open) return;
+    if (mode === "edit" && activeHarvest) {
+      const values = initialValues ?? buildHarvestInitialValues(activeHarvest);
+      setFormInitialValues(values);
+      setFormCurrentValues(values);
+      return;
+    }
     setFormInitialValues(initialValues);
     setFormCurrentValues(initialValues);
-  }, [open, initialValues]);
+  }, [activeHarvest, buildHarvestInitialValues, initialValues, mode, open]);
+
+  const normalizeHarvestDtoToBaserowPayload = React.useCallback(
+    (harvest: HarvestDto): Record<string, any> => {
+      const payload: Record<string, any> = {};
+
+      if (harvest.date) {
+        const parsedDate = new Date(harvest.date);
+        if (!Number.isNaN(parsedDate.getTime())) {
+          payload.Fecha = parsedDate.toISOString();
+        }
+      }
+
+      payload["KG Cosechados"] =
+        typeof harvest.harvestedKgs === "number" ? harvest.harvestedKgs : 0;
+
+      payload.Lotes = Array.isArray(harvest.lotsIds)
+        ? [...harvest.lotsIds]
+        : [];
+
+      const cycleId =
+        typeof harvest.cycleId === "number" && !Number.isNaN(harvest.cycleId)
+          ? harvest.cycleId
+          : null;
+      payload["Ciclo de siembra"] = cycleId ? [cycleId] : [];
+
+      payload.Stock = Array.isArray(harvest.stockIds)
+        ? harvest.stockIds.filter(
+            (id): id is number => typeof id === "number" && !Number.isNaN(id),
+          )
+        : [];
+
+      payload["Viajes camión directos"] = Array.isArray(
+        harvest.directTruckTripIds,
+      )
+        ? harvest.directTruckTripIds.filter(
+            (id): id is number => typeof id === "number" && !Number.isNaN(id),
+          )
+        : [];
+
+      const notesValue =
+        typeof harvest.notes === "string" ? harvest.notes.trim() : "";
+      payload.Notas = notesValue;
+
+      return payload;
+    },
+    [],
+  );
+
+  const normalizeArrayForComparison = React.useCallback((arr: unknown[]) => {
+    if (!arr.length) return [];
+    if (arr.every((value) => typeof value === "number")) {
+      return [...arr].sort((a, b) => (Number(a) || 0) - (Number(b) || 0));
+    }
+    if (arr.every((value) => typeof value === "string")) {
+      return [...arr]
+        .map((value) => String(value))
+        .sort((a, b) => a.localeCompare(b));
+    }
+    return [...arr];
+  }, []);
+
+  const isEqualValue = React.useCallback(
+    (a: unknown, b: unknown) => {
+      if (Array.isArray(a) && Array.isArray(b)) {
+        if (a.length !== b.length) return false;
+        const normalizedA = normalizeArrayForComparison(a);
+        const normalizedB = normalizeArrayForComparison(b);
+        return normalizedA.every((value, index) => value === normalizedB[index]);
+      }
+      return a === b;
+    },
+    [normalizeArrayForComparison],
+  );
+
+  const computeDiffPayload = React.useCallback(
+    (prevPayload: Record<string, any>, nextPayload: Record<string, any>) => {
+      const diff: Record<string, any> = {};
+      Object.keys(nextPayload).forEach((key) => {
+        if (!isEqualValue(prevPayload[key], nextPayload[key])) {
+          diff[key] = nextPayload[key];
+        }
+      });
+      return diff;
+    },
+    [isEqualValue],
+  );
 
   const loadFieldOptions = React.useCallback(async () => {
     if (fieldId) {
@@ -220,47 +374,99 @@ const HarvestDialog = ({
   );
 
   const fields = React.useMemo<SimpleEntityDialogFieldConfig[]>(() => {
-    const campoOptions = fieldOptions.map((field) => ({
+    const baseCampoOptions = fieldOptions.map((field) => ({
       label: field.label,
       value: field.id,
     }));
+    const fallbackCampoOptions =
+      mode === "edit" && activeHarvest?.fieldId
+        ? [
+            {
+              value: activeHarvest.fieldId,
+              label: activeHarvest.field || `Campo #${activeHarvest.fieldId}`,
+            },
+          ]
+        : [];
+    const campoOptions = mergeOptions(baseCampoOptions, fallbackCampoOptions);
 
-    const lotsOptions = dependencies.lots.map((lot) => ({
+    const baseLotsOptions = dependencies.lots.map((lot) => ({
       label: lot.label,
       value: lot.id,
     }));
+    const fallbackLotsOptions =
+      mode === "edit" && activeHarvest
+        ? buildFallbackOptions(
+            activeHarvest.lotsIds,
+            activeHarvest.lotsLabels,
+            (id) => `Lote #${id}`,
+          )
+        : [];
+    const lotsOptions = mergeOptions(baseLotsOptions, fallbackLotsOptions);
 
     const baseCycleOptions = dependencies.cycles.map((cycle) => ({
       label: cycle.label,
       value: cycle.id,
       meta: { crop: cycle.crop },
     }));
-    const fallbackCycleOptions =
+    const fallbackCycleOptions: Array<{
+      label: string;
+      value: number;
+      meta: { crop: string };
+    }> = [];
+
+    if (mode === "edit" && activeHarvest?.cycleId) {
+      fallbackCycleOptions.push({
+        value: activeHarvest.cycleId,
+        label:
+          activeHarvest.cycleLabel || `Ciclo #${activeHarvest.cycleId}`,
+        meta: { crop: activeHarvest.crop ?? "" },
+      });
+    }
+
+    if (
       selectedCycleId &&
       !baseCycleOptions.some((option) => option.value === selectedCycleId)
-        ? [
-            {
-              label:
-                cycleLabel?.trim() ||
-                (formCurrentValues.Cultivo
-                  ? `Ciclo #${selectedCycleId} · ${formCurrentValues.Cultivo}`
-                  : `Ciclo #${selectedCycleId}`),
-              value: selectedCycleId,
-              meta: { crop: formCurrentValues.Cultivo ?? "" },
-            },
-          ]
-        : [];
-    const cycleOptions = [...baseCycleOptions, ...fallbackCycleOptions];
+    ) {
+      fallbackCycleOptions.push({
+        label:
+          cycleLabel?.trim() ||
+          (formCurrentValues.Cultivo
+            ? `Ciclo #${selectedCycleId} · ${formCurrentValues.Cultivo}`
+            : `Ciclo #${selectedCycleId}`),
+        value: selectedCycleId,
+        meta: { crop: formCurrentValues.Cultivo ?? "" },
+      });
+    }
 
-    const stockOptions = dependencies.stocks.map((stock) => ({
+    const cycleOptions = mergeOptions(baseCycleOptions, fallbackCycleOptions);
+
+    const baseStockOptions = dependencies.stocks.map((stock) => ({
       label: stock.label,
       value: stock.id,
     }));
+    const fallbackStockOptions =
+      mode === "edit" && activeHarvest
+        ? buildFallbackOptions(
+            activeHarvest.stockIds,
+            activeHarvest.stockLabels,
+            (id) => `Stock #${id}`,
+          )
+        : [];
+    const stockOptions = mergeOptions(baseStockOptions, fallbackStockOptions);
 
-    const truckOptions = dependencies.truckTrips.map((trip) => ({
+    const baseTruckOptions = dependencies.truckTrips.map((trip) => ({
       label: trip.label,
       value: trip.id,
     }));
+    const fallbackTruckOptions =
+      mode === "edit" && activeHarvest
+        ? buildFallbackOptions(
+            activeHarvest.directTruckTripIds,
+            activeHarvest.directTruckLabels,
+            (id) => `Viaje #${id}`,
+          )
+        : [];
+    const truckOptions = mergeOptions(baseTruckOptions, fallbackTruckOptions);
 
     const dependentHelperText = selectedFieldId
       ? (dependenciesError ?? undefined)
@@ -389,10 +595,46 @@ const HarvestDialog = ({
     selectedFieldId,
     cycleLabel,
     formCurrentValues,
+    activeHarvest,
+    mode,
   ]);
 
   const handleSubmit = React.useCallback(
     async (values: Record<string, any>) => {
+      if (mode === "edit") {
+        if (!activeHarvest) {
+          throw new Error("No se encontró la cosecha a editar");
+        }
+        const nextPayload = normalizeHarvestFormToBaserowPayload(values, {
+          includeEmptyOptional: true,
+        });
+        const prevPayload = normalizeHarvestDtoToBaserowPayload(activeHarvest);
+        const diffPayload = computeDiffPayload(prevPayload, nextPayload);
+        if (!Object.keys(diffPayload).length) {
+          throw new Error("No hay cambios para guardar");
+        }
+        const response = await fetch(`/api/harvests/${activeHarvest.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ payload: diffPayload }),
+        });
+        if (!response.ok) {
+          const errorBody = await response.text();
+          let message = "No se pudo actualizar la cosecha";
+          if (errorBody) {
+            try {
+              const parsed = JSON.parse(errorBody);
+              message = parsed?.error || errorBody;
+            } catch {
+              message = errorBody;
+            }
+          }
+          throw new Error(message);
+        }
+        onSuccess?.({ id: activeHarvest.id });
+        return;
+      }
+
       const payload = normalizeHarvestFormToBaserowPayload(values);
       const response = await fetch("/api/harvests", {
         method: "POST",
@@ -415,13 +657,25 @@ const HarvestDialog = ({
       const created = (await response.json()) as { id: number };
       onSuccess?.({ id: created.id });
     },
-    [onSuccess],
+    [
+      activeHarvest,
+      computeDiffPayload,
+      mode,
+      normalizeHarvestDtoToBaserowPayload,
+      onSuccess,
+    ],
   );
 
   return (
     <SimpleEntityDialogForm
       open={open}
-      title="Nueva cosecha"
+      title={
+        mode === "edit"
+          ? activeHarvest?.harvestId
+            ? `Editar cosecha ${activeHarvest.harvestId}`
+            : "Editar cosecha"
+          : "Nueva cosecha"
+      }
       onClose={onClose}
       onSubmit={handleSubmit}
       fields={fields}
