@@ -25,6 +25,8 @@ export type StockRaw = {
   id: number;
   ID?: unknown;
   Notas?: string | null;
+  Periodo?: unknown;
+  'Período'?: unknown;
   'Ciclo de siembra'?: unknown;
   'Tipo unidad'?: unknown;
   'Fecha de creación'?: string | null;
@@ -46,6 +48,7 @@ export interface StockDto {
   stockId: string;
   name: string;
   notes?: string;
+  period: string;
   cycleIds: number[];
   cycleLabels: string[];
   unitType: string;
@@ -87,6 +90,7 @@ function mapStockRawToDto(row: StockRaw): StockDto {
     stockId: normalizedId,
     name: normalizedId,
     notes: row.Notas ?? undefined,
+    period: normalizeField(row.Periodo ?? row['Período']),
     cycleIds,
     cycleLabels,
     unitType: normalizeField(row['Tipo unidad']),
