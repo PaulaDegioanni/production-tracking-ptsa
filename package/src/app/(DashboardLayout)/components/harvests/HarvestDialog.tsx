@@ -282,7 +282,7 @@ const HarvestDialog = ({
         error instanceof Error
           ? error.message
           : "Ocurrió un error al cargar los campos";
-      setFormError(message);
+      setDependenciesError(message);
       setFieldOptions([]);
     } finally {
       setFieldOptionsLoading(false);

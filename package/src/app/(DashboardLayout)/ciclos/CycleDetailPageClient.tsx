@@ -775,11 +775,11 @@ const CycleDetailPageClient = ({
     localCycleDates.sowingDate,
   ]);
 
-  const cropDurationLabel = (() => {
+  const cropDurationLabel: string | undefined = (() => {
     if (computedCropDurationDays !== null) {
       return `${computedCropDurationDays} días`;
     }
-    if (typeof cycle.cropDurationDays === "string") {
+    if (typeof cycle.cropDurationDays === "number") {
       return `${cycle.cropDurationDays} días`;
     }
     return undefined;
