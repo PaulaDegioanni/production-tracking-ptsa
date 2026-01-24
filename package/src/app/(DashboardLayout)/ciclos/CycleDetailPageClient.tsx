@@ -339,6 +339,18 @@ const CycleDetailPageClient = ({
     selectedLotIdsDraft.length === 0
       ? "Debés seleccionar al menos un lote"
       : null;
+  const [stockUnitTypeOptions, setStockUnitTypeOptions] = React.useState<
+    Array<{ id: number; label: string }>
+  >([]);
+  const [stockStatusOptions, setStockStatusOptions] = React.useState<
+    Array<{ id: number; label: string }>
+  >([]);
+  const [stockOptionsLoading, setStockOptionsLoading] = React.useState(false);
+  const [stockOptionsError, setStockOptionsError] = React.useState<
+    string | null
+  >(null);
+  const [stockOptionsSnackbarOpen, setStockOptionsSnackbarOpen] =
+    React.useState(false);
   const isDesktop = useMediaQuery(
     (theme: Theme) => theme.breakpoints.up("md"),
     { defaultMatches: true },
@@ -374,13 +386,23 @@ const CycleDetailPageClient = ({
 
   const buildCreateStockInitialValues =
     React.useCallback((): StockFormValues => {
+      const normalizeLabel = (value: string) =>
+        value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+      const unitTypeDefault =
+        stockUnitTypeOptions.find(
+          (option) => normalizeLabel(option.label) === "bolson",
+        ) ?? stockUnitTypeOptions[0];
+      const statusDefault =
+        stockStatusOptions.find(
+          (option) => normalizeLabel(option.label) === "nuevo",
+        ) ?? stockStatusOptions[0];
       return {
-        "Tipo unidad": "",
+        "Tipo unidad": unitTypeDefault?.id ?? "",
         Campo: resolvedFieldId ?? "",
         "Ciclo de siembra": cycle.id ?? "", // row id del ciclo (Baserow)
         Cultivo: cycle.crop ?? "",
         "Fecha de creación": getTodayDateString(),
-        Estado: "",
+        Estado: statusDefault?.id ?? "",
         Notas: "",
         ID: "",
         "Kgs actuales": "",
@@ -389,7 +411,12 @@ const CycleDetailPageClient = ({
         "Cosechas asociadas": [],
         "Viajes de camión desde stock": [],
       };
-    }, [cycle, resolvedFieldId]);
+    }, [
+      cycle,
+      resolvedFieldId,
+      stockStatusOptions,
+      stockUnitTypeOptions,
+    ]);
 
   const buildCreateTripInitialValues =
     React.useCallback((): TruckTripFormValues => {
@@ -469,6 +496,51 @@ const CycleDetailPageClient = ({
       // ignore refresh errors
     }
   }, [cycle.id]);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    const loadStockSelectOptions = async () => {
+      try {
+        setStockOptionsLoading(true);
+        setStockOptionsError(null);
+        const response = await fetch("/api/stocks/options?select=true", {
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          const errorBody = await response.text();
+          throw new Error(
+            errorBody || "No se pudieron cargar las opciones de stock",
+          );
+        }
+        const data = (await response.json()) as {
+          unitTypeOptions?: Array<{ id: number; label: string }>;
+          statusOptions?: Array<{ id: number; label: string }>;
+        };
+        if (!isMounted) return;
+        setStockUnitTypeOptions(
+          Array.isArray(data.unitTypeOptions) ? data.unitTypeOptions : [],
+        );
+        setStockStatusOptions(
+          Array.isArray(data.statusOptions) ? data.statusOptions : [],
+        );
+      } catch (error) {
+        if (!isMounted) return;
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Error al cargar opciones de stock";
+        setStockOptionsError(message);
+        setStockOptionsSnackbarOpen(true);
+      } finally {
+        if (isMounted) setStockOptionsLoading(false);
+      }
+    };
+
+    loadStockSelectOptions();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   React.useEffect(() => {
     if (isDesktop) {
@@ -766,6 +838,14 @@ const CycleDetailPageClient = ({
   ) => {
     if (reason === "clickaway") return;
     setLotsSnackbarOpen(false);
+  };
+
+  const handleStockOptionsSnackbarClose = (
+    _event: React.SyntheticEvent | Event,
+    reason?: SnackbarCloseReason,
+  ) => {
+    if (reason === "clickaway") return;
+    setStockOptionsSnackbarOpen(false);
   };
 
   type StatCardProps = {
@@ -1921,7 +2001,12 @@ const CycleDetailPageClient = ({
                     size="small"
                     onClick={handleOpenCreateStock}
                     sx={{ textTransform: "none", fontWeight: 700 }}
-                    disabled={resolvedFieldId === null}
+                    disabled={
+                      resolvedFieldId === null ||
+                      stockOptionsLoading ||
+                      !stockUnitTypeOptions.length ||
+                      !stockStatusOptions.length
+                    }
                   >
                     + Nuevo stock
                   </Button>
@@ -2404,9 +2489,8 @@ const CycleDetailPageClient = ({
           mode="create"
           activeStock={null}
           initialValues={createStockInitialValues}
-          // ⚠️ por ahora: si no tenés estas options en este page, el dialog queda sin opciones
-          unitTypeOptions={[]}
-          statusOptions={[]}
+          unitTypeOptions={stockUnitTypeOptions}
+          statusOptions={stockStatusOptions}
           onClose={handleCloseCreateStock}
           onSuccess={() => setIsCreateStockOpen(false)}
         />
@@ -2564,6 +2648,23 @@ const CycleDetailPageClient = ({
           sx={{ width: "100%" }}
         >
           Lotes actualizados correctamente
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={stockOptionsSnackbarOpen}
+        autoHideDuration={5000}
+        onClose={handleStockOptionsSnackbarClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={(event) => handleStockOptionsSnackbarClose(event)}
+          severity="error"
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {stockOptionsError ||
+            "No se pudieron cargar las opciones de stock"}
         </Alert>
       </Snackbar>
     </PageContainer>
