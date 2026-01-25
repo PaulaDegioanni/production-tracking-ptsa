@@ -585,65 +585,55 @@ const CycleDetailPageClient = ({
     setIsCreateHarvestOpen(false);
   }, []);
 
-  const refreshHarvests = React.useCallback(async () => {
+  const refreshLinkedData = React.useCallback(async () => {
     try {
-      const response = await fetch(`/api/cycles/${cycle.id}/harvests`, {
-        cache: "no-store",
-      });
-      if (!response.ok) return;
-      const data = (await response.json()) as { harvests?: typeof harvests };
-      if (Array.isArray(data.harvests)) {
-        setHarvestsState(data.harvests);
-      }
-    } catch {
-      // ignore refresh errors
-    }
-  }, [cycle.id]);
+      const [cycleResponse, harvestsResponse, stockResponse, tripsResponse] =
+        await Promise.all([
+          fetch(`/api/cycles/${cycle.id}`, { cache: "no-store" }),
+          fetch(`/api/cycles/${cycle.id}/harvests`, { cache: "no-store" }),
+          fetch(`/api/cycles/${cycle.id}/stocks`, { cache: "no-store" }),
+          fetch(`/api/cycles/${cycle.id}/truck-trips`, { cache: "no-store" }),
+        ]);
 
-  const refreshStockUnits = React.useCallback(async () => {
-    try {
-      const response = await fetch(`/api/cycles/${cycle.id}/stocks`, {
-        cache: "no-store",
-      });
-      if (!response.ok) return;
-      const data = (await response.json()) as { stockUnits?: StockDto[] };
-      if (Array.isArray(data.stockUnits)) {
-        setStockUnitsState(data.stockUnits);
+      if (cycleResponse.ok) {
+        const data = (await cycleResponse.json()) as {
+          cycle?: typeof cycle;
+        };
+        if (data?.cycle) {
+          setCycleState(data.cycle as any);
+          setLocalCycleDates({
+            fallowStartDate: data.cycle.fallowStartDate ?? null,
+            sowingDate: data.cycle.sowingDate ?? null,
+            estimatedHarvestDate: data.cycle.estimatedHarvestDate ?? null,
+          });
+        }
       }
-    } catch {
-      // ignore refresh errors
-    }
-  }, [cycle.id]);
 
-  const refreshTruckTrips = React.useCallback(async () => {
-    try {
-      const response = await fetch(`/api/cycles/${cycle.id}/truck-trips`, {
-        cache: "no-store",
-      });
-      if (!response.ok) return;
-      const data = (await response.json()) as { truckTrips?: TruckTripDto[] };
-      if (Array.isArray(data.truckTrips)) {
-        setTruckTripsState(data.truckTrips);
+      if (harvestsResponse.ok) {
+        const data = (await harvestsResponse.json()) as {
+          harvests?: typeof harvests;
+        };
+        if (Array.isArray(data.harvests)) {
+          setHarvestsState(data.harvests);
+        }
       }
-    } catch {
-      // ignore refresh errors
-    }
-  }, [cycle.id]);
 
-  const refreshCycle = React.useCallback(async () => {
-    try {
-      const response = await fetch(`/api/cycles/${cycle.id}`, {
-        cache: "no-store",
-      });
-      if (!response.ok) return;
-      const data = (await response.json()) as { cycle?: typeof cycle };
-      if (data?.cycle) {
-        setCycleState(data.cycle as any);
-        setLocalCycleDates({
-          fallowStartDate: data.cycle.fallowStartDate ?? null,
-          sowingDate: data.cycle.sowingDate ?? null,
-          estimatedHarvestDate: data.cycle.estimatedHarvestDate ?? null,
-        });
+      if (stockResponse.ok) {
+        const data = (await stockResponse.json()) as {
+          stockUnits?: StockDto[];
+        };
+        if (Array.isArray(data.stockUnits)) {
+          setStockUnitsState(data.stockUnits);
+        }
+      }
+
+      if (tripsResponse.ok) {
+        const data = (await tripsResponse.json()) as {
+          truckTrips?: TruckTripDto[];
+        };
+        if (Array.isArray(data.truckTrips)) {
+          setTruckTripsState(data.truckTrips);
+        }
       }
     } catch {
       // ignore refresh errors
@@ -1010,6 +1000,7 @@ const CycleDetailPageClient = ({
         fieldId: result.cycle.fieldId ?? prev.fieldId,
       }));
       setLotsState(result.lots);
+      await refreshLinkedData();
       setIsEditLotsOpen(false);
       setLotsSnackbarOpen(true);
     } catch (error) {
@@ -2718,8 +2709,7 @@ const CycleDetailPageClient = ({
           onClose={handleCloseCreateStock}
           onSuccess={async () => {
             setIsCreateStockOpen(false);
-            await refreshStockUnits();
-            await refreshCycle();
+            await refreshLinkedData();
           }}
         />
       )}
@@ -2733,8 +2723,7 @@ const CycleDetailPageClient = ({
           onClose={handleCloseCreateTrip}
           onSuccess={async () => {
             setIsCreateTripOpen(false);
-            await refreshTruckTrips();
-            await refreshCycle();
+            await refreshLinkedData();
           }}
         />
       )}
@@ -2755,8 +2744,7 @@ const CycleDetailPageClient = ({
           onClose={handleCloseCreateHarvest}
           onSuccess={async () => {
             setIsCreateHarvestOpen(false);
-            await refreshHarvests();
-            await refreshCycle();
+            await refreshLinkedData();
           }}
         />
       )}
@@ -2778,8 +2766,7 @@ const CycleDetailPageClient = ({
           onClose={handleCloseEditHarvest}
           onSuccess={async () => {
             setIsEditHarvestOpen(false);
-            await refreshHarvests();
-            await refreshCycle();
+            await refreshLinkedData();
           }}
         />
       )}
@@ -2795,8 +2782,7 @@ const CycleDetailPageClient = ({
           onClose={handleCloseEditStock}
           onSuccess={async () => {
             setIsEditStockOpen(false);
-            await refreshStockUnits();
-            await refreshCycle();
+            await refreshLinkedData();
           }}
         />
       )}
@@ -2809,8 +2795,7 @@ const CycleDetailPageClient = ({
           onClose={handleCloseEditTrip}
           onSuccess={async () => {
             setIsEditTripOpen(false);
-            await refreshTruckTrips();
-            await refreshCycle();
+            await refreshLinkedData();
           }}
         />
       )}
