@@ -1735,7 +1735,7 @@ const CycleDetailPageClient = ({
                           {item.cropDurationLabel && (
                             <Chip
                               size="small"
-                              label={`Duración cultivo: ${item.cropDurationLabel}`}
+                              label={`Duración cultivo: ${item.cropDurationLabel}`}                              
                               sx={(theme) => ({
                                 mt: 0.7,
                                 fontWeight: 600,
@@ -2615,6 +2615,11 @@ const CycleDetailPageClient = ({
                                       </Typography>
                                     ) : null}
                                   </Stack>
+                                </TableCell>
+                                <TableCell>
+                                  <Typography variant="body1">
+                                    {t.provider || "—"}
+                                  </Typography>
                                 </TableCell>
                                 <TableCell align="right">
                                   <Typography
