@@ -2572,7 +2572,7 @@ const CycleDetailPageClient = ({
                                         <Chip
                                           size="small"
                                           color="error"
-                                          label="Revisión"
+                                          label="Revisar"
                                           sx={{
                                             fontWeight: 700,
                                             textTransform: "uppercase",
@@ -2725,7 +2725,7 @@ const CycleDetailPageClient = ({
                                           <Chip
                                             size="small"
                                             color="error"
-                                            label="Revisión"
+                                            label="Revisar"
                                             sx={{ fontWeight: 700 }}
                                           />
                                         </Tooltip>

@@ -138,6 +138,8 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
   const [cycleFilter, setCycleFilter] = React.useState<string>("all");
   const [destinationFilter, setDestinationFilter] =
     React.useState<string>("all");
+  const [truckFilter, setTruckFilter] = React.useState<string>("all");
+  const [providerFilter, setProviderFilter] = React.useState<string>("all");
   const [originFilter, setOriginFilter] = React.useState<
     TripOriginType | "all"
   >("all");
@@ -185,6 +187,34 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
     [sortedTrips],
   );
 
+  const uniqueTruckPlates = React.useMemo<string[]>(
+    () =>
+      Array.from(
+        new Set(
+          sortedTrips
+            .map((trip: TruckTripDto) => trip.truckPlate)
+            .filter((v): v is string => Boolean(v))
+            .map((v) => v.trim())
+            .filter((v) => v && v !== "—"),
+        ),
+      ).sort(),
+    [sortedTrips],
+  );
+
+  const uniqueProviders = React.useMemo<string[]>(
+    () =>
+      Array.from(
+        new Set(
+          sortedTrips
+            .map((trip: TruckTripDto) => trip.provider)
+            .filter((v): v is string => Boolean(v))
+            .map((v) => v.trim())
+            .filter((v) => v && v !== "—"),
+        ),
+      ).sort(),
+    [sortedTrips],
+  );
+
   // Destino: todas las opciones que se muestran en la tabla (getDestinationLabel)
   const uniqueDestinations = React.useMemo<string[]>(
     () =>
@@ -224,6 +254,16 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
         if (tableDestination !== destinationFilter) return false;
       }
 
+      // Camión
+      if (truckFilter !== "all") {
+        if (trip.truckPlate !== truckFilter) return false;
+      }
+
+      // Proveedor
+      if (providerFilter !== "all") {
+        if (trip.provider !== providerFilter) return false;
+      }
+
       // Origen
       if (originFilter !== "all") {
         if (trip.originType !== originFilter) return false;
@@ -237,6 +277,8 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
     fieldFilter,
     cycleFilter,
     destinationFilter,
+    truckFilter,
+    providerFilter,
     originFilter,
   ]);
 
@@ -303,10 +345,16 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                 border: `1px solid ${theme.palette.divider}`,
               })}
             >
-              <Stack
-                direction={{ xs: "column", md: "row" }}
-                spacing={2}
-                sx={{ alignItems: { xs: "stretch", md: "center" } }}
+              <Box
+                sx={{
+                  display: "grid",
+                  gap: 2,
+                  gridTemplateColumns: {
+                    xs: "1fr",
+                    md: "repeat(4, minmax(0, 1fr))",
+                    lg: "repeat(7, minmax(0, 1fr))",
+                  },
+                }}
               >
                 <FormControl fullWidth size="small">
                   <TextField
@@ -322,6 +370,24 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                     {periodOptions.map((period, index) => (
                       <MenuItem key={`${period}-${index}`} value={period}>
                         {period}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </FormControl>
+                <FormControl fullWidth size="small">
+                  <TextField
+                    label="Camión"
+                    select
+                    value={truckFilter}
+                    onChange={(e) => setTruckFilter(e.target.value)}
+                    fullWidth
+                    sx={{ bgcolor: "background.paper" }}
+                    size="small"
+                  >
+                    <MenuItem value="all">Todos</MenuItem>
+                    {uniqueTruckPlates.map((plate) => (
+                      <MenuItem key={plate} value={plate}>
+                        {plate}
                       </MenuItem>
                     ))}
                   </TextField>
@@ -382,7 +448,7 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                 </FormControl>
                 <FormControl fullWidth size="small">
                   <TextField
-                    label="Destino - Proveedor"
+                    label="Destino"
                     select
                     value={destinationFilter}
                     onChange={(e) => setDestinationFilter(e.target.value)}
@@ -398,7 +464,25 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                     ))}
                   </TextField>
                 </FormControl>
-              </Stack>
+                <FormControl fullWidth size="small">
+                  <TextField
+                    label="Proveedor"
+                    select
+                    value={providerFilter}
+                    onChange={(e) => setProviderFilter(e.target.value)}
+                    fullWidth
+                    sx={{ bgcolor: "background.paper" }}
+                    size="small"
+                  >
+                    <MenuItem value="all">Todos</MenuItem>
+                    {uniqueProviders.map((provider) => (
+                      <MenuItem key={provider} value={provider}>
+                        {provider}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </FormControl>
+              </Box>
             </Box>
             <Stack
               direction={{ xs: "column", md: "row" }}
@@ -667,7 +751,7 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                                 <Chip
                                   size="small"
                                   color="error"
-                                  label="Revisión"
+                                  label="Revisar"
                                   sx={{
                                     fontWeight: 700,
                                     mt: 0.75,
@@ -998,7 +1082,7 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                                   <Chip
                                     size="small"
                                     color="error"
-                                    label="Revisión"
+                                    label="Revisar"
                                     sx={{ fontWeight: 700 }}
                                   />
                                 </Tooltip>
