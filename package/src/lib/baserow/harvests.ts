@@ -13,6 +13,7 @@ import {
   splitIsoToDateAndTimeLocal,
   combineDateAndTimeToIso,
 } from '@/lib/forms/datetime';
+import { getTruckTripsByOriginsDto } from './truckTrips';
 
 export const HARVESTS_TABLE_ID = Number(
   process.env.NEXT_PUBLIC_BASEROW_HARVESTS_TABLE_ID
@@ -213,12 +214,50 @@ export async function getHarvestsRaw(): Promise<HarvestRaw[]> {
 
 export async function getHarvestsDto(): Promise<HarvestDto[]> {
   const rows = await getHarvestsRaw();
-  return rows.map(mapHarvestRawToDto);
+  const mapped = rows.map(mapHarvestRawToDto);
+  return enrichHarvestsWithDirectTruckKgs(mapped);
 }
 
 export async function getHarvestsByCycleIdDto(
   cycleId: number
 ): Promise<HarvestDto[]> {
   const rows = await getHarvestsRaw();
-  return rows.map(mapHarvestRawToDto).filter((h) => h.cycleId == cycleId);
+  const mapped = rows.map(mapHarvestRawToDto).filter((h) => h.cycleId == cycleId);
+  return enrichHarvestsWithDirectTruckKgs(mapped);
+}
+
+export async function getHarvestAvailableKgs(
+  harvestId: number
+): Promise<number> {
+  if (!harvestId || Number.isNaN(harvestId)) return 0;
+  const rows = await getHarvestsDto();
+  const harvest = rows.find((item) => item.id === harvestId);
+  if (!harvest) return 0;
+
+  const harvested = harvest.harvestedKgs ?? 0;
+  const directTruck = harvest.directTruckKgs ?? 0;
+
+  const available = harvested - directTruck;
+  return Number.isFinite(available) ? Math.max(0, available) : 0;
+}
+
+async function enrichHarvestsWithDirectTruckKgs(
+  harvests: HarvestDto[]
+): Promise<HarvestDto[]> {
+  if (!harvests.length) return harvests;
+  const harvestIds = harvests.map((h) => h.id);
+  const trips = await getTruckTripsByOriginsDto({ harvestIds });
+
+  const byHarvestId = new Map<number, number>();
+  trips.forEach((trip) => {
+    trip.harvestOriginIds.forEach((id) => {
+      const current = byHarvestId.get(id) ?? 0;
+      byHarvestId.set(id, current + (trip.totalKgsOrigin ?? 0));
+    });
+  });
+
+  return harvests.map((harvest) => ({
+    ...harvest,
+    directTruckKgs: byHarvestId.get(harvest.id) ?? 0,
+  }));
 }

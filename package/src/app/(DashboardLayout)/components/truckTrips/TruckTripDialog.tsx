@@ -108,6 +108,20 @@ const getCurrentTimeString = (): string => {
 const normalizeLabel = (value?: string | null): string =>
   value?.trim().toLowerCase() ?? "";
 
+const normalizeNumericInput = (value: unknown): number | null => {
+  if (value === undefined || value === null) return null;
+  const raw = String(value).trim().replace(",", ".");
+  if (!raw) return null;
+  const parsed = Number(raw);
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
+const formatKgs = (value: number): string =>
+  value.toLocaleString("es-ES", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+
 const ORIGIN_TYPE_SELECT_OPTIONS: Array<{
   label: string;
   value: "harvest" | "stock";
@@ -352,6 +366,21 @@ const TruckTripDialog = ({
   const [originOptionsError, setOriginOptionsError] = React.useState<
     string | null
   >(null);
+  const [originAvailableKgs, setOriginAvailableKgs] = React.useState<
+    number | null
+  >(null);
+  const [originAvailabilityLoading, setOriginAvailabilityLoading] =
+    React.useState(false);
+  const [originAvailabilityError, setOriginAvailabilityError] = React.useState<
+    string | null
+  >(null);
+  const [originKgsError, setOriginKgsError] = React.useState<string | null>(
+    null,
+  );
+  const [formValuesSnapshot, setFormValuesSnapshot] = React.useState<
+    Record<string, any>
+  >(dialogInitialValues);
+  const availabilityRequestId = React.useRef(0);
 
   const showToast = React.useCallback(
     (message: string, severity: SnackbarState["severity"]) => {
@@ -373,7 +402,51 @@ const TruckTripDialog = ({
     setSelectedOriginType("harvest");
     setOriginSelectOptions([]);
     setOriginOptionsError(null);
+    setOriginAvailableKgs(null);
+    setOriginAvailabilityError(null);
+    setOriginAvailabilityLoading(false);
+    setOriginKgsError(null);
+    setFormValuesSnapshot({});
   }, []);
+
+  const fetchOriginAvailability = React.useCallback(
+    async (originType: "harvest" | "stock", originId: number) => {
+      const requestId = availabilityRequestId.current + 1;
+      availabilityRequestId.current = requestId;
+
+      setOriginAvailabilityLoading(true);
+      setOriginAvailabilityError(null);
+      try {
+        const response = await fetch(
+          `/api/origins/availability?type=${originType}&id=${originId}`,
+          { cache: "no-store" },
+        );
+        if (!response.ok) {
+          const errorBody = await response.text();
+          throw new Error(
+            errorBody || "No se pudo cargar la disponibilidad del origen",
+          );
+        }
+        const data = (await response.json()) as { availableKgs?: number };
+        if (availabilityRequestId.current !== requestId) return;
+        const available = Number(data?.availableKgs ?? 0);
+        setOriginAvailableKgs(Number.isFinite(available) ? available : 0);
+      } catch (error) {
+        if (availabilityRequestId.current !== requestId) return;
+        const message =
+          error instanceof Error
+            ? error.message
+            : "No se pudo cargar la disponibilidad del origen";
+        setOriginAvailabilityError(message);
+        setOriginAvailableKgs(null);
+      } finally {
+        if (availabilityRequestId.current === requestId) {
+          setOriginAvailabilityLoading(false);
+        }
+      }
+    },
+    [],
+  );
 
   const fetchFormOptions = React.useCallback(async () => {
     try {
@@ -517,6 +590,7 @@ const TruckTripDialog = ({
 
     if (initialValues) {
       setDialogInitialValues(initialValues);
+      setFormValuesSnapshot(initialValues);
       setInitialValuesKey((prev) => prev + 1);
       const fieldId =
         typeof initialValues["Campo origen"] === "number"
@@ -552,6 +626,7 @@ const TruckTripDialog = ({
         options: formOptions,
       });
       setDialogInitialValues(values);
+      setFormValuesSnapshot(values);
       setInitialValuesKey((prev) => prev + 1);
       const fieldOption = findFieldOptionForTrip(
         activeTrip,
@@ -589,6 +664,7 @@ const TruckTripDialog = ({
 
     const defaults = getDefaultTruckTripFormValues(formOptions);
     setDialogInitialValues(defaults);
+    setFormValuesSnapshot(defaults);
     setInitialValuesKey((prev) => prev + 1);
     resetDialogState();
   }, [
@@ -601,13 +677,37 @@ const TruckTripDialog = ({
     resetDialogState,
   ]);
 
+  React.useEffect(() => {
+    if (!open) return;
+    const originIdRaw = dialogInitialValues.Origen;
+    const originTypeRaw = dialogInitialValues["Tipo origen"];
+    const originId =
+      typeof originIdRaw === "number"
+        ? originIdRaw
+        : Number(originIdRaw || "");
+    if (!originId || Number.isNaN(originId)) {
+      setOriginAvailableKgs(null);
+      setOriginAvailabilityError(null);
+      setOriginAvailabilityLoading(false);
+      return;
+    }
+    const normalizedType = originTypeRaw === "stock" ? "stock" : "harvest";
+    void fetchOriginAvailability(normalizedType, originId);
+  }, [dialogInitialValues, fetchOriginAvailability, open]);
+
   const handleDialogFieldChange = React.useCallback(
-    (key: string, value: any) => {
+    (key: string, value: any, values?: Record<string, any>) => {
+      if (values) {
+        setFormValuesSnapshot(values);
+      }
       if (key === "Campo origen") {
         if (!value) {
           setSelectedField(null);
           setOriginSelectOptions([]);
           setOriginOptionsError(null);
+          setOriginAvailableKgs(null);
+          setOriginAvailabilityError(null);
+          setOriginKgsError(null);
           return;
         }
 
@@ -616,6 +716,9 @@ const TruckTripDialog = ({
           setSelectedField(null);
           setOriginSelectOptions([]);
           setOriginOptionsError(null);
+          setOriginAvailableKgs(null);
+          setOriginAvailabilityError(null);
+          setOriginKgsError(null);
           return;
         }
 
@@ -624,6 +727,9 @@ const TruckTripDialog = ({
           null;
         setSelectedField(matchedField ?? { id: numericValue });
         setOriginOptionsError(null);
+        setOriginAvailableKgs(null);
+        setOriginAvailabilityError(null);
+        setOriginKgsError(null);
         void loadOriginOptions({
           campoId: matchedField?.id ?? numericValue,
           campoName: matchedField?.label,
@@ -633,6 +739,9 @@ const TruckTripDialog = ({
         const normalizedType = value === "stock" ? "stock" : "harvest";
         setSelectedOriginType(normalizedType);
         setOriginOptionsError(null);
+        setOriginAvailableKgs(null);
+        setOriginAvailabilityError(null);
+        setOriginKgsError(null);
         if (selectedField?.id || selectedField?.label) {
           void loadOriginOptions({
             campoId: selectedField?.id,
@@ -640,9 +749,27 @@ const TruckTripDialog = ({
             originType: normalizedType,
           });
         }
+      } else if (key === "Origen") {
+        const originId =
+          typeof value === "number" ? value : Number(value || "");
+        if (!originId || Number.isNaN(originId)) {
+          setOriginAvailableKgs(null);
+          setOriginAvailabilityError(null);
+          setOriginKgsError(null);
+          return;
+        }
+        const originTypeRaw = values?.["Tipo origen"] ?? selectedOriginType;
+        const normalizedType = originTypeRaw === "stock" ? "stock" : "harvest";
+        void fetchOriginAvailability(normalizedType, originId);
       }
     },
-    [formOptions?.fields, loadOriginOptions, selectedField, selectedOriginType],
+    [
+      fetchOriginAvailability,
+      formOptions?.fields,
+      loadOriginOptions,
+      selectedField,
+      selectedOriginType,
+    ],
   );
 
   const originHelperText = React.useMemo(() => {
@@ -651,6 +778,53 @@ const TruckTripDialog = ({
     }
     return originOptionsError ?? undefined;
   }, [originOptionsError, selectedField]);
+
+  const effectiveAvailableKgs = React.useMemo(() => {
+    if (originAvailableKgs === null) return null;
+    const selectedOriginId = normalizeNumericInput(formValuesSnapshot.Origen);
+    const selectedOriginType =
+      formValuesSnapshot["Tipo origen"] === "stock" ? "stock" : "harvest";
+    if (!activeTrip || !selectedOriginId) return originAvailableKgs;
+
+    const activeOriginType =
+      activeTrip.originType === "stock"
+        ? "stock"
+        : activeTrip.originType === "harvest"
+          ? "harvest"
+          : null;
+    const activeOriginId =
+      activeOriginType === "stock"
+        ? activeTrip.stockOriginIds?.[0]
+        : activeOriginType === "harvest"
+          ? activeTrip.harvestOriginIds?.[0]
+          : null;
+
+    if (
+      activeOriginType &&
+      activeOriginId &&
+      activeOriginType === selectedOriginType &&
+      activeOriginId === selectedOriginId
+    ) {
+      return originAvailableKgs + (activeTrip.totalKgsOrigin ?? 0);
+    }
+
+    return originAvailableKgs;
+  }, [activeTrip, formValuesSnapshot, originAvailableKgs]);
+
+  React.useEffect(() => {
+    const originKgs = normalizeNumericInput(
+      formValuesSnapshot["Kg carga origen"],
+    );
+    let nextError: string | null = null;
+    if (
+      originKgs !== null &&
+      effectiveAvailableKgs !== null &&
+      originKgs > effectiveAvailableKgs
+    ) {
+      nextError = "La carga supera los kg disponibles en el origen.";
+    }
+    setOriginKgsError((prev) => (prev === nextError ? prev : nextError));
+  }, [effectiveAvailableKgs, formValuesSnapshot]);
 
   const truckSelectOptions = React.useMemo<DialogFieldOption[]>(
     () =>
@@ -786,6 +960,34 @@ const TruckTripDialog = ({
         type: "number",
         required: true,
         step: 0.01,
+        helperContent: (
+          <Stack spacing={0.5}>
+            {originAvailabilityLoading ? (
+              <Typography variant="caption" color="text.secondary">
+                Cargando disponibles...
+              </Typography>
+            ) : originAvailabilityError ? (
+              <Typography variant="caption" color="error.main">
+                {originAvailabilityError}
+              </Typography>
+            ) : effectiveAvailableKgs !== null ? (
+              <Typography variant="caption" color="text.secondary">
+                Disponibles:{" "}
+                <strong>{formatKgs(effectiveAvailableKgs)} kg</strong>
+                {activeTrip &&
+                originAvailableKgs !== null &&
+                effectiveAvailableKgs !== originAvailableKgs
+                  ? " (incluye este viaje)"
+                  : ""}
+              </Typography>
+            ) : null}
+            {originKgsError ? (
+              <Alert severity="error" sx={{ py: 0.5 }}>
+                {originKgsError}
+              </Alert>
+            ) : null}
+          </Stack>
+        ),
       },
       {
         key: "Tipo destino",
@@ -813,6 +1015,25 @@ const TruckTripDialog = ({
         label: "Kg carga destino",
         type: "number",
         step: 0.01,
+        helperContent: (() => {
+          const originKgs = normalizeNumericInput(
+            formValuesSnapshot["Kg carga origen"],
+          );
+          const destinationKgs = normalizeNumericInput(
+            formValuesSnapshot["Kg carga destino"],
+          );
+          if (originKgs === null || destinationKgs === null) return null;
+          const diff = originKgs - destinationKgs;
+          return (
+            <Typography
+              variant="caption"
+              color={diff >= 0 ? "success.main" : "error.main"}
+              fontWeight={600}
+            >
+              Diferencia (origen - destino): {formatKgs(diff)} kg
+            </Typography>
+          );
+        })(),
       },
       {
         key: "Notas",
@@ -829,10 +1050,17 @@ const TruckTripDialog = ({
       originHelperText,
       originOptionsLoading,
       originSelectOptions,
+      activeTrip,
+      effectiveAvailableKgs,
+      originAvailableKgs,
+      originAvailabilityError,
+      originAvailabilityLoading,
+      originKgsError,
       providerSelectOptions,
       selectedField,
       statusSelectOptions,
       truckSelectOptions,
+      formValuesSnapshot,
     ],
   );
 
@@ -1015,6 +1243,7 @@ const TruckTripDialog = ({
         sections={TRUCK_TRIP_FORM_SECTIONS}
         initialValues={dialogInitialValues}
         onFieldChange={handleDialogFieldChange}
+        submitDisabled={Boolean(originKgsError)}
         showCancel={false}
         extraActionsInline
         extraActions={

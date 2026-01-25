@@ -1,19 +1,21 @@
 // src/app/(DashboardLayout)/proveedores/page.tsx
-import { getProvidersDto } from '@/lib/baserow/providers';
+import { getProviderPeriodRowsDto, getProvidersDto } from '@/lib/baserow/providers';
 import { getProviderSelectOptions } from '@/lib/baserow/providerFormOptions';
 import ProveedoresPageClient from './ProveedoresPageClient';
 
 export const dynamic = 'force-dynamic';
 
 const ProveedoresPage = async () => {
-  const [providers, selectOptions] = await Promise.all([
+  const [providers, providerRows, selectOptions] = await Promise.all([
     getProvidersDto(),
+    getProviderPeriodRowsDto(),
     getProviderSelectOptions(),
   ]);
 
   return (
     <ProveedoresPageClient
       initialProviders={providers}
+      initialProviderRows={providerRows}
       admitsOptions={selectOptions.admits}
     />
   );

@@ -25,6 +25,8 @@ export type StockRaw = {
   id: number;
   ID?: unknown;
   Notas?: string | null;
+  Periodo?: unknown;
+  'Período'?: unknown;
   'Ciclo de siembra'?: unknown;
   'Tipo unidad'?: unknown;
   'Fecha de creación'?: string | null;
@@ -46,6 +48,7 @@ export interface StockDto {
   stockId: string;
   name: string;
   notes?: string;
+  period: string;
   cycleIds: number[];
   cycleLabels: string[];
   unitType: string;
@@ -87,6 +90,7 @@ function mapStockRawToDto(row: StockRaw): StockDto {
     stockId: normalizedId,
     name: normalizedId,
     notes: row.Notas ?? undefined,
+    period: normalizeField(row.Periodo ?? row['Período']),
     cycleIds,
     cycleLabels,
     unitType: normalizeField(row['Tipo unidad']),
@@ -192,4 +196,15 @@ export async function getStockByCycleIdDto(
 ): Promise<StockDto[]> {
   const rows = await getStockRaw();
   return rows.map(mapStockRawToDto).filter((s) => s.cycleIds.includes(cycleId));
+}
+
+export async function getStockAvailableKgs(
+  stockId: number
+): Promise<number> {
+  if (!stockId || Number.isNaN(stockId)) return 0;
+  const rows = await getStockDto();
+  const stock = rows.find((item) => item.id === stockId);
+  if (!stock) return 0;
+  const available = stock.currentKgs ?? 0;
+  return Number.isFinite(available) ? Math.max(0, available) : 0;
 }

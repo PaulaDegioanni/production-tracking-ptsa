@@ -1,7 +1,18 @@
 "use client";
 
 import * as React from "react";
-import { Button, Stack, Typography } from "@mui/material";
+import {
+  Alert,
+  Button,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Stack,
+  Typography,
+} from "@mui/material";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 
 import SimpleEntityDialogForm, {
   type SimpleEntityDialogFieldConfig,
@@ -119,6 +130,9 @@ const HarvestDialog = ({
     React.useState(false);
   const [dependenciesError, setDependenciesError] =
     React.useState<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
+  const [deleteLoading, setDeleteLoading] = React.useState(false);
+  const [deleteError, setDeleteError] = React.useState<string | null>(null);
 
   const selectedFieldId = React.useMemo(
     () => parseNumericId(formCurrentValues.Campo),
@@ -672,30 +686,143 @@ const HarvestDialog = ({
     ],
   );
 
+  const openDeleteConfirm = React.useCallback(() => {
+    if (!activeHarvest) return;
+    setDeleteError(null);
+    setDeleteConfirmOpen(true);
+  }, [activeHarvest]);
+
+  const handleCloseDeleteConfirm = React.useCallback(() => {
+    if (deleteLoading) return;
+    setDeleteConfirmOpen(false);
+  }, [deleteLoading]);
+
+  const handleDeleteConfirmed = React.useCallback(async () => {
+    if (!activeHarvest) {
+      setDeleteError("No se encontró la cosecha a borrar");
+      return;
+    }
+
+    try {
+      setDeleteLoading(true);
+      setDeleteError(null);
+      const response = await fetch(`/api/harvests/${activeHarvest.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        let message = "No se pudo borrar la cosecha";
+        if (errorBody) {
+          try {
+            const parsed = JSON.parse(errorBody);
+            message = parsed?.error || errorBody;
+          } catch {
+            message = errorBody;
+          }
+        }
+        throw new Error(message);
+      }
+
+      setDeleteConfirmOpen(false);
+      onSuccess?.({ id: activeHarvest.id });
+      onClose();
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Ocurrió un error al borrar la cosecha";
+      setDeleteError(message);
+    } finally {
+      setDeleteLoading(false);
+    }
+  }, [activeHarvest, onClose, onSuccess]);
+
   return (
-    <SimpleEntityDialogForm
-      open={open}
-      title={
-        mode === "edit"
-          ? activeHarvest?.harvestId
-            ? `Editar cosecha ${activeHarvest.harvestId}`
-            : "Editar cosecha"
-          : "Nueva cosecha"
-      }
-      onClose={onClose}
-      onSubmit={handleSubmit}
-      fields={fields}
-      sections={sections}
-      initialValues={formInitialValues}
-      onFieldChange={handleFieldChange}
-      topContent={
-        dependenciesError && !selectedFieldId ? (
-          <Typography variant="caption" color="error.main">
-            {dependenciesError}
-          </Typography>
-        ) : null
-      }
-    />
+    <>
+      <SimpleEntityDialogForm
+        open={open}
+        title={
+          mode === "edit"
+            ? activeHarvest?.harvestId
+              ? `Editar cosecha ${activeHarvest.harvestId}`
+              : "Editar cosecha"
+            : "Nueva cosecha"
+        }
+        onClose={onClose}
+        onSubmit={handleSubmit}
+        fields={fields}
+        sections={sections}
+        initialValues={formInitialValues}
+        onFieldChange={handleFieldChange}
+        showCancel={mode !== "edit"}
+        extraActionsInline
+        extraActions={
+          mode === "edit" ? (
+            <Button
+              color="error"
+              variant="outlined"
+              onClick={openDeleteConfirm}
+              startIcon={<DeleteOutlineIcon />}
+              sx={{
+                borderRadius: 2,
+                textTransform: "none",
+                fontWeight: 600,
+                px: 2.5,
+              }}
+            >
+              Borrar cosecha
+            </Button>
+          ) : undefined
+        }
+        topContent={
+          dependenciesError && !selectedFieldId ? (
+            <Typography variant="caption" color="error.main">
+              {dependenciesError}
+            </Typography>
+          ) : null
+        }
+      />
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={handleCloseDeleteConfirm}
+        disableEscapeKeyDown={deleteLoading}
+      >
+        <DialogTitle>Borrar cosecha</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2}>
+            <Typography variant="body1">
+              ¿Seguro que querés borrar esta cosecha? Esta acción es
+              irreversible.
+            </Typography>
+            {deleteError ? <Alert severity="error">{deleteError}</Alert> : null}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={handleCloseDeleteConfirm}
+            disabled={deleteLoading}
+            sx={{ textTransform: "none" }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={handleDeleteConfirmed}
+            disabled={deleteLoading}
+            startIcon={
+              deleteLoading ? (
+                <CircularProgress color="inherit" size={18} />
+              ) : null
+            }
+            sx={{ textTransform: "none" }}
+          >
+            {deleteLoading ? "Borrando..." : "Borrar"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 };
 

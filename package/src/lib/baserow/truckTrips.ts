@@ -39,6 +39,7 @@ export type TruckTripRaw = {
   'Kg carga origen'?: string | number | null;
   'Kg carga destino'?: string | number | null;
   Estado?: any; // single select
+  eventStatus?: string | null; // single select (applied | kgsError)
 
   'Cosecha Origen (opcional)'?: any; // link_row a Cosechas
   'Stock Origen (opcional)'?: any; // link_row a Stock
@@ -75,6 +76,7 @@ export interface TruckTripDto {
   totalKgsDestination: number; // Kg carga destino
   status: string; // Estado (Entregado, Pendiente, etc.)
   statusId: number | null;
+  eventStatus: string | null;
 
   harvestOriginIds: number[]; // Cosecha Origen (opcional)
   stockOriginIds: number[]; // Stock Origen (opcional)
@@ -121,6 +123,7 @@ function mapTruckTripRawToDto(row: TruckTripRaw): TruckTripDto {
     totalKgsDestination: toNumber(row['Kg carga destino']),
     status: normalizeField(row.Estado),
     statusId: extractSingleSelectId(row.Estado),
+    eventStatus: normalizeField(row.eventStatus),
 
     harvestOriginIds,
     stockOriginIds,
@@ -155,6 +158,16 @@ export async function getTruckTripsRaw(): Promise<TruckTripRaw[]> {
 export async function getTruckTripsDto(): Promise<TruckTripDto[]> {
   const rows = await getTruckTripsRaw();
   return rows.map(mapTruckTripRawToDto);
+}
+
+export async function getTruckTripsByIdsDto(
+  tripIds: number[]
+): Promise<TruckTripDto[]> {
+  if (!tripIds.length) return [];
+
+  const lookup = new Set(tripIds);
+  const trips = await getTruckTripsDto();
+  return trips.filter((trip) => lookup.has(trip.id));
 }
 
 /**

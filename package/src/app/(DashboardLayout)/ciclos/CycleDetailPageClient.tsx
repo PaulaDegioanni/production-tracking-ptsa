@@ -21,6 +21,7 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  Tooltip,
   TextField,
   MenuItem,
   Button,
@@ -71,7 +72,7 @@ import type { HarvestDto } from "@/lib/baserow/harvests";
 import type { LotDto } from "@/lib/baserow/lots";
 import type { StockDto } from "@/lib/baserow/stocks";
 import type { TruckTripDto } from "@/lib/baserow/truckTrips";
-import type { Theme } from "@mui/material/styles";
+import { darken, type Theme } from "@mui/material/styles";
 import { splitIsoToDateAndTimeLocal } from "@/lib/forms/datetime";
 
 type CycleDetailPageClientProps = {
@@ -262,6 +263,13 @@ const CycleDetailPageClient = ({
   const formatKgs = (value: number): string =>
     formatNumber(value, { maximumFractionDigits: 0 });
 
+  const getDifferenceColor = (theme: Theme, value: number) => {
+    if (value === 0) return theme.palette.text.secondary;
+    const base =
+      value > 0 ? theme.palette.error.main : theme.palette.success.main;
+    return darken(base, 0.35);
+  };
+
   const formatReadonlyKg = (value: number): string => `${formatKgs(value)} kg`;
 
   const buildChipValues = (items?: string[]): string[] => {
@@ -277,7 +285,7 @@ const CycleDetailPageClient = ({
       ? stock.createdAt.slice(0, 10)
       : getTodayDateString();
 
-    const campoId = stock.fieldId ?? resolvedFieldId ?? ""; 
+    const campoId = stock.fieldId ?? resolvedFieldId ?? "";
 
     return {
       "Tipo unidad": stock.unitTypeId ?? "",
@@ -305,7 +313,9 @@ const CycleDetailPageClient = ({
     return "—";
   };
 
-  const buildHarvestInitialValues = (harvest: HarvestDto): HarvestFormValues => {
+  const buildHarvestInitialValues = (
+    harvest: HarvestDto,
+  ): HarvestFormValues => {
     const { date, time } = splitIsoToDateAndTimeLocal(harvest.date);
     const { date: todayDate, time: todayTime } = splitIsoToDateAndTimeLocal(
       new Date().toISOString(),
@@ -418,9 +428,9 @@ const CycleDetailPageClient = ({
   const [isEditLotsOpen, setIsEditLotsOpen] = React.useState(false);
   const [lotsOptions, setLotsOptions] = React.useState<LotDto[]>([]);
   const [lotsOptionsLoading, setLotsOptionsLoading] = React.useState(false);
-  const [selectedLotIdsDraft, setSelectedLotIdsDraft] = React.useState<number[]>(
-    cycle.lotIds,
-  );
+  const [selectedLotIdsDraft, setSelectedLotIdsDraft] = React.useState<
+    number[]
+  >(cycle.lotIds);
   const [lotsSaving, setLotsSaving] = React.useState(false);
   const [lotsError, setLotsError] = React.useState<string | null>(null);
   const [lotsSnackbarOpen, setLotsSnackbarOpen] = React.useState(false);
@@ -488,7 +498,10 @@ const CycleDetailPageClient = ({
   const buildCreateStockInitialValues =
     React.useCallback((): StockFormValues => {
       const normalizeLabel = (value: string) =>
-        value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        value
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase();
       const unitTypeDefault =
         stockUnitTypeOptions.find(
           (option) => normalizeLabel(option.label) === "bolson",
@@ -512,12 +525,7 @@ const CycleDetailPageClient = ({
         "Cosechas asociadas": [],
         "Viajes de camión desde stock": [],
       };
-    }, [
-      cycle,
-      resolvedFieldId,
-      stockStatusOptions,
-      stockUnitTypeOptions,
-    ]);
+    }, [cycle, resolvedFieldId, stockStatusOptions, stockUnitTypeOptions]);
 
   const buildCreateTripInitialValues =
     React.useCallback((): TruckTripFormValues => {
@@ -585,65 +593,55 @@ const CycleDetailPageClient = ({
     setIsCreateHarvestOpen(false);
   }, []);
 
-  const refreshHarvests = React.useCallback(async () => {
+  const refreshLinkedData = React.useCallback(async () => {
     try {
-      const response = await fetch(`/api/cycles/${cycle.id}/harvests`, {
-        cache: "no-store",
-      });
-      if (!response.ok) return;
-      const data = (await response.json()) as { harvests?: typeof harvests };
-      if (Array.isArray(data.harvests)) {
-        setHarvestsState(data.harvests);
-      }
-    } catch {
-      // ignore refresh errors
-    }
-  }, [cycle.id]);
+      const [cycleResponse, harvestsResponse, stockResponse, tripsResponse] =
+        await Promise.all([
+          fetch(`/api/cycles/${cycle.id}`, { cache: "no-store" }),
+          fetch(`/api/cycles/${cycle.id}/harvests`, { cache: "no-store" }),
+          fetch(`/api/cycles/${cycle.id}/stocks`, { cache: "no-store" }),
+          fetch(`/api/cycles/${cycle.id}/truck-trips`, { cache: "no-store" }),
+        ]);
 
-  const refreshStockUnits = React.useCallback(async () => {
-    try {
-      const response = await fetch(`/api/cycles/${cycle.id}/stocks`, {
-        cache: "no-store",
-      });
-      if (!response.ok) return;
-      const data = (await response.json()) as { stockUnits?: StockDto[] };
-      if (Array.isArray(data.stockUnits)) {
-        setStockUnitsState(data.stockUnits);
+      if (cycleResponse.ok) {
+        const data = (await cycleResponse.json()) as {
+          cycle?: typeof cycle;
+        };
+        if (data?.cycle) {
+          setCycleState(data.cycle as any);
+          setLocalCycleDates({
+            fallowStartDate: data.cycle.fallowStartDate ?? null,
+            sowingDate: data.cycle.sowingDate ?? null,
+            estimatedHarvestDate: data.cycle.estimatedHarvestDate ?? null,
+          });
+        }
       }
-    } catch {
-      // ignore refresh errors
-    }
-  }, [cycle.id]);
 
-  const refreshTruckTrips = React.useCallback(async () => {
-    try {
-      const response = await fetch(`/api/cycles/${cycle.id}/truck-trips`, {
-        cache: "no-store",
-      });
-      if (!response.ok) return;
-      const data = (await response.json()) as { truckTrips?: TruckTripDto[] };
-      if (Array.isArray(data.truckTrips)) {
-        setTruckTripsState(data.truckTrips);
+      if (harvestsResponse.ok) {
+        const data = (await harvestsResponse.json()) as {
+          harvests?: typeof harvests;
+        };
+        if (Array.isArray(data.harvests)) {
+          setHarvestsState(data.harvests);
+        }
       }
-    } catch {
-      // ignore refresh errors
-    }
-  }, [cycle.id]);
 
-  const refreshCycle = React.useCallback(async () => {
-    try {
-      const response = await fetch(`/api/cycles/${cycle.id}`, {
-        cache: "no-store",
-      });
-      if (!response.ok) return;
-      const data = (await response.json()) as { cycle?: typeof cycle };
-      if (data?.cycle) {
-        setCycleState(data.cycle as any);
-        setLocalCycleDates({
-          fallowStartDate: data.cycle.fallowStartDate ?? null,
-          sowingDate: data.cycle.sowingDate ?? null,
-          estimatedHarvestDate: data.cycle.estimatedHarvestDate ?? null,
-        });
+      if (stockResponse.ok) {
+        const data = (await stockResponse.json()) as {
+          stockUnits?: StockDto[];
+        };
+        if (Array.isArray(data.stockUnits)) {
+          setStockUnitsState(data.stockUnits);
+        }
+      }
+
+      if (tripsResponse.ok) {
+        const data = (await tripsResponse.json()) as {
+          truckTrips?: TruckTripDto[];
+        };
+        if (Array.isArray(data.truckTrips)) {
+          setTruckTripsState(data.truckTrips);
+        }
       }
     } catch {
       // ignore refresh errors
@@ -831,12 +829,17 @@ const CycleDetailPageClient = ({
     const sowingDate = datesDraft.sowingDate ?? localCycleDates.sowingDate;
     const estimatedHarvestDate = hasHarvests
       ? null
-      : datesDraft.estimatedHarvestDate ?? localCycleDates.estimatedHarvestDate;
+      : (datesDraft.estimatedHarvestDate ??
+        localCycleDates.estimatedHarvestDate);
 
     if (fallowStartDate && sowingDate && fallowStartDate > sowingDate) {
       return "La fecha de barbecho debe ser anterior o igual a la fecha de siembra.";
     }
-    if (sowingDate && estimatedHarvestDate && sowingDate > estimatedHarvestDate) {
+    if (
+      sowingDate &&
+      estimatedHarvestDate &&
+      sowingDate > estimatedHarvestDate
+    ) {
       return "La fecha de siembra debe ser anterior o igual a la fecha estimada de cosecha.";
     }
     return null;
@@ -956,39 +959,34 @@ const CycleDetailPageClient = ({
     setIsEditLotsOpen(false);
   };
 
-  const loadLotsOptions = React.useCallback(
-    async (fieldId: number | null) => {
-      if (!fieldId) {
-        setLotsOptions([]);
-        return;
+  const loadLotsOptions = React.useCallback(async (fieldId: number | null) => {
+    if (!fieldId) {
+      setLotsOptions([]);
+      return;
+    }
+    try {
+      setLotsOptionsLoading(true);
+      setLotsError(null);
+      const response = await fetch(`/api/fields/${fieldId}/lots`, {
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(errorBody || "No se pudieron cargar los lotes");
       }
-      try {
-        setLotsOptionsLoading(true);
-        setLotsError(null);
-        const response = await fetch(`/api/fields/${fieldId}/lots`, {
-          cache: "no-store",
-        });
-        if (!response.ok) {
-          const errorBody = await response.text();
-          throw new Error(errorBody || "No se pudieron cargar los lotes");
-        }
-        const data = (await response.json()) as { lots?: LotDto[] };
-        const lots = Array.isArray(data.lots) ? data.lots : [];
-        setLotsOptions(
-          lots.sort((a, b) => a.code.localeCompare(b.code)),
-        );
-      } catch (error) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Error inesperado al cargar lotes";
-        setLotsError(message);
-      } finally {
-        setLotsOptionsLoading(false);
-      }
-    },
-    [],
-  );
+      const data = (await response.json()) as { lots?: LotDto[] };
+      const lots = Array.isArray(data.lots) ? data.lots : [];
+      setLotsOptions(lots.sort((a, b) => a.code.localeCompare(b.code)));
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Error inesperado al cargar lotes";
+      setLotsError(message);
+    } finally {
+      setLotsOptionsLoading(false);
+    }
+  }, []);
 
   React.useEffect(() => {
     if (!isEditLotsOpen) return;
@@ -1010,6 +1008,7 @@ const CycleDetailPageClient = ({
         fieldId: result.cycle.fieldId ?? prev.fieldId,
       }));
       setLotsState(result.lots);
+      await refreshLinkedData();
       setIsEditLotsOpen(false);
       setLotsSnackbarOpen(true);
     } catch (error) {
@@ -1355,10 +1354,7 @@ const CycleDetailPageClient = ({
         {/* Hero Header */}
         <Box
           sx={(theme) => ({
-            background: `${alpha(
-              theme.palette.primary.main,
-              0.05,
-            )}` ,
+            background: `${alpha(theme.palette.primary.main, 0.05)}`,
             borderBottom: `1px solid ${theme.palette.divider}`,
             pt: { xs: 2, md: 6 },
             pb: { xs: 3, md: 6 },
@@ -1384,17 +1380,17 @@ const CycleDetailPageClient = ({
               >
                 {cycle.cycleId}
               </Typography>
-              
-                <Chip
-                  label={`Periodo ${cycle.period}`}
-                  sx={{
-                    bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-                    color: "primary.dark",
-                    fontWeight: 700,
-                    borderRadius: "8px",
-                    mt: 2,
-                  }}
-                />
+
+              <Chip
+                label={`Periodo ${cycle.period}`}
+                sx={{
+                  bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
+                  color: "primary.dark",
+                  fontWeight: 700,
+                  borderRadius: "8px",
+                  mt: 2,
+                }}
+              />
             </Box>
             <Stack direction="row" spacing={1.5} alignItems="center">
               <StatusChip
@@ -1580,9 +1576,7 @@ const CycleDetailPageClient = ({
                       }
                       disabled={datesSaving || hasHarvests}
                       helperText={
-                        hasHarvests
-                          ? "Ya hay cosechas registrada"
-                          : undefined
+                        hasHarvests ? "Ya hay cosechas registrada" : undefined
                       }
                       InputLabelProps={{ shrink: true }}
                     />
@@ -1741,8 +1735,7 @@ const CycleDetailPageClient = ({
                           {item.cropDurationLabel && (
                             <Chip
                               size="small"
-                              label={`Duración cultivo: ${item.cropDurationLabel}`}
-                              
+                              label={`Duración cultivo: ${item.cropDurationLabel}`}                              
                               sx={(theme) => ({
                                 mt: 0.7,
                                 fontWeight: 600,
@@ -1793,7 +1786,9 @@ const CycleDetailPageClient = ({
                 <StatCard
                   icon={<IconFreezeRowColumn />}
                   label="Superficie"
-                  value={formatNumber(cycle.areaHa, { maximumFractionDigits: 2 })}
+                  value={formatNumber(cycle.areaHa, {
+                    maximumFractionDigits: 2,
+                  })}
                   unit="ha"
                   color="primary"
                   gradient
@@ -1916,7 +1911,9 @@ const CycleDetailPageClient = ({
                               </TableCell>
                               <TableCell align="right">
                                 <Typography variant="body1" fontWeight={600}>
-                                  {formatNumber(lot.areaHa, { maximumFractionDigits: 2 })}
+                                  {formatNumber(lot.areaHa, {
+                                    maximumFractionDigits: 2,
+                                  })}
                                 </Typography>
                               </TableCell>
                             </TableRow>
@@ -1951,7 +1948,10 @@ const CycleDetailPageClient = ({
                                   {lot.code}
                                 </Typography>
                                 <Typography variant="h6" fontWeight={700}>
-                                  {formatNumber(lot.areaHa, { maximumFractionDigits: 2 })} ha
+                                  {formatNumber(lot.areaHa, {
+                                    maximumFractionDigits: 2,
+                                  })}{" "}
+                                  ha
                                 </Typography>
                               </Stack>
                             </CardContent>
@@ -2150,8 +2150,7 @@ const CycleDetailPageClient = ({
                                         fontWeight={800}
                                         color="success.dark"
                                       >
-                                        {formatNumber(h.harvestedKgs)}{" "}
-                                        kg
+                                        {formatNumber(h.harvestedKgs)} kg
                                       </Typography>
                                     </Box>
                                     <Box>
@@ -2167,8 +2166,7 @@ const CycleDetailPageClient = ({
                                         mt={0.5}
                                         fontWeight={600}
                                       >
-                                        {formatNumber(h.directTruckKgs)}{" "}
-                                        kg
+                                        {formatNumber(h.directTruckKgs)} kg
                                       </Typography>
                                     </Box>
                                   </Stack>
@@ -2283,25 +2281,25 @@ const CycleDetailPageClient = ({
                                   options={STOCK_STATUS_OPTIONS}
                                 />
                               </TableCell>
-                                <TableCell align="right">
-                                  <Typography variant="body1" fontWeight={600}>
-                                    {formatNumber(s.totalInKgs)}
-                                  </Typography>
-                                </TableCell>
-                                <TableCell align="right">
-                                  <Typography variant="body1" fontWeight={600}>
-                                    {formatNumber(s.totalOutFromHarvestKgs)}
-                                  </Typography>
-                                </TableCell>
-                                <TableCell align="right">
-                                  <Typography
-                                    variant="body1"
-                                    fontWeight={800}
-                                    color="warning.dark"
-                                  >
-                                    {formatNumber(s.currentKgs)}
-                                  </Typography>
-                                </TableCell>
+                              <TableCell align="right">
+                                <Typography variant="body1" fontWeight={600}>
+                                  {formatNumber(s.totalInKgs)}
+                                </Typography>
+                              </TableCell>
+                              <TableCell align="right">
+                                <Typography variant="body1" fontWeight={600}>
+                                  {formatNumber(s.totalOutFromHarvestKgs)}
+                                </Typography>
+                              </TableCell>
+                              <TableCell align="right">
+                                <Typography
+                                  variant="body1"
+                                  fontWeight={800}
+                                  color="warning.dark"
+                                >
+                                  {formatNumber(s.currentKgs)}
+                                </Typography>
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -2464,13 +2462,14 @@ const CycleDetailPageClient = ({
                           <TableRow>
                             {[
                               "ID viaje",
+                              "Camión",
                               "Fecha",
                               "Estado",
-                              "Camión",
                               "Origen",
-                              "Destino",
-                              "Proveedor",
-                              "Kgs cargados",
+                              "Destino - Proveedor",
+                              "Kgs origen",
+                              "Kgs destino",
+                              "Diferencia",
                             ].map((header) => (
                               <TableCell
                                 key={header}
@@ -2496,10 +2495,17 @@ const CycleDetailPageClient = ({
                             const fromHarvest =
                               (t.harvestOriginIds ?? []).length > 0;
                             const originLabel = fromStock
-                              ? "Desde stock"
+                              ? "Stock"
                               : fromHarvest
-                                ? "Desde cosecha"
+                                ? "Cosecha"
                                 : "—";
+                            const destinationLabel =
+                              t.destinationDetail || t.destinationType || "—";
+                            const differenceKgs =
+                              (t.totalKgsOrigin ?? 0) -
+                              (t.totalKgsDestination ?? 0);
+
+                            const needsReview = t.eventStatus === "kgsError";
 
                             return (
                               <TableRow
@@ -2511,6 +2517,19 @@ const CycleDetailPageClient = ({
                                     bgcolor: (theme) =>
                                       alpha(theme.palette.secondary.main, 0.02),
                                   },
+                                  ...(needsReview
+                                    ? {
+                                        bgcolor: (theme) =>
+                                          alpha(theme.palette.error.main, 0.08),
+                                        "&:hover": {
+                                          bgcolor: (theme) =>
+                                            alpha(
+                                              theme.palette.error.main,
+                                              0.12,
+                                            ),
+                                        },
+                                      }
+                                    : {}),
                                 }}
                               >
                                 <TableCell>
@@ -2519,39 +2538,83 @@ const CycleDetailPageClient = ({
                                   </Typography>
                                 </TableCell>
                                 <TableCell>
+                                  <Stack>
+                                    <Chip
+                                      size="small"
+                                      label={t.truckPlate || "—"}
+                                      variant="outlined"
+                                      sx={{
+                                        fontWeight: 600,
+                                        fontSize: "0.9rem",
+                                        textTransform: "capitalize",
+                                        color: "text.primary",
+                                      }}
+                                    />
+                                  </Stack>
+                                </TableCell>
+                                <TableCell>
                                   <Typography variant="body1" fontWeight={700}>
                                     {formatDate(t.date)}
                                   </Typography>
                                 </TableCell>
                                 <TableCell>
-                                  <StatusChip
-                                    status={t.status}
-                                    options={TRIP_STATUS_OPTIONS}
-                                  />
+                                  <Stack
+                                    direction="row"
+                                    spacing={1}
+                                    alignItems="center"
+                                  >
+                                    <StatusChip
+                                      status={t.status}
+                                      options={TRIP_STATUS_OPTIONS}
+                                    />
+                                    {needsReview ? (
+                                      <Tooltip title="Este viaje excede los kg disponibles del origen y requiere revisión.">
+                                        <Chip
+                                          size="small"
+                                          color="error"
+                                          label="Revisar"
+                                          sx={{
+                                            fontWeight: 700,
+                                            textTransform: "uppercase",
+                                            fontSize: "0.65rem",
+                                          }}
+                                        />
+                                      </Tooltip>
+                                    ) : null}
+                                  </Stack>
                                 </TableCell>
-                                <TableCell>
-                                  <Typography variant="body1">
-                                    {t.truckPlate || "—"}
-                                  </Typography>
-                                </TableCell>
+
                                 <TableCell>
                                   <Chip
                                     size="small"
                                     label={originLabel}
                                     variant="outlined"
-                                    sx={{
+                                    sx={(theme) => ({
+                                      alignSelf: "flex-start",
+
                                       fontWeight: 600,
-                                      fontSize: "0.7rem",
-                                      borderRadius: "8px",
-                                    }}
+                                      fontSize: theme.typography.caption,
+                                      bgcolor: alpha(
+                                        theme.palette.primary.main,
+                                        0.05,
+                                      ),
+                                      color: theme.palette.primary.main,
+                                      borderRadius: "999px",
+                                      border: "none",
+                                    })}
                                   />
                                 </TableCell>
                                 <TableCell>
-                                  <Typography variant="body1">
-                                    {t.destinationDetail ||
-                                      t.destinationType ||
-                                      "—"}
-                                  </Typography>
+                                  <Stack direction="row">
+                                    <Typography variant="body1">
+                                      {destinationLabel}
+                                    </Typography>
+                                    {t.provider ? (
+                                      <Typography variant="body1">
+                                        - {t.provider}
+                                      </Typography>
+                                    ) : null}
+                                  </Stack>
                                 </TableCell>
                                 <TableCell>
                                   <Typography variant="body1">
@@ -2564,7 +2627,26 @@ const CycleDetailPageClient = ({
                                     fontWeight={800}
                                     color="secondary.dark"
                                   >
+                                    {formatNumber(t.totalKgsOrigin)}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell align="right">
+                                  <Typography variant="body1">
                                     {formatNumber(t.totalKgsDestination)}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell align="right">
+                                  <Typography
+                                    variant="body1"
+                                    fontWeight={700}
+                                    sx={(theme) => ({
+                                      color: getDifferenceColor(
+                                        theme,
+                                        differenceKgs,
+                                      ),
+                                    })}
+                                  >
+                                    {formatNumber(differenceKgs)}
                                   </Typography>
                                 </TableCell>
                               </TableRow>
@@ -2586,6 +2668,13 @@ const CycleDetailPageClient = ({
                             : fromHarvest
                               ? "Cosecha"
                               : "—";
+                          const destinationLabel =
+                            t.destinationDetail || t.destinationType || "—";
+                          const differenceKgs =
+                            (t.totalKgsOrigin ?? 0) -
+                            (t.totalKgsDestination ?? 0);
+
+                          const needsReview = t.eventStatus === "kgsError";
 
                           return (
                             <Card
@@ -2600,6 +2689,17 @@ const CycleDetailPageClient = ({
                                   boxShadow: (theme) =>
                                     `0 8px 20px ${alpha(theme.palette.secondary.main, 0.15)}`,
                                 },
+                                ...(needsReview
+                                  ? {
+                                      border: (theme) =>
+                                        `2px solid ${alpha(
+                                          theme.palette.error.main,
+                                          0.6,
+                                        )}`,
+                                      backgroundColor: (theme) =>
+                                        alpha(theme.palette.error.main, 0.06),
+                                    }
+                                  : {}),
                               }}
                             >
                               <CardContent>
@@ -2616,10 +2716,26 @@ const CycleDetailPageClient = ({
                                     >
                                       {t.tripId}
                                     </Typography>
-                                    <StatusChip
-                                      status={t.status}
-                                      options={TRIP_STATUS_OPTIONS}
-                                    />
+                                    <Stack
+                                      direction="row"
+                                      spacing={1}
+                                      alignItems="center"
+                                    >
+                                      <StatusChip
+                                        status={t.status}
+                                        options={TRIP_STATUS_OPTIONS}
+                                      />
+                                      {needsReview ? (
+                                        <Tooltip title="Este viaje excede los kg disponibles del origen y requiere revisión.">
+                                          <Chip
+                                            size="small"
+                                            color="error"
+                                            label="Revisar"
+                                            sx={{ fontWeight: 700 }}
+                                          />
+                                        </Tooltip>
+                                      ) : null}
+                                    </Stack>
                                   </Stack>
                                   <Stack
                                     direction="row"
@@ -2632,13 +2748,6 @@ const CycleDetailPageClient = ({
                                       size="small"
                                       label={
                                         t.truckPlate || "Camión sin identificar"
-                                      }
-                                    />
-                                    <Chip
-                                      variant="outlined"
-                                      size="small"
-                                      label={
-                                        t.provider || "Proveedor sin definir"
                                       }
                                     />
                                   </Stack>
@@ -2667,32 +2776,79 @@ const CycleDetailPageClient = ({
                                         color="text.secondary"
                                         fontWeight={700}
                                       >
-                                        Destino
+                                        Destino - Proveedor
                                       </Typography>
-                                      <Typography variant="body2" mt={0.5}>
-                                        {t.destinationType ||
-                                          t.destinationDetail ||
-                                          "—"}
-                                      </Typography>
+                                      <Stack direction="row">
+                                        <Typography variant="body2" mt={0.5}>
+                                          {destinationLabel}
+                                        </Typography>
+                                        -{" "}
+                                        {t.provider ? (
+                                          <Typography variant="body2" mt={0.5}>
+                                            {t.provider}
+                                          </Typography>
+                                        ) : null}
+                                      </Stack>
                                     </Box>
                                   </Stack>
 
-                                  <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                    fontWeight={700}
+                                  <Stack
+                                    direction="row"
+                                    justifyContent="space-between"
+                                    alignItems="flex-end"
                                   >
-                                    Carga
-                                  </Typography>
-                                  <Typography
-                                    variant="h6"
-                                    fontWeight={800}
-                                    color="secondary.dark"
-                                    lineHeight="0.5rem"
-                                  >
-                                    {formatNumber(t.totalKgsDestination)}{" "}
-                                    kg
-                                  </Typography>
+                                    <Stack spacing={0.3}>
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                        fontWeight={700}
+                                      >
+                                        Kgs Origen
+                                      </Typography>
+                                      <Typography
+                                        variant="body2"
+                                        fontWeight={600}
+                                      >
+                                        {formatNumber(t.totalKgsOrigin)} kg
+                                      </Typography>
+                                    </Stack>
+                                    <Stack spacing={0.3}>
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                        fontWeight={700}
+                                      >
+                                        Kgs Destino
+                                      </Typography>
+                                      <Typography
+                                        variant="body2"
+                                        fontWeight={600}
+                                      >
+                                        {formatNumber(t.totalKgsDestination)} kg
+                                      </Typography>
+                                    </Stack>
+                                    <Stack spacing={0.3}>
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                        fontWeight={700}
+                                      >
+                                        Diferencia
+                                      </Typography>
+                                      <Typography
+                                        variant="body2"
+                                        fontWeight={600}
+                                        sx={(theme) => ({
+                                          color: getDifferenceColor(
+                                            theme,
+                                            differenceKgs,
+                                          ),
+                                        })}
+                                      >
+                                        {formatNumber(differenceKgs)} kg
+                                      </Typography>
+                                    </Stack>
+                                  </Stack>
                                 </Stack>
                               </CardContent>
                             </Card>
@@ -2718,8 +2874,7 @@ const CycleDetailPageClient = ({
           onClose={handleCloseCreateStock}
           onSuccess={async () => {
             setIsCreateStockOpen(false);
-            await refreshStockUnits();
-            await refreshCycle();
+            await refreshLinkedData();
           }}
         />
       )}
@@ -2733,8 +2888,7 @@ const CycleDetailPageClient = ({
           onClose={handleCloseCreateTrip}
           onSuccess={async () => {
             setIsCreateTripOpen(false);
-            await refreshTruckTrips();
-            await refreshCycle();
+            await refreshLinkedData();
           }}
         />
       )}
@@ -2755,8 +2909,7 @@ const CycleDetailPageClient = ({
           onClose={handleCloseCreateHarvest}
           onSuccess={async () => {
             setIsCreateHarvestOpen(false);
-            await refreshHarvests();
-            await refreshCycle();
+            await refreshLinkedData();
           }}
         />
       )}
@@ -2778,8 +2931,7 @@ const CycleDetailPageClient = ({
           onClose={handleCloseEditHarvest}
           onSuccess={async () => {
             setIsEditHarvestOpen(false);
-            await refreshHarvests();
-            await refreshCycle();
+            await refreshLinkedData();
           }}
         />
       )}
@@ -2795,8 +2947,7 @@ const CycleDetailPageClient = ({
           onClose={handleCloseEditStock}
           onSuccess={async () => {
             setIsEditStockOpen(false);
-            await refreshStockUnits();
-            await refreshCycle();
+            await refreshLinkedData();
           }}
         />
       )}
@@ -2809,8 +2960,7 @@ const CycleDetailPageClient = ({
           onClose={handleCloseEditTrip}
           onSuccess={async () => {
             setIsEditTripOpen(false);
-            await refreshTruckTrips();
-            await refreshCycle();
+            await refreshLinkedData();
           }}
         />
       )}
@@ -2845,7 +2995,9 @@ const CycleDetailPageClient = ({
                 renderValue: (selected) => (
                   <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                     {(selected as number[]).map((id) => {
-                      const lot = lotsOptions.find((option) => option.id === id);
+                      const lot = lotsOptions.find(
+                        (option) => option.id === id,
+                      );
                       return (
                         <Chip
                           key={id}
@@ -2951,8 +3103,7 @@ const CycleDetailPageClient = ({
           variant="filled"
           sx={{ width: "100%" }}
         >
-          {stockOptionsError ||
-            "No se pudieron cargar las opciones de stock"}
+          {stockOptionsError || "No se pudieron cargar las opciones de stock"}
         </Alert>
       </Snackbar>
     </PageContainer>
