@@ -1576,7 +1576,7 @@ const CycleDetailPageClient = ({
                       }
                       disabled={datesSaving || hasHarvests}
                       helperText={
-                        hasHarvests ? "Ya hay cosechas registrada" : undefined
+                        hasHarvests ? "Ya hay cosechas registradas" : undefined
                       }
                       InputLabelProps={{ shrink: true }}
                     />
@@ -2615,6 +2615,11 @@ const CycleDetailPageClient = ({
                                       </Typography>
                                     ) : null}
                                   </Stack>
+                                </TableCell>
+                                <TableCell>
+                                  <Typography variant="body1">
+                                    {t.provider || "—"}
+                                  </Typography>
                                 </TableCell>
                                 <TableCell>
                                   <Typography variant="body1">
