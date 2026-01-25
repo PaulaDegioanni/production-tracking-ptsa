@@ -20,6 +20,7 @@ import {
   TableContainer,
   Card,
   CardContent,
+  Tooltip,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import Link from "next/link";
@@ -72,19 +73,6 @@ const getOriginLabel = (originType: TripOriginType): string => {
   }
 };
 
-const getOriginChipColor = (
-  originType: TripOriginType,
-): "default" | "warning.dark" | "success.dark" => {
-  switch (originType) {
-    case "harvest":
-      return "success.dark";
-    case "stock":
-      return "warning.dark";
-    default:
-      return "default";
-  }
-};
-
 const TRIP_STATUS_OPTIONS: StatusChipOption[] = [
   { value: "Entregado", color: "success" },
   { value: "En viaje", color: "warning" },
@@ -92,11 +80,21 @@ const TRIP_STATUS_OPTIONS: StatusChipOption[] = [
 ];
 
 const getDestinationLabel = (trip: TruckTripDto): string => {
-  if (trip.provider) return trip.provider;
   if (trip.destinationDetail) return trip.destinationDetail;
   if (trip.destinationType) return trip.destinationType;
   return "—";
 };
+
+const getDifferenceColor = (value: number) =>
+  value > 0 ? "error.dark" : value === 0 ? "text.secondary" : "success.dark";
+
+const kgsFormatter = new Intl.NumberFormat("es-ES", {
+  useGrouping: true,
+  maximumFractionDigits: 2,
+});
+
+const formatKgs = (value: number | string | null | undefined) =>
+  kgsFormatter.format(Number(value ?? 0));
 
 /* --------- Componente principal --------- */
 
@@ -140,6 +138,8 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
   const [cycleFilter, setCycleFilter] = React.useState<string>("all");
   const [destinationFilter, setDestinationFilter] =
     React.useState<string>("all");
+  const [truckFilter, setTruckFilter] = React.useState<string>("all");
+  const [providerFilter, setProviderFilter] = React.useState<string>("all");
   const [originFilter, setOriginFilter] = React.useState<
     TripOriginType | "all"
   >("all");
@@ -187,6 +187,34 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
     [sortedTrips],
   );
 
+  const uniqueTruckPlates = React.useMemo<string[]>(
+    () =>
+      Array.from(
+        new Set(
+          sortedTrips
+            .map((trip: TruckTripDto) => trip.truckPlate)
+            .filter((v): v is string => Boolean(v))
+            .map((v) => v.trim())
+            .filter((v) => v && v !== "—"),
+        ),
+      ).sort(),
+    [sortedTrips],
+  );
+
+  const uniqueProviders = React.useMemo<string[]>(
+    () =>
+      Array.from(
+        new Set(
+          sortedTrips
+            .map((trip: TruckTripDto) => trip.provider)
+            .filter((v): v is string => Boolean(v))
+            .map((v) => v.trim())
+            .filter((v) => v && v !== "—"),
+        ),
+      ).sort(),
+    [sortedTrips],
+  );
+
   // Destino: todas las opciones que se muestran en la tabla (getDestinationLabel)
   const uniqueDestinations = React.useMemo<string[]>(
     () =>
@@ -226,6 +254,16 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
         if (tableDestination !== destinationFilter) return false;
       }
 
+      // Camión
+      if (truckFilter !== "all") {
+        if (trip.truckPlate !== truckFilter) return false;
+      }
+
+      // Proveedor
+      if (providerFilter !== "all") {
+        if (trip.provider !== providerFilter) return false;
+      }
+
       // Origen
       if (originFilter !== "all") {
         if (trip.originType !== originFilter) return false;
@@ -239,6 +277,8 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
     fieldFilter,
     cycleFilter,
     destinationFilter,
+    truckFilter,
+    providerFilter,
     originFilter,
   ]);
 
@@ -251,7 +291,7 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
 
           acc.totalKgsOrigin += originKgs;
           acc.totalKgsDestination += destinationKgs;
-          acc.totalDifference += destinationKgs - originKgs;
+          acc.totalDifference += originKgs - destinationKgs;
 
           return acc;
         },
@@ -305,10 +345,16 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                 border: `1px solid ${theme.palette.divider}`,
               })}
             >
-              <Stack
-                direction={{ xs: "column", md: "row" }}
-                spacing={2}
-                sx={{ alignItems: { xs: "stretch", md: "center" } }}
+              <Box
+                sx={{
+                  display: "grid",
+                  gap: 2,
+                  gridTemplateColumns: {
+                    xs: "1fr",
+                    md: "repeat(4, minmax(0, 1fr))",
+                    lg: "repeat(7, minmax(0, 1fr))",
+                  },
+                }}
               >
                 <FormControl fullWidth size="small">
                   <TextField
@@ -324,6 +370,24 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                     {periodOptions.map((period, index) => (
                       <MenuItem key={`${period}-${index}`} value={period}>
                         {period}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </FormControl>
+                <FormControl fullWidth size="small">
+                  <TextField
+                    label="Camión"
+                    select
+                    value={truckFilter}
+                    onChange={(e) => setTruckFilter(e.target.value)}
+                    fullWidth
+                    sx={{ bgcolor: "background.paper" }}
+                    size="small"
+                  >
+                    <MenuItem value="all">Todos</MenuItem>
+                    {uniqueTruckPlates.map((plate) => (
+                      <MenuItem key={plate} value={plate}>
+                        {plate}
                       </MenuItem>
                     ))}
                   </TextField>
@@ -384,7 +448,7 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                 </FormControl>
                 <FormControl fullWidth size="small">
                   <TextField
-                    label="Destino / Proveedor"
+                    label="Destino"
                     select
                     value={destinationFilter}
                     onChange={(e) => setDestinationFilter(e.target.value)}
@@ -400,7 +464,25 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                     ))}
                   </TextField>
                 </FormControl>
-              </Stack>
+                <FormControl fullWidth size="small">
+                  <TextField
+                    label="Proveedor"
+                    select
+                    value={providerFilter}
+                    onChange={(e) => setProviderFilter(e.target.value)}
+                    fullWidth
+                    sx={{ bgcolor: "background.paper" }}
+                    size="small"
+                  >
+                    <MenuItem value="all">Todos</MenuItem>
+                    {uniqueProviders.map((provider) => (
+                      <MenuItem key={provider} value={provider}>
+                        {provider}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </FormControl>
+              </Box>
             </Box>
             <Stack
               direction={{ xs: "column", md: "row" }}
@@ -526,7 +608,7 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                       />
                       <TableCell>Ciclo</TableCell>
                       <TableCell>Origen</TableCell>
-                      <TableCell>Destino / Proveedor</TableCell>
+                      <TableCell>Destino - Proveedor</TableCell>
                       <TableCell
                         sx={(theme) => ({
                           borderLeft: `2px solid ${alpha(
@@ -545,7 +627,9 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                       const { date, time } = formatDateTimeParts(trip.date);
                       const originKgs = trip.totalKgsOrigin ?? 0;
                       const destinationKgs = trip.totalKgsDestination ?? 0;
-                      const differenceKgs = destinationKgs - originKgs;
+                      const differenceKgs = originKgs - destinationKgs;
+                      const differenceColor = getDifferenceColor(differenceKgs);
+                      const needsReview = trip.eventStatus === "kgsError";
 
                       return (
                         <TableRow
@@ -573,6 +657,20 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                               borderBottom: `1px solid ${theme.palette.divider}`,
                               py: 1.5,
                             },
+                            ...(needsReview
+                              ? {
+                                  bgcolor: alpha(
+                                    theme.palette.error.main,
+                                    0.06,
+                                  ),
+                                  "&:hover": {
+                                    bgcolor: alpha(
+                                      theme.palette.error.main,
+                                      0.1,
+                                    ),
+                                  },
+                                }
+                              : {}),
                           })}
                         >
                           {/* ID */}
@@ -648,6 +746,21 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                               status={trip.status}
                               options={TRIP_STATUS_OPTIONS}
                             />
+                            {needsReview ? (
+                              <Tooltip title="Este viaje excede los kg disponibles del origen y requiere revisión.">
+                                <Chip
+                                  size="small"
+                                  color="error"
+                                  label="Revisar"
+                                  sx={{
+                                    fontWeight: 700,
+                                    mt: 0.75,
+                                    textTransform: "uppercase",
+                                    fontSize: "0.65rem",
+                                  }}
+                                />
+                              </Tooltip>
+                            ) : null}
                           </TableCell>
                           <TableCell
                             sx={(theme) => ({
@@ -694,15 +807,17 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                                 variant="outlined"
                                 label={getOriginLabel(trip.originType)}
                                 sx={(theme) => ({
+                                  alignSelf: "flex-start",
+
                                   fontWeight: 600,
-                                  fontSize: "body1",
-                                  color: `${getOriginChipColor(
-                                    trip.originType,
-                                  )}`,
-                                  border: `2px solid ${alpha(
+                                  fontSize: theme.typography.caption,
+                                  bgcolor: alpha(
                                     theme.palette.primary.main,
-                                    0.08,
-                                  )}`,
+                                    0.05,
+                                  ),
+                                  color: theme.palette.primary.main,
+                                  borderRadius: "999px",
+                                  border: "none",
                                 })}
                               />
                             </Stack>
@@ -710,11 +825,19 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
 
                           {/* Destino */}
                           <TableCell>
-                            <Typography variant="body1">
-                              {getDestinationLabel(trip)}
-                            </Typography>
+                            <Stack direction="row" flexWrap="wrap">
+                              <Typography variant="body1">
+                                {getDestinationLabel(trip)} -
+                              </Typography>
+                              {trip.provider ? (
+                                <Typography variant="body1">
+                                  {trip.provider}
+                                </Typography>
+                              ) : null}
+                            </Stack>
                           </TableCell>
                           <TableCell
+                            padding="none"
                             sx={(theme) => ({
                               borderLeft: `2px solid ${alpha(
                                 theme.palette.primary.main,
@@ -725,7 +848,7 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                           {/* Kgs */}
                           <TableCell align="right">
                             <Typography variant="body1" fontWeight={600}>
-                              {originKgs.toLocaleString("es-ES")}
+                              {formatKgs(originKgs)}
                             </Typography>
                           </TableCell>
                           <TableCell align="right">
@@ -734,20 +857,16 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                               fontWeight={700}
                               color="primary"
                             >
-                              {destinationKgs.toLocaleString("es-ES")}
+                              {formatKgs(destinationKgs)}
                             </Typography>
                           </TableCell>
                           <TableCell align="right">
                             <Typography
                               variant="body1"
                               fontWeight={700}
-                              color={
-                                differenceKgs >= 0
-                                  ? "success.main"
-                                  : "error.main"
-                              }
+                              color={differenceColor}
                             >
-                              {differenceKgs.toLocaleString("es-ES")}
+                              {formatKgs(differenceKgs)}
                             </Typography>
                           </TableCell>
                         </TableRow>
@@ -781,9 +900,7 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                       />
                       <TableCell align="right">
                         <Typography variant="body1" fontWeight={600}>
-                          {filteredTotals.totalKgsOrigin.toLocaleString(
-                            "es-ES",
-                          )}
+                          {formatKgs(filteredTotals.totalKgsOrigin)}
                         </Typography>
                       </TableCell>
                       <TableCell align="right">
@@ -792,24 +909,18 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                           fontWeight={700}
                           color="primary"
                         >
-                          {filteredTotals.totalKgsDestination.toLocaleString(
-                            "es-ES",
-                          )}
+                          {formatKgs(filteredTotals.totalKgsDestination)}
                         </Typography>
                       </TableCell>
                       <TableCell align="right">
                         <Typography
                           variant="body1"
                           fontWeight={700}
-                          color={
-                            filteredTotals.totalDifference >= 0
-                              ? "success.main"
-                              : "error.main"
-                          }
-                        >
-                          {filteredTotals.totalDifference.toLocaleString(
-                            "es-ES",
+                          color={getDifferenceColor(
+                            filteredTotals.totalDifference,
                           )}
+                        >
+                          {formatKgs(filteredTotals.totalDifference)}
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -868,11 +979,9 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                           <Typography
                             variant="body1"
                             fontWeight={700}
-                            color={
-                              filteredTotals.totalDifference >= 0
-                                ? "success.dark"
-                                : "error.dark"
-                            }
+                            color={getDifferenceColor(
+                              filteredTotals.totalDifference,
+                            )}
                           >
                             {filteredTotals.totalDifference.toLocaleString(
                               "es-ES",
@@ -904,7 +1013,9 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                   const { date, time } = formatDateTimeParts(trip.date);
                   const originKgs = trip.totalKgsOrigin ?? 0;
                   const destinationKgs = trip.totalKgsDestination ?? 0;
-                  const differenceKgs = destinationKgs - originKgs;
+                  const differenceKgs = originKgs - destinationKgs;
+                  const differenceColor = getDifferenceColor(differenceKgs);
+                  const needsReview = trip.eventStatus === "kgsError";
                   return (
                     <Card
                       key={trip.id}
@@ -927,6 +1038,18 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                           )}`,
                           borderColor: theme.palette.primary.main,
                         },
+                        ...(needsReview
+                          ? {
+                              border: `1px solid ${alpha(
+                                theme.palette.error.main,
+                                0.6,
+                              )}`,
+                              backgroundColor: alpha(
+                                theme.palette.error.main,
+                                0.05,
+                              ),
+                            }
+                          : {}),
                       })}
                     >
                       <CardContent sx={{ p: 2.5 }}>
@@ -945,11 +1068,26 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                             >
                               {trip.tripId}
                             </Typography>
-
-                            <StatusChip
-                              status={trip.status}
-                              options={TRIP_STATUS_OPTIONS}
-                            />
+                            <Stack
+                              direction="row"
+                              spacing={1}
+                              alignItems="center"
+                            >
+                              <StatusChip
+                                status={trip.status}
+                                options={TRIP_STATUS_OPTIONS}
+                              />
+                              {needsReview ? (
+                                <Tooltip title="Este viaje excede los kg disponibles del origen y requiere revisión.">
+                                  <Chip
+                                    size="small"
+                                    color="error"
+                                    label="Revisar"
+                                    sx={{ fontWeight: 700 }}
+                                  />
+                                </Tooltip>
+                              ) : null}
+                            </Stack>
                           </Stack>
                           <Stack
                             direction="row"
@@ -986,8 +1124,13 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                           />
 
                           {/* Origen y destino */}
-                          <Stack direction="row" spacing={4}>
-                            <Stack spacing={1.5} alignItems="center">
+                          <Stack
+                            direction="row"
+                            justifyContent="space-between"
+                            paddingRight="50px"
+                            paddingBottom="5px"
+                          >
+                            <Stack spacing={0.3} alignItems="start">
                               <Typography
                                 variant="caption"
                                 color="text.secondary"
@@ -995,34 +1138,28 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                               >
                                 Origen
                               </Typography>
-                              <Chip
-                                size="small"
-                                variant="outlined"
-                                label={getOriginLabel(trip.originType)}
-                                sx={(theme) => ({
-                                  fontWeight: 600,
-                                  fontSize: "0.7rem",
-                                  color: `${getOriginChipColor(
-                                    trip.originType,
-                                  )}`,
-                                  border: `2px solid ${alpha(
-                                    theme.palette.primary.main,
-                                    0.08,
-                                  )}`,
-                                })}
-                              />
+                              <Typography variant="body2" mt={0.5}>
+                                {getOriginLabel(trip.originType)}
+                              </Typography>
                             </Stack>
-                            <Stack spacing={1.5} alignItems="start">
+                            <Stack spacing={0.3} alignItems="start">
                               <Typography
                                 variant="caption"
                                 color="text.secondary"
                                 fontWeight={700}
                               >
-                                Destino / Proveedor
+                                Destino - Proveedor
                               </Typography>
-                              <Typography variant="body2" mt={0.5}>
-                                {getDestinationLabel(trip)}
-                              </Typography>
+                              <Stack direction="row">
+                                <Typography variant="body2">
+                                  {getDestinationLabel(trip)}
+                                </Typography>
+                                {trip.provider ? (
+                                  <Typography variant="body2">
+                                    - {trip.provider}
+                                  </Typography>
+                                ) : null}
+                              </Stack>
                             </Stack>
                           </Stack>
 
@@ -1031,6 +1168,7 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                             spacing={1.2}
                             direction="row"
                             justifyContent="space-between"
+                            paddingTop={1}
                           >
                             <Stack spacing={0.3}>
                               <Typography
@@ -1041,7 +1179,7 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                                 Kgs Origen
                               </Typography>
                               <Typography variant="body2" fontWeight={600}>
-                                {originKgs.toLocaleString("es-ES")} kg
+                                {formatKgs(originKgs)} kg
                               </Typography>
                             </Stack>
                             <Stack spacing={0.3}>
@@ -1057,7 +1195,7 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                                 fontWeight={700}
                                 color="primary"
                               >
-                                {destinationKgs.toLocaleString("es-ES")} kg
+                                {formatKgs(destinationKgs)} kg
                               </Typography>
                             </Stack>
                             <Stack spacing={0.3}>
@@ -1071,13 +1209,9 @@ const ViajesDeCamionClient = ({ initialTrips }: ViajesDeCamionClientProps) => {
                               <Typography
                                 variant="body2"
                                 fontWeight={700}
-                                color={
-                                  differenceKgs >= 0
-                                    ? "success.dark"
-                                    : "error.dark"
-                                }
+                                color={differenceColor}
                               >
-                                {differenceKgs.toLocaleString("es-ES")} kg
+                                {formatKgs(differenceKgs)} kg
                               </Typography>
                             </Stack>
                           </Stack>

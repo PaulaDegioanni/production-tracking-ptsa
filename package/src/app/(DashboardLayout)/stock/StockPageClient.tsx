@@ -161,6 +161,8 @@ const StockPageClient = ({
   const [fieldFilter, setFieldFilter] = React.useState<string>("all");
   const [cycleFilter, setCycleFilter] = React.useState<string>("all");
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
+  const [unitTypeFilter, setUnitTypeFilter] = React.useState<string>("all");
+  const [periodFilter, setPeriodFilter] = React.useState<string>("all");
 
   const uniqueFields = React.useMemo<string[]>(
     () =>
@@ -198,6 +200,18 @@ const StockPageClient = ({
     [initialStock],
   );
 
+  const uniquePeriods = React.useMemo<string[]>(
+    () =>
+      Array.from(
+        new Set(
+          initialStock
+            .map((s) => s.period)
+            .filter((v): v is string => Boolean(v)),
+        ),
+      ).sort(),
+    [initialStock],
+  );
+
   // Stock filtrado
   const filteredStock = React.useMemo<StockDto[]>(() => {
     return initialStock
@@ -209,6 +223,15 @@ const StockPageClient = ({
         if (statusFilter !== "all") {
           if (!s.status || s.status !== statusFilter) return false;
         }
+        if (unitTypeFilter !== "all") {
+          const selectedId = Number(unitTypeFilter);
+          if (Number.isFinite(selectedId) && s.unitTypeId !== selectedId) {
+            return false;
+          }
+        }
+        if (periodFilter !== "all") {
+          if (!s.period || s.period !== periodFilter) return false;
+        }
         return true;
       })
       .sort((a, b) => {
@@ -216,7 +239,14 @@ const StockPageClient = ({
         const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
         return timeB - timeA;
       });
-  }, [initialStock, fieldFilter, cycleFilter, statusFilter]);
+  }, [
+    initialStock,
+    fieldFilter,
+    cycleFilter,
+    statusFilter,
+    unitTypeFilter,
+    periodFilter,
+  ]);
 
   const filteredTotals = React.useMemo(
     () =>
@@ -299,10 +329,15 @@ const StockPageClient = ({
                 border: `1px solid ${theme.palette.divider}`,
               })}
             >
-              <Stack
-                direction={{ xs: "column", md: "row" }}
-                spacing={2}
-                sx={{ alignItems: { xs: "stretch", md: "center" } }}
+              <Box
+                sx={{
+                  display: "grid",
+                  gap: 2,
+                  gridTemplateColumns: {
+                    xs: "1fr",
+                    md: "repeat(5, minmax(0, 1fr))",
+                  },
+                }}
               >
                 {/* Campo */}
                 <FormControl fullWidth size="small">
@@ -324,7 +359,26 @@ const StockPageClient = ({
                   </TextField>
                 </FormControl>
 
-                {/* Ciclo */}
+                {/* Período */}
+                <FormControl fullWidth size="small">
+                  <TextField
+                    label="Período"
+                    select
+                    value={periodFilter}
+                    onChange={(e) => setPeriodFilter(e.target.value)}
+                    fullWidth
+                    size="small"
+                    sx={{ bgcolor: "background.paper" }}
+                  >
+                    <MenuItem value="all">Todos</MenuItem>
+                    {uniquePeriods.map((period) => (
+                      <MenuItem key={period} value={period}>
+                        {period}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </FormControl>
+                 {/* Ciclo */}
                 <FormControl fullWidth size="small">
                   <TextField
                     label="Ciclo"
@@ -343,6 +397,28 @@ const StockPageClient = ({
                     ))}
                   </TextField>
                 </FormControl>
+
+                {/* Tipo unidad */}
+                <FormControl fullWidth size="small">
+                  <TextField
+                    label="Tipo de unidad"
+                    select
+                    value={unitTypeFilter}
+                    onChange={(e) => setUnitTypeFilter(e.target.value)}
+                    fullWidth
+                    size="small"
+                    sx={{ bgcolor: "background.paper" }}
+                  >
+                    <MenuItem value="all">Todos</MenuItem>
+                    {unitTypeOptions.map((option) => (
+                      <MenuItem key={option.id} value={String(option.id)}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </FormControl>
+
+               
 
                 {/* Estado */}
                 <FormControl fullWidth size="small">
@@ -363,7 +439,7 @@ const StockPageClient = ({
                     ))}
                   </TextField>
                 </FormControl>
-              </Stack>
+              </Box>
             </Box>
 
             {/* Resumen + acciones */}

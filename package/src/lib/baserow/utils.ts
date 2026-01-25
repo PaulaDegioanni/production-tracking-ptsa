@@ -71,7 +71,29 @@ export function extractSingleSelectId(value: unknown): number | null {
 export function toNumber(value: unknown): number {
   if (typeof value === 'number') return value;
   if (typeof value === 'string' && value.trim() !== '') {
-    const n = Number(value);
+    const raw = value.trim();
+    if (!raw) return 0;
+    const cleaned = raw.replace(/[^\d,.\-]/g, '');
+    if (!cleaned) return 0;
+    const hasComma = cleaned.includes(',');
+    const hasDot = cleaned.includes('.');
+
+    let normalized = cleaned;
+    if (hasComma && hasDot) {
+      normalized = cleaned.replace(/\./g, '').replace(',', '.');
+    } else if (hasComma && !hasDot) {
+      normalized = cleaned.replace(',', '.');
+    } else if (hasDot && !hasComma) {
+      const parts = cleaned.split('.');
+      const last = parts[parts.length - 1];
+      const allThousands =
+        parts.length > 1 && parts.slice(1).every((p) => p.length === 3);
+      if (allThousands && last.length === 3) {
+        normalized = cleaned.replace(/\./g, '');
+      }
+    }
+
+    const n = Number(normalized);
     return Number.isNaN(n) ? 0 : n;
   }
   return 0;

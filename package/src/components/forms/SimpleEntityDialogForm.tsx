@@ -115,6 +115,7 @@ export type SimpleEntityDialogFormProps = {
   externalValues?: Record<string, any> | null;
   externalValuesKey?: string | number | null;
   topContent?: React.ReactNode;
+  submitDisabled?: boolean;
 };
 
 const cloneInitialValues = (initials?: Record<string, any>) => {
@@ -160,6 +161,7 @@ const SimpleEntityDialogForm = ({
   externalValues,
   externalValuesKey,
   topContent,
+  submitDisabled = false,
 }: SimpleEntityDialogFormProps) => {
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down("md"));
@@ -370,7 +372,7 @@ const SimpleEntityDialogForm = ({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (loading) return;
+    if (loading || submitDisabled) return;
 
     const validationErrors = validate();
     setErrors(validationErrors);
@@ -1088,7 +1090,7 @@ const SimpleEntityDialogForm = ({
               <Button
                 type="submit"
                 variant="contained"
-                disabled={loading}
+                disabled={loading || submitDisabled}
                 startIcon={
                   loading ? (
                     <CircularProgress color="inherit" size={18} />
