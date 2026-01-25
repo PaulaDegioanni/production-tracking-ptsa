@@ -37,10 +37,11 @@ import SimpleEntityDialogForm, {
   type SimpleEntityDialogFieldConfig,
   type SimpleEntityDialogSection,
 } from "@/components/forms/SimpleEntityDialogForm";
-import type { ProviderDto } from "@/lib/baserow/providers";
+import type { ProviderDto, ProviderPeriodDto } from "@/lib/baserow/providers";
 
 type ProveedoresPageClientProps = {
   initialProviders: ProviderDto[];
+  initialProviderRows: ProviderPeriodDto[];
   admitsOptions: Array<{ id: string; label: string }>;
 };
 
@@ -68,10 +69,13 @@ const deleteProvider = async (id: number): Promise<void> => {
 
 const ProveedoresPageClient = ({
   initialProviders,
+  initialProviderRows,
   admitsOptions,
 }: ProveedoresPageClientProps) => {
   const [providers, setProviders] =
     React.useState<ProviderDto[]>(initialProviders);
+  const [providerRows, setProviderRows] =
+    React.useState<ProviderPeriodDto[]>(initialProviderRows);
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [dialogMode, setDialogMode] = React.useState<"create" | "edit">(
     "create",
@@ -86,6 +90,7 @@ const ProveedoresPageClient = ({
     }));
   const [periodFilter, setPeriodFilter] = React.useState<string>("all");
   const [admitFilter, setAdmitFilter] = React.useState<string>("all");
+  const [providerFilter, setProviderFilter] = React.useState<string>("all");
   const [snackbar, setSnackbar] = React.useState<SnackbarState | null>(null);
   const [deleteLoading, setDeleteLoading] = React.useState(false);
   const [deleteError, setDeleteError] = React.useState<string | null>(null);
@@ -95,14 +100,24 @@ const ProveedoresPageClient = ({
     setProviders(initialProviders);
   }, [initialProviders]);
 
+  React.useEffect(() => {
+    setProviderRows(initialProviderRows);
+  }, [initialProviderRows]);
+
   const uniquePeriods = React.useMemo(() => {
     const set = new Set<string>();
-    providers.forEach((provider) => {
-      provider.periodLabels.forEach((label) => {
-        if (label) set.add(label);
-      });
+    providerRows.forEach((row) => {
+      if (row.period && row.period !== "—") {
+        set.add(row.period);
+      }
     });
     return Array.from(set).sort((a, b) => a.localeCompare(b, "es-ES"));
+  }, [providerRows]);
+
+  const uniqueProviders = React.useMemo(() => {
+    return Array.from(
+      new Set(providers.map((provider) => provider.name).filter(Boolean)),
+    ).sort((a, b) => a.localeCompare(b, "es-ES"));
   }, [providers]);
 
   const uniqueAdmits = React.useMemo(() => {
@@ -122,27 +137,46 @@ const ProveedoresPageClient = ({
     ).sort((a, b) => a.localeCompare(b, "es-ES"));
   }, [admitsOptions, providers]);
 
-  const filteredProviders = React.useMemo(() => {
-    return providers
-      .filter((provider) => {
-        if (
-          periodFilter !== "all" &&
-          !provider.periodLabels.includes(periodFilter)
-        ) {
+  const filteredProviderRows = React.useMemo(() => {
+    return providerRows
+      .filter((row) => {
+        if (periodFilter !== "all" && row.period !== periodFilter) {
           return false;
         }
 
-        if (
-          admitFilter !== "all" &&
-          !provider.admitsLabels.includes(admitFilter)
-        ) {
+        if (providerFilter !== "all" && row.name !== providerFilter) {
+          return false;
+        }
+
+        if (admitFilter !== "all" && !row.admitsLabels.includes(admitFilter)) {
           return false;
         }
 
         return true;
       })
-      .sort((a, b) => a.name.localeCompare(b.name, "es-ES"));
-  }, [providers, periodFilter, admitFilter]);
+      .sort(
+        (a, b) =>
+          a.name.localeCompare(b.name, "es-ES") ||
+          a.period.localeCompare(b.period, "es-ES"),
+      );
+  }, [providerRows, periodFilter, providerFilter, admitFilter]);
+
+  const filteredTotals = React.useMemo(() => {
+    const tripIds = new Set<number>();
+    const totals = filteredProviderRows.reduce(
+      (acc, row) => {
+        acc.totalDeliveredKgs += row.deliveredKgs ?? 0;
+        acc.totalRows += 1;
+        row.tripIds.forEach((tripId) => tripIds.add(tripId));
+        return acc;
+      },
+      { totalDeliveredKgs: 0, totalRows: 0 },
+    );
+    return {
+      ...totals,
+      totalTrips: tripIds.size,
+    };
+  }, [filteredProviderRows]);
 
   const buildDefaultFormValues = React.useCallback(
     (): ProviderFormValues => ({
@@ -263,6 +297,38 @@ const ProveedoresPageClient = ({
         return sortProvidersByName(updated);
       });
 
+      setProviderRows((prev) => {
+        if (dialogMode === "create") {
+          return [
+            ...prev,
+            {
+              id: `${mapped.id}-no-period`,
+              providerId: mapped.id,
+              name: mapped.name,
+              notes: mapped.notes,
+              admitsIds: mapped.admitsIds,
+              admitsLabels: mapped.admitsLabels,
+              period: "—",
+              tripIds: [],
+              tripLabels: [],
+              deliveredKgs: 0,
+            },
+          ];
+        }
+
+        return prev.map((row) =>
+          row.providerId === mapped.id
+            ? {
+                ...row,
+                name: mapped.name,
+                notes: mapped.notes,
+                admitsIds: mapped.admitsIds,
+                admitsLabels: mapped.admitsLabels,
+              }
+            : row,
+        );
+      });
+
       setSnackbar({
         open: true,
         severity: "success",
@@ -285,6 +351,9 @@ const ProveedoresPageClient = ({
       await deleteProvider(activeProvider.id);
       setProviders((prev) =>
         prev.filter((provider) => provider.id !== activeProvider.id),
+      );
+      setProviderRows((prev) =>
+        prev.filter((row) => row.providerId !== activeProvider.id),
       );
       setSnackbar({
         open: true,
@@ -412,6 +481,27 @@ const ProveedoresPageClient = ({
 
                 <FormControl fullWidth size="small">
                   <TextField
+                    label="Proveedor"
+                    select
+                    value={providerFilter}
+                    onChange={(event) =>
+                      setProviderFilter(event.target.value)
+                    }
+                    fullWidth
+                    size="small"
+                    sx={{ bgcolor: "background.paper" }}
+                  >
+                    <MenuItem value="all">Todos</MenuItem>
+                    {uniqueProviders.map((label) => (
+                      <MenuItem key={label} value={label}>
+                        {label}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </FormControl>
+
+                <FormControl fullWidth size="small">
+                  <TextField
                     label="Admite"
                     select
                     value={admitFilter}
@@ -455,9 +545,9 @@ const ProveedoresPageClient = ({
                   color="primary.dark"
                   fontWeight={600}
                 >
-                  {filteredProviders.length} proveedor
-                  {filteredProviders.length === 1 ? "" : "es"} encontrado
-                  {filteredProviders.length === 1 ? "" : "s"}
+                  {filteredProviderRows.length} registro
+                  {filteredProviderRows.length === 1 ? "" : "s"} encontrado
+                  {filteredProviderRows.length === 1 ? "" : "s"}
                 </Typography>
               </Box>
 
@@ -521,107 +611,132 @@ const ProveedoresPageClient = ({
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {filteredProviders.map((provider, index) => (
-                      <TableRow
-                        key={provider.id}
-                        hover
-                        onClick={() => handleOpenEdit(provider)}
-                        sx={(theme) => ({
-                          cursor: "pointer",
-                          transition: "all 0.2s ease",
-                          bgcolor:
-                            index % 2 === 0
-                              ? "transparent"
-                              : alpha(theme.palette.grey[100], 0.4),
-                          "&:hover": {
-                            bgcolor: alpha(theme.palette.primary.main, 0.05),
-                            transform: "scale(1.002)",
-                            boxShadow: `0 2px 8px ${alpha(
-                              theme.palette.primary.main,
-                              0.1,
-                            )}`,
-                          },
-                          "& .MuiTableCell-root": {
-                            borderBottom: `1px solid ${theme.palette.divider}`,
-                            py: 1.5,
-                          },
-                        })}
-                      >
-                        <TableCell>
-                          <Typography variant="body1" fontWeight={700}>
-                            {provider.name}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          {provider.admitsLabels.length ? (
-                            <Stack
-                              direction="row"
-                              spacing={0.5}
-                              flexWrap="wrap"
-                              sx={{ rowGap: 0.5 }}
-                            >
-                              {provider.admitsLabels.map((label, idx) => (
-                                <CropChip
-                                  key={`${provider.id}-admit-${idx}`}
-                                  crop={label}
+                    {filteredProviderRows.map((row, index) => {
+                      const baseProvider = providers.find(
+                        (provider) => provider.id === row.providerId,
+                      );
+                      return (
+                        <TableRow
+                          key={row.id}
+                          hover
+                          onClick={() => {
+                            if (baseProvider) handleOpenEdit(baseProvider);
+                          }}
+                          sx={(theme) => ({
+                            cursor: "pointer",
+                            transition: "all 0.2s ease",
+                            bgcolor:
+                              index % 2 === 0
+                                ? "transparent"
+                                : alpha(theme.palette.grey[100], 0.4),
+                            "&:hover": {
+                              bgcolor: alpha(theme.palette.primary.main, 0.05),
+                              transform: "scale(1.002)",
+                              boxShadow: `0 2px 8px ${alpha(
+                                theme.palette.primary.main,
+                                0.1,
+                              )}`,
+                            },
+                            "& .MuiTableCell-root": {
+                              borderBottom: `1px solid ${theme.palette.divider}`,
+                              py: 1.5,
+                            },
+                          })}
+                        >
+                          <TableCell>
+                            <Stack spacing={0.5}>
+                              <Typography variant="body1" fontWeight={700}>
+                                {row.name}
+                              </Typography>
+                              {row.period && row.period !== "—" ? (
+                                <Chip
                                   size="small"
-                                  onClick={(event) => event.stopPropagation()}
+                                  label={row.period}
+                                  variant="outlined"
+                                  sx={{ alignSelf: "flex-start" }}
                                 />
-                              ))}
+                              ) : null}
                             </Stack>
-                          ) : (
-                            <Typography variant="body2" color="text.secondary">
-                              —
-                            </Typography>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {provider.tripIds.length ? (
-                            <Stack
-                              direction="row"
-                              flexWrap="wrap"
-                              sx={{ gap: 1 }}
-                            >
-                              {provider.tripIds.map((tripId, idx) => (
-                                <Box
-                                  key={`${provider.id}-trip-${tripId}`}
-                                  sx={{
-                                    flexBasis: {
-                                      xs: "100%",
-                                      sm: "calc(20% - 0.5rem)",
-                                    },
-                                  }}
-                                >
-                                  <Chip
-                                    key={`${provider.id}-trip-${tripId}`}
-                                    label={
-                                      provider.tripLabels[idx] || String(tripId)
-                                    }
+                          </TableCell>
+                          <TableCell>
+                            {row.admitsLabels.length ? (
+                              <Stack
+                                direction="row"
+                                spacing={0.5}
+                                flexWrap="wrap"
+                                sx={{ rowGap: 0.5 }}
+                              >
+                                {row.admitsLabels.map((label, idx) => (
+                                  <CropChip
+                                    key={`${row.providerId}-admit-${idx}`}
+                                    crop={label}
                                     size="small"
-                                    variant="outlined"
+                                    onClick={(event) =>
+                                      event.stopPropagation()
+                                    }
                                   />
-                                </Box>
-                              ))}
-                            </Stack>
-                          ) : (
-                            <Typography variant="body2" color="text.secondary">
-                              —
+                                ))}
+                              </Stack>
+                            ) : (
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                —
+                              </Typography>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {row.tripIds.length ? (
+                              <Stack
+                                direction="row"
+                                flexWrap="wrap"
+                                sx={{ gap: 1 }}
+                              >
+                                {row.tripIds.map((tripId, idx) => (
+                                  <Box
+                                    key={`${row.providerId}-trip-${tripId}`}
+                                    sx={{
+                                      flexBasis: {
+                                        xs: "100%",
+                                        sm: "calc(20% - 0.5rem)",
+                                      },
+                                    }}
+                                  >
+                                    <Chip
+                                      key={`${row.providerId}-trip-${tripId}`}
+                                      label={
+                                        row.tripLabels[idx] || String(tripId)
+                                      }
+                                      size="small"
+                                      variant="outlined"
+                                    />
+                                  </Box>
+                                ))}
+                              </Stack>
+                            ) : (
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                —
+                              </Typography>
+                            )}
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography
+                              variant="body1"
+                              fontWeight={700}
+                              color="primary"
+                            >
+                              {formatKgs(row.deliveredKgs)}
                             </Typography>
-                          )}
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography
-                            variant="body1"
-                            fontWeight={700}
-                            color="primary"
-                          >
-                            {formatKgs(provider.deliveredKgs)}
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
 
-                    {!filteredProviders.length && (
+                    {!filteredProviderRows.length && (
                       <TableRow>
                         <TableCell colSpan={4} align="center">
                           <Typography
@@ -635,6 +750,30 @@ const ProveedoresPageClient = ({
                         </TableCell>
                       </TableRow>
                     )}
+
+                    {filteredProviderRows.length ? (
+                      <TableRow
+                        sx={(theme) => ({
+                          background: theme.palette.grey.A100,
+                          "& .MuiTableCell-root": {
+                            borderTop: `2px solid ${theme.palette.grey}`,
+                            fontWeight: 800,
+                            color: theme.palette.primary.main,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.5px",
+                            py: 1.5,
+                            fontSize: "0.9rem",
+                          },
+                        })}
+                      >
+                        <TableCell colSpan={3} align="right">
+                          Total
+                        </TableCell>
+                        <TableCell align="right">
+                          {formatKgs(filteredTotals.totalDeliveredKgs)}
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
                   </TableBody>
                 </Table>
               </TableContainer>
@@ -642,7 +781,7 @@ const ProveedoresPageClient = ({
 
             <Box sx={{ display: { xs: "block", md: "none" } }}>
               <Stack spacing={2}>
-                {filteredProviders.length === 0 && (
+                {filteredProviderRows.length === 0 && (
                   <Paper
                     variant="outlined"
                     sx={(theme) => ({
@@ -655,10 +794,75 @@ const ProveedoresPageClient = ({
                     No se encontraron proveedores con los filtros seleccionados.
                   </Paper>
                 )}
-                {filteredProviders.map((provider) => (
+                {filteredProviderRows.length ? (
                   <Card
-                    key={provider.id}
-                    onClick={() => handleOpenEdit(provider)}
+                    sx={(theme) => ({
+                      borderRadius: 2,
+                      border: `1px solid ${alpha(
+                        theme.palette.primary.main,
+                        0.2,
+                      )}`,
+                      background: `linear-gradient(135deg, ${alpha(
+                        theme.palette.primary.main,
+                        0.05,
+                      )} 0%, ${alpha(
+                        theme.palette.primary.light,
+                        0.05,
+                      )} 100%)`,
+                    })}
+                  >
+                    <CardContent sx={{ p: 2 }}>
+                      <Typography
+                        variant="subtitle2"
+                        color="primary"
+                        fontWeight={700}
+                        mb={1}
+                      >
+                        TOTAL
+                      </Typography>
+                      <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        marginRight={3}
+                      >
+                        <Stack spacing={0.3}>
+                          <Typography variant="caption" color="text.secondary">
+                            Registros
+                          </Typography>
+                          <Typography variant="body1" fontWeight={700}>
+                            {filteredTotals.totalRows}
+                          </Typography>
+                        </Stack>
+                        <Stack spacing={0.3}>
+                          <Typography variant="caption" color="text.secondary">
+                            Viajes
+                          </Typography>
+                          <Typography variant="body1" fontWeight={700}>
+                            {filteredTotals.totalTrips}
+                          </Typography>
+                        </Stack>
+                        <Stack spacing={0.3}>
+                          <Typography variant="caption" color="text.secondary">
+                            Kgs entregados
+                          </Typography>
+                          <Typography variant="body1" fontWeight={700}>
+                            {formatKgs(filteredTotals.totalDeliveredKgs)} kg
+                          </Typography>
+                        </Stack>
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                ) : null}
+                {filteredProviderRows.map((row) => {
+                  const baseProvider = providers.find(
+                    (provider) => provider.id === row.providerId,
+                  );
+                  return (
+                  <Card
+                    key={row.id}
+                    onClick={() => {
+                      if (baseProvider) handleOpenEdit(baseProvider);
+                    }}
                     sx={(theme) => ({
                       cursor: "pointer",
                       borderRadius: 2.5,
@@ -685,9 +889,17 @@ const ProveedoresPageClient = ({
                           alignItems="center"
                         >
                           <Typography variant="h6" color="primary">
-                            {provider.name}
+                            {row.name}
                           </Typography>
                         </Stack>
+                        {row.period && row.period !== "—" ? (
+                          <Chip
+                            size="small"
+                            label={row.period}
+                            variant="outlined"
+                            sx={{ alignSelf: "flex-start" }}
+                          />
+                        ) : null}
 
                         <Stack spacing={1}>
                           <Typography
@@ -697,16 +909,16 @@ const ProveedoresPageClient = ({
                           >
                             Admite
                           </Typography>
-                          {provider.admitsLabels.length ? (
+                          {row.admitsLabels.length ? (
                             <Stack
                               direction="row"
                               spacing={0.5}
                               flexWrap="wrap"
                               sx={{ rowGap: 0.5 }}
                             >
-                              {provider.admitsLabels.map((label, idx) => (
+                              {row.admitsLabels.map((label, idx) => (
                                 <CropChip
-                                  key={`${provider.id}-mobile-admit-${idx}`}
+                                  key={`${row.providerId}-mobile-admit-${idx}`}
                                   crop={label}
                                   size="small"
                                   onClick={(event) => event.stopPropagation()}
@@ -728,21 +940,21 @@ const ProveedoresPageClient = ({
                           >
                             Viajes asociados
                           </Typography>
-                          {provider.tripIds.length ? (
+                          {row.tripIds.length ? (
                             <Stack
                               spacing={0.5}
                               flexWrap="wrap"
                               sx={{ rowGap: 0.5 }}
                             >
-                              {provider.tripIds.map((tripId, idx) => (
+                              {row.tripIds.map((tripId, idx) => (
                                 <Chip
-                                  key={`${provider.id}-mobile-trip-${tripId}`}
+                                  key={`${row.providerId}-mobile-trip-${tripId}`}
                                   component={Link}
                                   href={`/viajes-de-camion/${tripId}`}
                                   onClick={(event) => event.stopPropagation()}
                                   clickable
                                   label={
-                                    provider.tripLabels[idx] || String(tripId)
+                                    row.tripLabels[idx] || String(tripId)
                                   }
                                   size="small"
                                   variant="outlined"
@@ -765,13 +977,14 @@ const ProveedoresPageClient = ({
                             Kgs entregados
                           </Typography>
                           <Typography variant="body1" fontWeight={800}>
-                            {formatKgs(provider.deliveredKgs)} kg
+                            {formatKgs(row.deliveredKgs)} kg
                           </Typography>
                         </Stack>
                       </Stack>
                     </CardContent>
                   </Card>
-                ))}
+                );
+                })}
               </Stack>
             </Box>
           </Stack>

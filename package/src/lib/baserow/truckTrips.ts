@@ -160,6 +160,16 @@ export async function getTruckTripsDto(): Promise<TruckTripDto[]> {
   return rows.map(mapTruckTripRawToDto);
 }
 
+export async function getTruckTripsByIdsDto(
+  tripIds: number[]
+): Promise<TruckTripDto[]> {
+  if (!tripIds.length) return [];
+
+  const lookup = new Set(tripIds);
+  const trips = await getTruckTripsDto();
+  return trips.filter((trip) => lookup.has(trip.id));
+}
+
 /**
  * Returns trips whose origin is:
  *  - any harvest in harvestIds, or
