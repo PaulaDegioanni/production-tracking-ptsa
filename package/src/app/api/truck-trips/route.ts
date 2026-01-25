@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 
 import { TRUCK_TRIPS_TABLE_ID } from '@/lib/baserow/truckTrips';
 import { createTableRow } from '@/lib/baserow/rowsCrud';
+import {
+  buildEventStatusPayload,
+  computeTruckTripEventStatus,
+} from '@/lib/truckTrips/eventStatus';
 
 export async function POST(request: Request) {
   try {
@@ -15,7 +19,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = await createTableRow(TRUCK_TRIPS_TABLE_ID, payload);
+    const { status } = await computeTruckTripEventStatus({ payload });
+    const eventStatusPayload = await buildEventStatusPayload(status);
+    const finalPayload = { ...payload, ...eventStatusPayload };
+
+    const result = await createTableRow(TRUCK_TRIPS_TABLE_ID, finalPayload);
     return NextResponse.json(result);
   } catch (error) {
     console.error('Error al crear viaje de camión en Baserow', error);

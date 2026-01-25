@@ -6,6 +6,10 @@ import {
   deleteTableRow,
   patchTableRow,
 } from '@/lib/baserow/client';
+import {
+  buildEventStatusPayload,
+  computeTruckTripEventStatus,
+} from '@/lib/truckTrips/eventStatus';
 
 type RouteParams = {
   params: Promise<{
@@ -43,10 +47,17 @@ export async function PATCH(request: Request, context: RouteParams) {
       return NextResponse.json({ error: 'Empty payload' }, { status: 400 });
     }
 
+    const { status } = await computeTruckTripEventStatus({
+      payload: payload as Record<string, any>,
+      rowId,
+    });
+    const eventStatusPayload = await buildEventStatusPayload(status);
+    const finalPayload = { ...payload, ...eventStatusPayload };
+
     const updatedRow = await patchTableRow(
       TRUCK_TRIPS_TABLE_ID,
       rowId,
-      payload as Record<string, any>
+      finalPayload as Record<string, any>
     );
 
     return NextResponse.json(updatedRow);

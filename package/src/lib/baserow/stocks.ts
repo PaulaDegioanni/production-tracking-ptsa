@@ -197,3 +197,14 @@ export async function getStockByCycleIdDto(
   const rows = await getStockRaw();
   return rows.map(mapStockRawToDto).filter((s) => s.cycleIds.includes(cycleId));
 }
+
+export async function getStockAvailableKgs(
+  stockId: number
+): Promise<number> {
+  if (!stockId || Number.isNaN(stockId)) return 0;
+  const rows = await getStockDto();
+  const stock = rows.find((item) => item.id === stockId);
+  if (!stock) return 0;
+  const available = stock.currentKgs ?? 0;
+  return Number.isFinite(available) ? Math.max(0, available) : 0;
+}
