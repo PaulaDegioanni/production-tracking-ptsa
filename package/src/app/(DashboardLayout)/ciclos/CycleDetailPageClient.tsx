@@ -1735,7 +1735,7 @@ const CycleDetailPageClient = ({
                           {item.cropDurationLabel && (
                             <Chip
                               size="small"
-                              label={`Duración cultivo: ${item.cropDurationLabel}`}                              
+                              label={`Duración cultivo: ${item.cropDurationLabel}`}
                               sx={(theme) => ({
                                 mt: 0.7,
                                 fontWeight: 600,
@@ -1804,7 +1804,7 @@ const CycleDetailPageClient = ({
                 <StatCard
                   icon={<CheckCircleIcon sx={{ fontSize: 28 }} />}
                   label="Cosechado"
-                  value={formatNumber(cycle.totalKgs)}
+                  value={`${formatNumber(cycle.totalKgs)} / ${formatNumber(cycle.expectedYield * cycle.areaHa)}`}
                   unit="kg"
                   color="success"
                   gradient

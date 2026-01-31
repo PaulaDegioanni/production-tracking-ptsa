@@ -40,6 +40,14 @@ type CiclosPageClientProps = {
   initialCiclos: CycleItem[];
 };
 
+const getExpectedHarvestKgs = (cycle: CycleItem): number => {
+  const value = cycle.expectedYield * cycle.areaHa;
+  return Number.isFinite(value) ? value : 0;
+};
+
+const formatKgs = (value: number): string =>
+  value.toLocaleString("es-ES", { maximumFractionDigits: 0 });
+
 const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
   const router = useRouter();
 
@@ -81,8 +89,7 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
       cycle.crop.toLowerCase() === cropFilter.toLowerCase();
 
     const matchField =
-      fieldFilter === "all" ||
-      cycle.field.trim() === fieldFilter;
+      fieldFilter === "all" || cycle.field.trim() === fieldFilter;
 
     const matchStatus = statusFilter === "all" || cycle.status === statusFilter;
 
@@ -90,6 +97,38 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
   };
 
   const filteredCycles = initialCiclos.filter(filterCycles);
+  const totals = filteredCycles.reduce(
+    (acc, cycle) => {
+      const area = Number.isFinite(cycle.areaHa) ? cycle.areaHa : 0;
+      const expectedKgs = getExpectedHarvestKgs(cycle);
+      const actualYieldWeighted = cycle.actualYield * area;
+      const expectedYieldWeighted = cycle.expectedYield * area;
+
+      acc.totalArea += area;
+      acc.totalExpectedKgs += Number.isFinite(expectedKgs) ? expectedKgs : 0;
+      acc.totalHarvestedKgs += Number.isFinite(cycle.totalKgs)
+        ? cycle.totalKgs
+        : 0;
+      acc.totalStockKgs += Number.isFinite(cycle.stockKgs) ? cycle.stockKgs : 0;
+      acc.totalTruckKgs += Number.isFinite(cycle.truckKgs) ? cycle.truckKgs : 0;
+      acc.totalActualYieldWeighted += Number.isFinite(actualYieldWeighted)
+        ? actualYieldWeighted
+        : 0;
+      acc.totalExpectedYieldWeighted += Number.isFinite(expectedYieldWeighted)
+        ? expectedYieldWeighted
+        : 0;
+      return acc;
+    },
+    {
+      totalArea: 0,
+      totalExpectedKgs: 0,
+      totalHarvestedKgs: 0,
+      totalStockKgs: 0,
+      totalTruckKgs: 0,
+      totalActualYieldWeighted: 0,
+      totalExpectedYieldWeighted: 0,
+    },
+  );
 
   const CYCLE_STATUS_OPTIONS: StatusChipOption[] = [
     { value: "planificado", label: "Planificado", color: "default" },
@@ -392,19 +431,9 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
                             )}`,
                           })}
                         />
-                        <TableCell align="right">Rend. esp. (qq/ha)</TableCell>
-                        <TableCell align="right">Rend. obt. (qq/ha)</TableCell>
-                        <TableCell
-                          sx={(theme) => ({
-                            borderLeft: `2px solid ${alpha(
-                              theme.palette.primary.main,
-                              0.15,
-                            )}`,
-                          })}
-                        />
+                        <TableCell align="right">Kgs cosechados</TableCell>
                         <TableCell align="right">Kgs stock</TableCell>
                         <TableCell align="right">Kgs camión</TableCell>
-                        <TableCell align="right">Kgs totales</TableCell>
                         <TableCell
                           align="right"
                           sx={(theme) => ({
@@ -414,7 +443,7 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
                             )}`,
                           })}
                         >
-                          Kgs check
+                          Rendimiento (qq/ha)
                         </TableCell>
                       </TableRow>
                     </TableHead>
@@ -514,29 +543,20 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
                           />
 
                           <TableCell align="right">
-                            <Typography variant="body1" color="text.secondary">
-                              {cycle.expectedYield.toFixed(1)}
-                            </Typography>
-                          </TableCell>
-
-                          <TableCell align="right">
-                            <Typography
-                              variant="body1"
-                              fontWeight={700}
-                              color="primary"
+                            <Stack
+                              direction="row"
+                              flexWrap="wrap"
+                              justifyContent="flex-end"
+                              alignItems="baseline"
                             >
-                              {cycle.actualYield.toFixed(1)}
-                            </Typography>
+                              <Typography variant="body1" fontWeight={700}>
+                                {cycle.totalKgs.toLocaleString("es-ES")} /
+                              </Typography>
+                              <Typography variant="body2" paddingLeft={1}>
+                                {formatKgs(getExpectedHarvestKgs(cycle))}
+                              </Typography>
+                            </Stack>
                           </TableCell>
-
-                          <TableCell
-                            sx={(theme) => ({
-                              borderLeft: `2px solid ${alpha(
-                                theme.palette.primary.main,
-                                0.08,
-                              )}`,
-                            })}
-                          />
 
                           <TableCell align="right">
                             <Typography variant="body1">
@@ -550,12 +570,6 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
                             </Typography>
                           </TableCell>
 
-                          <TableCell align="right">
-                            <Typography variant="body1" fontWeight={700}>
-                              {cycle.totalKgs.toLocaleString("es-ES")}
-                            </Typography>
-                          </TableCell>
-
                           <TableCell
                             align="right"
                             sx={(theme) => ({
@@ -565,37 +579,121 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
                               )}`,
                             })}
                           >
-                            <Box
-                              sx={(theme) => ({
-                                display: "inline-block",
-                                px: 1.5,
-                                py: 0.5,
-                                borderRadius: 1,
-                                bgcolor:
-                                  cycle.checkKgs === 0
-                                    ? alpha(theme.palette.success.main, 0.15)
-                                    : alpha(theme.palette.secondary.main, 0.15),
-                              })}
+                            <Stack
+                              direction="row"
+                              flexWrap="wrap"
+                              justifyContent="flex-end"
+                              alignItems="baseline"
                             >
-                              <Typography
-                                variant="body2"
-                                fontWeight={700}
-                                color={
-                                  cycle.checkKgs === 0
-                                    ? "success.dark"
-                                    : "secondary.main"
-                                }
-                              >
-                                {cycle.checkKgs.toLocaleString("es-ES")}
+                              <Typography variant="body1" fontWeight={700}>
+                                {cycle.actualYield.toFixed(1)} /
                               </Typography>
-                            </Box>
+                              <Typography variant="body2" paddingLeft={1}>
+                                {cycle.expectedYield.toFixed(1)}
+                              </Typography>
+                            </Stack>
                           </TableCell>
                         </TableRow>
                       ))}
 
+                      {filteredCycles.length > 0 && (
+                        <TableRow
+                          sx={(theme) => ({
+                            background: theme.palette.grey.A100,
+                            "& .MuiTableCell-root": {
+                              borderTop: `2px solid ${theme.palette.grey[300]}`,
+                              fontWeight: 800,
+                              color: theme.palette.primary.main,
+                              textTransform: "uppercase",
+                              letterSpacing: "0.5px",
+                              py: 1.5,
+                              fontSize: "0.85rem",
+                            },
+                          })}
+                        >
+                          <TableCell colSpan={6} align="right">
+                            <Typography variant="body1" fontWeight={800}>
+                              Total
+                            </Typography>
+                          </TableCell>
+                          <TableCell
+                            align="center"
+                            sx={(theme) => ({
+                              borderLeft: `2px solid ${alpha(
+                                theme.palette.primary.main,
+                                0.08,
+                              )}`,
+                            })}
+                          />
+                          <TableCell align="right">
+                            <Stack
+                              direction="row"
+                              flexWrap="wrap"
+                              justifyContent="flex-end"
+                              alignItems="baseline"
+                            >
+                              <Typography variant="body1" fontWeight={700}>
+                                {formatKgs(totals.totalHarvestedKgs)} /
+                              </Typography>
+                              <Typography variant="body2" paddingLeft={1}>
+                                {formatKgs(totals.totalExpectedKgs)}
+                              </Typography>
+                            </Stack>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography variant="body1" fontWeight={700}>
+                              {formatKgs(totals.totalStockKgs)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography
+                              variant="body1"
+                              fontWeight={700}
+                              color="primary"
+                            >
+                              {formatKgs(totals.totalTruckKgs)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell
+                            align="right"
+                            sx={(theme) => ({
+                              borderLeft: `2px solid ${alpha(
+                                theme.palette.primary.main,
+                                0.08,
+                              )}`,
+                            })}
+                          >
+                            <Stack
+                              direction="row"
+                              flexWrap="wrap"
+                              justifyContent="flex-end"
+                              alignItems="baseline"
+                            >
+                              <Typography variant="body1" fontWeight={700}>
+                                {totals.totalArea > 0
+                                  ? (
+                                      totals.totalActualYieldWeighted /
+                                      totals.totalArea
+                                    ).toFixed(1)
+                                  : "0.0"}{" "}
+                                /
+                              </Typography>
+                              <Typography variant="body2" paddingLeft={1}>
+                                {totals.totalArea > 0
+                                  ? (
+                                      totals.totalExpectedYieldWeighted /
+                                      totals.totalArea
+                                    ).toFixed(1)
+                                  : "0.0"}
+                              </Typography>
+                            </Stack>
+                          </TableCell>
+                        </TableRow>
+                      )}
+
                       {filteredCycles.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={14} align="center" sx={{ py: 4 }}>
+                          <TableCell colSpan={11} align="center" sx={{ py: 4 }}>
                             <Typography variant="body1" color="text.secondary">
                               No hay ciclos para los filtros seleccionados.
                             </Typography>
@@ -700,16 +798,16 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
                                 Rendimiento
                               </Typography>
                               <Typography variant="body2">
-                                <Box component="span" color="text.secondary">
-                                  {cycle.expectedYield.toFixed(1)}
-                                </Box>
-                                {" / "}
                                 <Box
                                   component="span"
                                   fontWeight={700}
                                   color="primary.main"
                                 >
                                   {cycle.actualYield.toFixed(1)}
+                                </Box>
+                                {" / "}
+                                <Box component="span" color="text.secondary">
+                                  {cycle.expectedYield.toFixed(1)}
                                 </Box>
                                 {" qq/ha"}
                               </Typography>
@@ -724,10 +822,15 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
                                 color="text.secondary"
                                 fontWeight={600}
                               >
-                                Kgs totales
+                                Cosechado
                               </Typography>
                               <Typography variant="body2" fontWeight={700}>
-                                {cycle.totalKgs.toLocaleString("es-ES")}
+                                {cycle.totalKgs.toLocaleString("es-ES")} /{" "}
+                                {getExpectedHarvestKgs(cycle).toLocaleString(
+                                  "es-ES",
+                                  { maximumFractionDigits: 0 },
+                                )}{" "}
+                                kg
                               </Typography>
                             </Stack>
 
@@ -746,46 +849,6 @@ const CiclosPageClient = ({ initialCiclos }: CiclosPageClientProps) => {
                                 {cycle.stockKgs.toLocaleString("es-ES")} /{" "}
                                 {cycle.truckKgs.toLocaleString("es-ES")}
                               </Typography>
-                            </Stack>
-
-                            <Stack
-                              direction="row"
-                              justifyContent="space-between"
-                              alignItems="center"
-                            >
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                fontWeight={600}
-                              >
-                                Verificación
-                              </Typography>
-                              <Box
-                                sx={(theme) => ({
-                                  px: 1.5,
-                                  py: 0.5,
-                                  borderRadius: 1,
-                                  bgcolor:
-                                    cycle.checkKgs === 0
-                                      ? alpha(theme.palette.success.main, 0.15)
-                                      : alpha(
-                                          theme.palette.secondary.main,
-                                          0.15,
-                                        ),
-                                })}
-                              >
-                                <Typography
-                                  variant="body2"
-                                  fontWeight={700}
-                                  color={
-                                    cycle.checkKgs === 0
-                                      ? "success.dark"
-                                      : "secondary.main"
-                                  }
-                                >
-                                  {cycle.checkKgs.toLocaleString("es-ES")} kg
-                                </Typography>
-                              </Box>
                             </Stack>
                           </Stack>
                         </Stack>
